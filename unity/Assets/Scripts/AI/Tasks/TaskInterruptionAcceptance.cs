@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Yixuan.AI.Tasks {
  // Explicit harness: deterministic runtime tests and real user/LLM tests are reported separately.
  public sealed class TaskInterruptionAcceptance:MonoBehaviour {
-  public string Output="D:/AI/GameScaling/docs/evidence/interrupt_pose_fix_2026-10-25";
+  public string Output="Captures/Evidence/interrupt_pose_fix_2026-10-25";
   public bool FollowupOnly;
   public bool Running; public string Current="";public RuntimeTestReport Report;
   ChatSession s;TaskMissionRunner r;Vector3 initial;float initialYaw;bool mic,voice,taskVoice;string evidenceRoot;TaskInputMode mode;float codeTimeout;

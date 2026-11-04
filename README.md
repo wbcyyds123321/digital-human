@@ -7,6 +7,12 @@
 - 演示视频：https://space.bilibili.com/503297296
 - 项目仓库：https://github.com/wbcyyds123321/digital-human
 
+<p align="center">
+  <img src="docs/images/runtime-hero.jpg" width="82%">
+</p>
+
+<p align="center"><i>Unity 大地图里的数字人：场景、第三人称相机、角色表现与运行时交互都在同一套系统里。</i></p>
+
 ---
 
 ## 项目状态：阶段性源码开源（不是成品游戏）
@@ -20,6 +26,27 @@
 
 等后续版本稳定后，再考虑打包与发行。
 
+---
+
+## 效果预览
+
+### 1. 数字人 HUD：地图、任务、角色、视觉、语音都在一个控制台里
+
+<p align="center">
+  <img src="docs/images/runtime-hud.jpg" width="49%">
+  <img src="docs/images/runtime-task.jpg" width="49%">
+</p>
+
+<p align="center"><i>左：地图页 + 小地图 + 点选导航；右：任务执行页（LLM 生成计划 → Unity 技能 → 真实回执）。</i></p>
+
+### 2. 边走边说：小地图点选目的地，角色一边走一边对话
+
+<p align="center">
+  <img src="docs/images/runtime-walk.jpg" width="82%">
+</p>
+
+<p align="center"><i>角色边走边聊，小地图显示当前位置、可去地点和实时导航；行动/对话双车道共享状态，所以不会因为说话把走路停掉。</i></p>
+
 ## 她现在能做什么
 
 - **听懂并做事**：自然语言指令 → 任务契约 → Lua 任务程序 → Unity 技能执行 → 真实回执校验。
@@ -28,6 +55,64 @@
 - **说得出**：全双工语音链路（AEC / VAD / ASR + 流式 TTS + 口型同步），支持边说边听、被打断会停。
 - **演得像**：15 种表情、10 种神态、16 个角色技能，VRM / MMD 骨骼 + 表情/口型/头发物理。
 - **能改世界**：程序化地图工具链（2D 规划 → GPT-Image 参考图 → Blender 模块化生成 → GLB + 导航/碰撞/锚点/地面高度 + 中文名/坐标映射）。
+
+---
+
+## 地图生成工具链：程序化生成一座「苏联蓝调小区」
+
+这个项目里的大地图不是手工摆出来的，而是按「先规划、再生成、最后接运行时数据」的流程做的。地图为 **400×300 m** 的苏联蓝调风格街区，包含住宅、公共文化、工业、地标四类建筑。
+
+### 1. 先出 2D 规划
+
+先由 `make_plan.py` 输出总平面图与 `plan.json`：道路、地块、建筑类型、朝向、地标位置先确定，再进入 Blender。
+
+<p align="center">
+  <img src="docs/images/map-plan.jpg" width="88%">
+</p>
+
+<p align="center"><i>程序化生成的总平面图：48 栋建筑、17 条街道、39 个地块，住宅/公共/工业/地标分类和中文图例都在图里。</i></p>
+
+### 2. 参考图定风格与比例
+
+生成之前先用 GPT-Image 产出小地图、建筑三视图、材质、立面细节等 **104 张参考图**，再配 **52 张苏联建筑真实照片**做对照，先定风格、比例和材质，而不是直接开始堆模型。
+
+### 3. Blender 模块化生成
+
+`build.py` 读取 `plan.json`，调用 `mod_residential.py` / `mod_civic.py` / `mod_industrial.py` / `mod_landmark_*.py` 等模块，生成：
+
+- **34 类建筑模块**、**48 栋建筑**、**38,454 个对象**、约 **142 万三角面**；
+- 每栋建筑按「体块 → 立面 → 窗户/门/招牌 → 材质」分层生成；
+- 地标单独建、单独 QA，满意后才放回地图。
+
+<p align="center">
+  <img src="docs/images/map-hero.jpg" width="49%">
+  <img src="docs/images/map-street.jpg" width="49%">
+</p>
+
+<p align="center"><i>左：蓝调时刻的街区鸟瞰；右：街道视角。玻璃、石材、砖墙、招牌材质都是按参考图逐项定的。</i></p>
+
+### 4. 地标：从参考图到可进入的场景
+
+地标同样走「独立摄影棚工作流」：先单独建模，转 4 个角度 + 正/背立面 + 近景细节，对照参考图反复迭代，满意后才放进地图。
+
+<p align="center">
+  <img src="docs/images/map-motherland.jpg" width="49%">
+  <img src="docs/images/map-msu.jpg" width="49%">
+</p>
+
+<p align="center"><i>左：祖国母亲雕像；右：国立大学主楼。雕塑、尖塔、旗帜、钟面都是可单独查看的地标物件。</i></p>
+
+### 5. 导出给 Unity 用的运行时数据
+
+地图生成完不是只导一个 GLB，还同时产出运行时数据：
+
+- **91 个碰撞 AABB**：角色和相机的碰撞、避障；
+- **3,486 节点 / 8,551 边导航图**：A* 寻路直接用；
+- **46 个中文语义锚点**：模型/Agent 说「去面包房」时能定位到具体坐标；
+- **1m 地面高度图**：角色动态贴地，广场和草地不会悬空或陷进去；
+- **中文名 + 坐标映射表**：每栋建筑 / 地点一份，给 VLM 和后续 Agent 查表用，而不是让模型猜坐标。
+
+---
 
 ## 核心架构
 
@@ -64,6 +149,8 @@
 - `map/tools/build.py`
 - `map/integration/make_unity_data.py`
 
+---
+
 ## 仓库结构
 
 ```text
@@ -78,6 +165,7 @@ map/
 docs/
   architecture.md        # 项目技术总览（架构 / 数据流 / 模型 / 指标）
   roadmap.md             # 下一版方向：VLM 改地图 / 双全工语音 / Agent 注入
+  images/                # README 截图（运行时 + 地图生成结果）
 ```
 
 ## 建议先看这些
@@ -102,7 +190,8 @@ docs/
 - **不包含**角色 VRM / MMD 模型、美术贴图、动画资产、地图 GLB/BLEND/渲染图、模型权重、TTS 参考音频；
 - **不包含**内部 agent 记录、`Logs/`、`Captures/`、本地缓存与任何 API Key；
 - 第三方 Unity 包（VRM / UniGLTF / lilToon / ADB / Unity MCP 等）不在此仓库中，README 只说明依赖关系；
-- 代码通过环境变量或本地配置文件读取密钥，仓库内没有任何可用的 API key。
+- 代码通过环境变量或本地配置文件读取密钥，仓库内没有任何可用的 API key；
+- `docs/images/` 里的截图是项目运行/地图生成结果，用于展示效果，不代表完整工程可一键复现。
 
 如果你需要完整工程或美术资源，请通过 GitHub / Bilibili 联系作者。
 

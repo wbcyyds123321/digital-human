@@ -4,7 +4,7 @@ using System.IO;
 using UnityEngine;
 namespace Yixuan.AI.Tasks {
  public sealed class TaskRuntimeRouteAcceptance:MonoBehaviour {
-  public bool Running;public RuntimeTestReport Report;public string Output="D:/AI/GameScaling/docs/evidence/task_runtime_v2_2026-10-25";TaskMissionRunner runner;
+  public bool Running;public RuntimeTestReport Report;public string Output="Captures/Evidence/task_runtime_v2_2026-10-25";TaskMissionRunner runner;
   public void Begin(){if(Running)return;runner=FindObjectOfType<TaskMissionRunner>();Running=true;Report=new RuntimeTestReport{suite="real configured core LLM semantic auto route; hypothetical/status vs imperative, no planner/code injection for tested user input"};StartCoroutine(Run());}
   IEnumerator Case(string name,string text,bool action){var old=runner.Context;int seq=old.Events.Count;var startPosition=runner.Motor.transform.position;float startYaw=runner.Motor.transform.eulerAngles.y,startCameraYaw=runner.Gimbal.TargetYaw,startCameraPitch=runner.Gimbal.TargetPitch;float start=Time.realtimeSinceStartup;runner.Session.Submit(text);float limit=start+75;
    while(Time.realtimeSinceStartup<limit){if(action){if(runner.Context!=old&&!runner.IsRunning)break;}else if(old.Events.Find(e=>e.type=="NarratorClassified"&&e.sequence>seq)!=null||runner.Context!=old)break;yield return null;}

@@ -4,7 +4,7 @@ using System.IO;
 using UnityEngine;
 namespace Yixuan.AI.Tasks {
  public sealed class TaskRuntimeConcurrentAcceptance:MonoBehaviour {
-  public TaskMissionRunner Runner;public RuntimeTestReport Report;public bool Running;public string Output="D:/AI/GameScaling/docs/evidence/task_runtime_v2_2026-10-25";
+  public TaskMissionRunner Runner;public RuntimeTestReport Report;public bool Running;public string Output="Captures/Evidence/task_runtime_v2_2026-10-25";
   bool oldVoice,oldParallel,oldTaskVoice,oldTts;TaskInputMode oldMode;
   public void Begin(){if(Running)return;Runner=FindObjectOfType<TaskMissionRunner>();Running=true;Report=new RuntimeTestReport{suite="injected action contracts + actual movement, real independent narrator, real TTS, barge/cancel API entrypoints; no ASR microphone claim"};StartCoroutine(Run());}
   TaskObligation O(string id,string kind,string target=""){return new TaskObligation{id=id,source="验收",kind=kind,target_id=target,count=1};}

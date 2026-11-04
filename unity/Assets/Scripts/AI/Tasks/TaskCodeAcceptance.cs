@@ -12,7 +12,7 @@ namespace Yixuan.AI.Tasks
     // Opt-in acceptance harness. Test-injected programs are explicitly separate from core-LLM runs.
     public class TaskCodeAcceptance : MonoBehaviour
     {
-        public string Root="D:/AI/GameScaling/docs/evidence/task_code_2026-10-24";
+        public string Root="Captures/Evidence/task_code_2026-10-24";
         public bool Running {get;private set;}
         public TaskAcceptanceSuite.SuiteReport Summary=new TaskAcceptanceSuite.SuiteReport();
         TaskMissionRunner r; Vector3 start; bool oldVoice; string oldRoot;

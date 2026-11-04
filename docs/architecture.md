@@ -123,7 +123,7 @@
 - **批处理链路**：`Unity.exe -batchmode -executeMethod ...`（构建场景 / 导入 / QA / 校验 / 探针），
   文件报告 + watchdog 防卡死；QA 出图后用图像检查（颜色/占比/是否有洋红 error shader）。
 - **验收体系**：14 个 C# 验收套件（任务/失败/代码/打断/注意力/日志/并发/生命周期/配对/真实/路由/
-  脚本语义等），输出 JSON/MD 证据（`Captures/TaskMissions`, `D:/AI/GameScaling/docs/evidence`）。
+  脚本语义等），输出 JSON/MD 证据（`Captures/TaskMissions`, `Captures/Evidence`）。
 - **文档驱动**：AGENTS.md（接手必读）、PROJECT_NOTES.md（1,237 行踩坑记录）、
   Docs/Architecture 下 20+ 篇交接/评审/验收文档；每次重大改动有代码证据和截图证据。
 - **工作流**：Agent Teams + 独立只读审计（Parity Audit）+ 并行子代理（地图分析/导入工程师）+
