@@ -1,0 +1,15 @@
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.wav binary
+*.mp3 binary
+*.glb binary
+*.gltf binary
+*.fbx binary
+*.blend binary
+*.vrm binary
+*.pmx binary

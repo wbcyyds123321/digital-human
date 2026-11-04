@@ -1,0 +1,517 @@
+{
+ "schema": "sbh.unity.anchors.v1",
+ "spawn": [
+  -14.0,
+  0.0,
+  -62.0
+ ],
+ "spawn_yaw": 160.0,
+ "anchors": [
+  {
+   "id": "central_plaza",
+   "label": "中央广场",
+   "pos": [
+    -10.0,
+    0.0,
+    -46.0
+   ],
+   "source": "curated",
+   "notes": "curated，吸附到 nav node #1852（0.00m）"
+  },
+  {
+   "id": "obelisk",
+   "label": "方尖碑",
+   "pos": [
+    0.0,
+    0.0,
+    -56.5
+   ],
+   "source": "curated",
+   "notes": "nav node #3433，吸附 0.00m"
+  },
+  {
+   "id": "fountain",
+   "label": "干涸喷泉",
+   "pos": [
+    7.6,
+    0.0,
+    -43.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3434，吸附 0.00m"
+  },
+  {
+   "id": "house_of_culture",
+   "label": "文化宫",
+   "pos": [
+    0.0,
+    0.0,
+    -37.0
+   ],
+   "source": "curated",
+   "notes": "nav node #13，吸附 0.00m"
+  },
+  {
+   "id": "flags_plaza",
+   "label": "旗杆广场",
+   "pos": [
+    4.8,
+    0.0,
+    -67.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3435，吸附 0.00m"
+  },
+  {
+   "id": "avenue_lenin",
+   "label": "列宁大街",
+   "pos": [
+    0.0,
+    0.0,
+    -72.0
+   ],
+   "source": "curated",
+   "notes": "nav node #1，吸附 0.00m"
+  },
+  {
+   "id": "bus_stop",
+   "label": "公交站",
+   "pos": [
+    -44.0,
+    0.0,
+    -72.25
+   ],
+   "source": "curated",
+   "notes": "nav node #602，吸附 4.00m"
+  },
+  {
+   "id": "shop_gastronom",
+   "label": "食品商店",
+   "pos": [
+    102.0,
+    0.0,
+    -70.4
+   ],
+   "source": "curated",
+   "notes": "nav node #3440，吸附 0.00m"
+  },
+  {
+   "id": "kiosk",
+   "label": "售货亭",
+   "pos": [
+    -45.5,
+    0.0,
+    -72.4
+   ],
+   "source": "curated",
+   "notes": "nav node #3441，吸附 0.00m"
+  },
+  {
+   "id": "boiler_house",
+   "label": "锅炉房",
+   "pos": [
+    -99.0,
+    0.0,
+    44.0
+   ],
+   "source": "curated",
+   "notes": "nav node #119，吸附 0.00m"
+  },
+  {
+   "id": "banya",
+   "label": "公共浴场",
+   "pos": [
+    -135.6,
+    0.0,
+    30.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3446，吸附 0.00m"
+  },
+  {
+   "id": "school_3",
+   "label": "第三中学",
+   "pos": [
+    26.0,
+    0.0,
+    5.9
+   ],
+   "source": "curated",
+   "notes": "nav node #3379，吸附 0.00m"
+  },
+  {
+   "id": "kindergarten_9",
+   "label": "第九幼儿园",
+   "pos": [
+    -21.0,
+    0.0,
+    26.4
+   ],
+   "source": "curated",
+   "notes": "nav node #3439，吸附 0.00m"
+  },
+  {
+   "id": "gym",
+   "label": "体育馆",
+   "pos": [
+    77.0,
+    0.0,
+    5.6
+   ],
+   "source": "curated",
+   "notes": "nav node #3442，吸附 0.00m"
+  },
+  {
+   "id": "stadium",
+   "label": "小区体育场",
+   "pos": [
+    80.0,
+    0.0,
+    40.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3459，吸附 0.00m"
+  },
+  {
+   "id": "market",
+   "label": "市场",
+   "pos": [
+    125.6,
+    0.0,
+    -53.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3444，吸附 0.00m"
+  },
+  {
+   "id": "cinema",
+   "label": "电影院",
+   "pos": [
+    24.0,
+    0.0,
+    -90.0
+   ],
+   "source": "curated",
+   "notes": "curated，吸附到 nav node #715（0.00m）"
+  },
+  {
+   "id": "bakery",
+   "label": "面包房",
+   "pos": [
+    -1.0,
+    0.0,
+    -89.6
+   ],
+   "source": "curated",
+   "notes": "nav node #3445，吸附 0.00m"
+  },
+  {
+   "id": "metro",
+   "label": "地铁站",
+   "pos": [
+    135.0,
+    0.0,
+    48.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3463，吸附 1.50m"
+  },
+  {
+   "id": "msu_main",
+   "label": "国立大学主楼",
+   "pos": [
+    171.6,
+    0.0,
+    55.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3449，吸附 0.00m"
+  },
+  {
+   "id": "vysotka_plaza",
+   "label": "高楼广场",
+   "pos": [
+    180.71,
+    0.0,
+    -6.0
+   ],
+   "source": "curated",
+   "notes": "curated，吸附到 nav node #2883（2.12m）"
+  },
+  {
+   "id": "mfa",
+   "label": "外交部大楼",
+   "pos": [
+    173.6,
+    0.0,
+    -19.0
+   ],
+   "source": "curated",
+   "notes": "nav node #3451，吸附 0.00m"
+  },
+  {
+   "id": "motherland",
+   "label": "祖国母亲雕像",
+   "pos": [
+    -4.0,
+    0.0,
+    128.5
+   ],
+   "source": "curated",
+   "notes": "curated，吸附到 nav node #2777（0.00m）"
+  },
+  {
+   "id": "eternal_flame",
+   "label": "长明火",
+   "pos": [
+    0.0,
+    0.0,
+    126.4
+   ],
+   "source": "curated",
+   "notes": "nav node #3460，吸附 0.00m"
+  },
+  {
+   "id": "monument_esplanade",
+   "label": "纪念广场",
+   "pos": [
+    -48.0,
+    0.0,
+    120.0
+   ],
+   "source": "curated",
+   "notes": "curated，吸附到 nav node #2584（0.00m）"
+  },
+  {
+   "id": "brest_relief",
+   "label": "勇气浮雕墙",
+   "pos": [
+    -32.0,
+    0.0,
+    118.0
+   ],
+   "source": "curated",
+   "notes": "curated，吸附到 nav node #2683（0.00m）"
+  },
+  {
+   "id": "north_park",
+   "label": "北公园",
+   "pos": [
+    -70.0,
+    0.0,
+    100.0
+   ],
+   "source": "curated",
+   "notes": "curated，吸附到 nav node #328（0.00m）"
+  },
+  {
+   "id": "pond",
+   "label": "公园池塘南岸",
+   "pos": [
+    5.0,
+    0.0,
+    91.5
+   ],
+   "source": "curated",
+   "notes": "nav node #3438，吸附 0.00m"
+  },
+  {
+   "id": "ufo_station",
+   "label": "飞碟车站",
+   "pos": [
+    -61.0,
+    0.0,
+    -113.6
+   ],
+   "source": "curated",
+   "notes": "nav node #3457，吸附 0.00m"
+  },
+  {
+   "id": "clinic",
+   "label": "门诊部",
+   "pos": [
+    -37.0,
+    0.0,
+    -1.6
+   ],
+   "source": "nav_poi",
+   "notes": "node=3443"
+  },
+  {
+   "id": "dom_byta",
+   "label": "生活服务楼",
+   "pos": [
+    -32.0,
+    0.0,
+    -90.0
+   ],
+   "source": "nav_poi",
+   "notes": "node=702"
+  },
+  {
+   "id": "robotics",
+   "label": "机器人研究院",
+   "pos": [
+    129.0,
+    0.0,
+    107.85
+   ],
+   "source": "nav_poi",
+   "notes": "node=3454 -> reachable node=3478"
+  },
+  {
+   "id": "museum",
+   "label": "军事博物馆",
+   "pos": [
+    127.6,
+    0.0,
+    74.0
+   ],
+   "source": "nav_poi",
+   "notes": "node=3453"
+  },
+  {
+   "id": "ukraina",
+   "label": "乌克兰饭店",
+   "pos": [
+    173.6,
+    0.0,
+    13.0
+   ],
+   "source": "nav_poi",
+   "notes": "node=3450"
+  },
+  {
+   "id": "mot",
+   "label": "交通部大楼",
+   "pos": [
+    171.6,
+    0.0,
+    -49.0
+   ],
+   "source": "nav_poi",
+   "notes": "node=3455"
+  },
+  {
+   "id": "druzhba",
+   "label": "友谊疗养院",
+   "pos": [
+    127.6,
+    0.0,
+    -99.0
+   ],
+   "source": "nav_poi",
+   "notes": "node=3456"
+  },
+  {
+   "id": "hit",
+   "label": "中苏学堂",
+   "pos": [
+    127.6,
+    0.0,
+    32.0
+   ],
+   "source": "nav_poi",
+   "notes": "node=3452"
+  },
+  {
+   "id": "hex_station",
+   "label": "六边形车站",
+   "pos": [
+    48.0,
+    0.0,
+    -115.6
+   ],
+   "source": "nav_poi",
+   "notes": "node=3458"
+  },
+  {
+   "id": "park_pavilion",
+   "label": "公园凉亭",
+   "pos": [
+    54.0,
+    0.0,
+    96.0
+   ],
+   "source": "nav_poi",
+   "notes": "node=3436"
+  },
+  {
+   "id": "park_entrance",
+   "label": "公园入口",
+   "pos": [
+    -122.0,
+    0.0,
+    92.5
+   ],
+   "source": "nav_poi",
+   "notes": "node=3437"
+  },
+  {
+   "id": "bus_terminal",
+   "label": "公交总站",
+   "pos": [
+    -77.0,
+    0.0,
+    -118.0
+   ],
+   "source": "route_anchor",
+   "notes": "node=3483"
+  },
+  {
+   "id": "west_park",
+   "label": "西公园",
+   "pos": [
+    -188.0,
+    0.0,
+    20.0
+   ],
+   "source": "route_anchor",
+   "notes": "node=3484"
+  },
+  {
+   "id": "start_point",
+   "label": "起始位置",
+   "pos": [
+    -14.0,
+    0.0,
+    -62.0
+   ],
+   "source": "legacy",
+   "notes": ""
+  },
+  {
+   "id": "market_square",
+   "label": "市场广场",
+   "pos": [
+    125.5,
+    0.0,
+    -50.0
+   ],
+   "source": "legacy",
+   "notes": ""
+  },
+  {
+   "id": "street_center",
+   "label": "街道中央",
+   "pos": [
+    0.0,
+    0.0,
+    -72.0
+   ],
+   "source": "legacy",
+   "notes": ""
+  },
+  {
+   "id": "store_door",
+   "label": "面包房门口",
+   "pos": [
+    -1.0,
+    0.0,
+    -89.6
+   ],
+   "source": "legacy",
+   "notes": "alias of bakery"
+  }
+ ]
+}

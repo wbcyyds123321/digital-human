@@ -1,0 +1,4669 @@
+{
+ "schema": "sbh.plan.v3",
+ "title": "苏式蓝调小区 / Soviet Blue-Hour Microdistrict",
+ "note": "Blender Z-up, meters. X east, Y north. map x[-200,200] y[-150,150]. Round 3: monument esplanade + Motherland-style statue, vysotka cluster, Sino-Soviet institute/museum row, modernist institutes, Druzhba sanatorium, UFO + hexagonal bus stations, west forest park.",
+ "base": [
+  400,
+  300
+ ],
+ "roads": [
+  {
+   "id": "AVENUE",
+   "cn": "列宁大街",
+   "kind": "avenue",
+   "rect": [
+    -200,
+    -88,
+    200,
+    -74
+   ],
+   "tram": true,
+   "parking": false
+  },
+  {
+   "id": "NORTH_ROAD",
+   "cn": "北环路",
+   "kind": "street",
+   "rect": [
+    -200,
+    78,
+    200,
+    90
+   ],
+   "tram": false
+  },
+  {
+   "id": "MID_DRIVE",
+   "cn": "小区中路",
+   "kind": "drive",
+   "rect": [
+    -120,
+    -4,
+    120,
+    2
+   ],
+   "tram": false
+  },
+  {
+   "id": "WEST_DRIVE",
+   "cn": "西巷",
+   "kind": "drive",
+   "rect": [
+    -60,
+    -74,
+    -54,
+    90
+   ],
+   "tram": false
+  },
+  {
+   "id": "EAST_DRIVE",
+   "cn": "东巷",
+   "kind": "drive",
+   "rect": [
+    54,
+    -74,
+    60,
+    90
+   ],
+   "tram": false
+  },
+  {
+   "id": "NW_DRIVE",
+   "cn": "锅炉房巷",
+   "kind": "drive",
+   "rect": [
+    -84,
+    2,
+    -78,
+    58
+   ],
+   "tram": false
+  },
+  {
+   "id": "NE_DRIVE",
+   "cn": "学校东巷",
+   "kind": "drive",
+   "rect": [
+    60,
+    2,
+    64,
+    76
+   ],
+   "tram": false
+  },
+  {
+   "id": "SOUTH_SERVICE",
+   "cn": "南侧服务路",
+   "kind": "drive",
+   "rect": [
+    -160,
+    -112,
+    160,
+    -106
+   ],
+   "tram": false
+  },
+  {
+   "id": "S_SPUR_W",
+   "cn": "南巷西",
+   "kind": "drive",
+   "rect": [
+    -74,
+    -112,
+    -68,
+    -88
+   ],
+   "tram": false
+  },
+  {
+   "id": "S_SPUR_E",
+   "cn": "南巷东",
+   "kind": "drive",
+   "rect": [
+    68,
+    -112,
+    74,
+    -88
+   ],
+   "tram": false
+  },
+  {
+   "id": "WEST2_DRIVE",
+   "cn": "西二巷",
+   "kind": "drive",
+   "rect": [
+    -128,
+    -74,
+    -122,
+    90
+   ],
+   "tram": false
+  },
+  {
+   "id": "EAST2_DRIVE",
+   "cn": "东二巷",
+   "kind": "drive",
+   "rect": [
+    118,
+    -74,
+    124,
+    90
+   ],
+   "tram": false
+  },
+  {
+   "id": "SOUTH_HWY",
+   "cn": "南公路",
+   "kind": "drive",
+   "rect": [
+    -200,
+    -144,
+    200,
+    -130
+   ],
+   "tram": false
+  },
+  {
+   "id": "T_SPUR_W",
+   "cn": "客运站西巷",
+   "kind": "drive",
+   "rect": [
+    -80,
+    -130,
+    -74,
+    -88
+   ],
+   "tram": false
+  },
+  {
+   "id": "T_SPUR_E",
+   "cn": "客运站东巷",
+   "kind": "drive",
+   "rect": [
+    74,
+    -130,
+    80,
+    -88
+   ],
+   "tram": false
+  },
+  {
+   "id": "EAST3_DRIVE",
+   "cn": "东三路",
+   "kind": "drive",
+   "rect": [
+    164,
+    -88,
+    170,
+    120
+   ],
+   "tram": false
+  },
+  {
+   "id": "WEST_RING",
+   "cn": "西环路",
+   "kind": "drive",
+   "rect": [
+    -176,
+    -88,
+    -170,
+    120
+   ],
+   "tram": false
+  }
+ ],
+ "sidewalks": [
+  {
+   "id": "SW_AVENUE_N",
+   "rect": [
+    -200,
+    -74,
+    200,
+    -70.5
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_AVENUE_S",
+   "rect": [
+    -200,
+    -92,
+    200,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_NORTH_ROAD",
+   "rect": [
+    -200,
+    74,
+    200,
+    78
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_MID_S",
+   "rect": [
+    -120,
+    -6.5,
+    120,
+    -4
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_MID_N",
+   "rect": [
+    -120,
+    2,
+    120,
+    4.5
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_WEST_DRIVE_W",
+   "rect": [
+    -63,
+    -74,
+    -60,
+    2
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_WEST_DRIVE_E",
+   "rect": [
+    -54,
+    -74,
+    -51,
+    2
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_EAST_DRIVE_W",
+   "rect": [
+    51,
+    -74,
+    54,
+    2
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_EAST_DRIVE_E",
+   "rect": [
+    60,
+    -74,
+    63,
+    2
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_NW_DRIVE_W",
+   "rect": [
+    -87,
+    2,
+    -84,
+    58
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_NW_DRIVE_E",
+   "rect": [
+    -78,
+    2,
+    -75,
+    58
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_NE_DRIVE_W",
+   "rect": [
+    57,
+    2,
+    60,
+    76
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_NE_DRIVE_E",
+   "rect": [
+    64,
+    2,
+    67,
+    76
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_SOUTH_SERVICE_N",
+   "rect": [
+    -160,
+    -106,
+    160,
+    -103.5
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_SOUTH_SERVICE_S",
+   "rect": [
+    -160,
+    -114.5,
+    160,
+    -112
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_S_SPUR_W_W",
+   "rect": [
+    -76.5,
+    -112,
+    -74,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_S_SPUR_W_E",
+   "rect": [
+    -68,
+    -112,
+    -65.5,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_S_SPUR_E_W",
+   "rect": [
+    65.5,
+    -112,
+    68,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_S_SPUR_E_E",
+   "rect": [
+    74,
+    -112,
+    76.5,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_WEST2_W",
+   "rect": [
+    -131,
+    -74,
+    -128,
+    90
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_WEST2_E",
+   "rect": [
+    -122,
+    -74,
+    -119,
+    90
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_EAST2_W",
+   "rect": [
+    115,
+    -74,
+    118,
+    90
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_EAST2_E",
+   "rect": [
+    124,
+    -74,
+    127,
+    90
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_HWY_N",
+   "rect": [
+    -200,
+    -130,
+    200,
+    -127
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_HWY_S",
+   "rect": [
+    -200,
+    -147,
+    200,
+    -144
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_T_SPUR_W_W",
+   "rect": [
+    -83,
+    -130,
+    -80,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_T_SPUR_W_E",
+   "rect": [
+    -74,
+    -130,
+    -71,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_T_SPUR_E_W",
+   "rect": [
+    71,
+    -130,
+    74,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_T_SPUR_E_E",
+   "rect": [
+    80,
+    -130,
+    83,
+    -88
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_EAST3_W",
+   "rect": [
+    161,
+    -88,
+    164,
+    120
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_EAST3_E",
+   "rect": [
+    170,
+    -88,
+    173,
+    120
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_WEST_RING_W",
+   "rect": [
+    -179,
+    -88,
+    -176,
+    120
+   ],
+   "kind": "walk"
+  },
+  {
+   "id": "SW_WEST_RING_E",
+   "rect": [
+    -170,
+    -88,
+    -167,
+    120
+   ],
+   "kind": "walk"
+  }
+ ],
+ "zones": [
+  {
+   "id": "PLAZA",
+   "kind": "plaza",
+   "cn": "中央广场",
+   "rect": [
+    -34,
+    -70,
+    34,
+    -34
+   ],
+   "surface": "granite"
+  },
+  {
+   "id": "PLAZA_STEPS",
+   "kind": "steps",
+   "rect": [
+    -26,
+    -36,
+    26,
+    -34
+   ],
+   "height": 1.2
+  },
+  {
+   "id": "DK_TERRACE",
+   "kind": "terrace",
+   "rect": [
+    -30,
+    -12,
+    30,
+    -6
+   ],
+   "surface": "concrete"
+  },
+  {
+   "id": "W_COURT",
+   "kind": "court",
+   "cn": "西院",
+   "rect": [
+    -102,
+    -52,
+    -64,
+    -34
+   ],
+   "surface": "asphalt_worn"
+  },
+  {
+   "id": "E_COURT",
+   "kind": "court",
+   "cn": "东院",
+   "rect": [
+    64,
+    -52,
+    102,
+    -34
+   ],
+   "surface": "asphalt_worn"
+  },
+  {
+   "id": "W_SOUTH_STRIP",
+   "kind": "parking",
+   "rect": [
+    -120,
+    -70.5,
+    -63,
+    -66
+   ],
+   "cn": "西侧停车带"
+  },
+  {
+   "id": "E_SOUTH_STRIP",
+   "kind": "parking",
+   "rect": [
+    63,
+    -70.5,
+    120,
+    -66
+   ],
+   "cn": "东侧停车带"
+  },
+  {
+   "id": "W_NORTH_STRIP",
+   "kind": "lawn",
+   "rect": [
+    -120,
+    -22,
+    -63,
+    -6.5
+   ],
+   "cn": "西侧绿化带"
+  },
+  {
+   "id": "E_NORTH_STRIP",
+   "kind": "lawn",
+   "rect": [
+    63,
+    -22,
+    120,
+    -6.5
+   ],
+   "cn": "东侧绿化带"
+  },
+  {
+   "id": "WEST_EDGE_GREEN",
+   "kind": "lawn",
+   "rect": [
+    -120,
+    -66,
+    -113,
+    -22
+   ],
+   "cn": "西边界绿地"
+  },
+  {
+   "id": "EAST_EDGE_GREEN",
+   "kind": "lawn",
+   "rect": [
+    113,
+    -66,
+    120,
+    -22
+   ],
+   "cn": "东边界绿地"
+  },
+  {
+   "id": "NORTH_GREEN",
+   "kind": "lawn",
+   "rect": [
+    -120,
+    62,
+    120,
+    74
+   ],
+   "cn": "北侧林带"
+  },
+  {
+   "id": "NORTH_GREEN_2",
+   "kind": "lawn",
+   "rect": [
+    -120,
+    4.5,
+    120,
+    8
+   ],
+   "cn": "北区南缘绿带"
+  },
+  {
+   "id": "BOILER_YARD",
+   "kind": "dirt",
+   "cn": "锅炉房场院",
+   "rect": [
+    -118,
+    44,
+    -86,
+    62
+   ]
+  },
+  {
+   "id": "GARAGE_LANE",
+   "kind": "dirt",
+   "cn": "车库通道",
+   "rect": [
+    -80,
+    10,
+    -42,
+    18
+   ]
+  },
+  {
+   "id": "KG_YARD",
+   "kind": "playground",
+   "cn": "幼儿园场地",
+   "rect": [
+    -38,
+    26,
+    -2,
+    44
+   ]
+  },
+  {
+   "id": "SCHOOL_YARD",
+   "kind": "sport",
+   "cn": "学校操场",
+   "rect": [
+    0,
+    34,
+    54,
+    56
+   ]
+  },
+  {
+   "id": "SCHOOL_YARD_S",
+   "kind": "court",
+   "cn": "学校前院",
+   "rect": [
+    0,
+    32,
+    54,
+    34
+   ]
+  },
+  {
+   "id": "STADIUM",
+   "kind": "stadium",
+   "cn": "小区体育场",
+   "rect": [
+    64,
+    34,
+    96,
+    72
+   ]
+  },
+  {
+   "id": "GYM_COURT",
+   "kind": "sport",
+   "cn": "篮球场",
+   "rect": [
+    88,
+    6,
+    112,
+    30
+   ]
+  },
+  {
+   "id": "SHOP_PARKING",
+   "kind": "parking",
+   "cn": "商店停车",
+   "rect": [
+    88,
+    -74,
+    114,
+    -70.5
+   ]
+  },
+  {
+   "id": "PLAZA_GARDEN",
+   "kind": "lawn",
+   "rect": [
+    -34,
+    -34,
+    -26,
+    -24
+   ],
+   "cn": "广场绿岛"
+  },
+  {
+   "id": "PLAZA_GARDEN_E",
+   "kind": "lawn",
+   "rect": [
+    26,
+    -34,
+    34,
+    -24
+   ],
+   "cn": "广场绿岛"
+  },
+  {
+   "id": "SOUTH_EDGE_LAWN",
+   "kind": "lawn",
+   "cn": "南缘绿地",
+   "rect": [
+    -160,
+    -120,
+    160,
+    -115
+   ]
+  },
+  {
+   "id": "SOUTH_YARD_W",
+   "kind": "court",
+   "cn": "南西院",
+   "rect": [
+    -78,
+    -104,
+    -46,
+    -92
+   ],
+   "surface": "asphalt_worn"
+  },
+  {
+   "id": "SOUTH_YARD_MID",
+   "kind": "court",
+   "cn": "南中院",
+   "rect": [
+    8,
+    -104,
+    18,
+    -92
+   ],
+   "surface": "asphalt_worn"
+  },
+  {
+   "id": "SOUTH_PARKING_W",
+   "kind": "parking",
+   "cn": "南停车场",
+   "rect": [
+    -158,
+    -104,
+    -80,
+    -92
+   ]
+  },
+  {
+   "id": "SOUTH_PARKING_E",
+   "kind": "parking",
+   "cn": "南停车场",
+   "rect": [
+    62,
+    -104,
+    158,
+    -92
+   ]
+  },
+  {
+   "id": "SOUTH_BACK_YARD",
+   "kind": "dirt",
+   "cn": "南后院",
+   "rect": [
+    -160,
+    -106,
+    -80,
+    -104
+   ]
+  },
+  {
+   "id": "W2_COURT",
+   "kind": "court",
+   "cn": "西二院",
+   "rect": [
+    -146,
+    -56,
+    -118,
+    -34
+   ],
+   "surface": "asphalt_worn"
+  },
+  {
+   "id": "W2_SOUTH_LAWN",
+   "kind": "lawn",
+   "cn": "西二南绿地",
+   "rect": [
+    -158,
+    -74,
+    -128,
+    -70
+   ]
+  },
+  {
+   "id": "W2_GARAGE_LANE",
+   "kind": "dirt",
+   "cn": "西二车库通道",
+   "rect": [
+    -158,
+    -2,
+    -134,
+    4
+   ]
+  },
+  {
+   "id": "W2_BANYA_YARD",
+   "kind": "dirt",
+   "cn": "浴场场院",
+   "rect": [
+    -158,
+    14,
+    -134,
+    22
+   ]
+  },
+  {
+   "id": "E_MARKET_SQUARE",
+   "kind": "plaza",
+   "cn": "市场广场",
+   "rect": [
+    124,
+    -64,
+    128,
+    -36
+   ]
+  },
+  {
+   "id": "E_MARKET_PARKING",
+   "kind": "parking",
+   "cn": "市场停车",
+   "rect": [
+    128,
+    -72,
+    158,
+    -66
+   ]
+  },
+  {
+   "id": "E2_COURT",
+   "kind": "court",
+   "cn": "东二院",
+   "rect": [
+    122,
+    -36,
+    160,
+    -30
+   ]
+  },
+  {
+   "id": "E2_LAWN",
+   "kind": "lawn",
+   "cn": "东二绿地",
+   "rect": [
+    124,
+    -66,
+    160,
+    -36
+   ]
+  },
+  {
+   "id": "PARK_LAWN",
+   "kind": "lawn",
+   "cn": "北公园",
+   "rect": [
+    -160,
+    90,
+    160,
+    120
+   ]
+  },
+  {
+   "id": "PARK_ENTRY_W",
+   "kind": "plaza",
+   "cn": "公园西门",
+   "rect": [
+    -132,
+    90,
+    -116,
+    100
+   ]
+  },
+  {
+   "id": "PARK_ENTRY_E",
+   "kind": "plaza",
+   "cn": "公园东门",
+   "rect": [
+    104,
+    90,
+    120,
+    100
+   ]
+  },
+  {
+   "id": "PARK_PLAY_ZONE",
+   "kind": "playground",
+   "cn": "公园儿童场",
+   "rect": [
+    -60,
+    92,
+    -34,
+    112
+   ]
+  },
+  {
+   "id": "PARK_PATH_ZONE",
+   "kind": "court",
+   "cn": "公园环路",
+   "rect": [
+    -70,
+    100,
+    70,
+    112
+   ]
+  },
+  {
+   "id": "PARK_POND",
+   "kind": "water",
+   "cn": "公园池塘",
+   "rect": [
+    -30,
+    94,
+    40,
+    116
+   ],
+   "ellipse": true
+  },
+  {
+   "id": "MONUMENT_ESPLANADE",
+   "kind": "plaza",
+   "cn": "纪念广场",
+   "rect": [
+    -92,
+    118,
+    92,
+    132
+   ]
+  },
+  {
+   "id": "MONUMENT_TERRACE",
+   "kind": "dirt",
+   "cn": "纪念台地",
+   "rect": [
+    -52,
+    132,
+    52,
+    142
+   ],
+   "surface": "granite"
+  },
+  {
+   "id": "MONUMENT_MOUND",
+   "kind": "lawn",
+   "cn": "纪念坡地",
+   "rect": [
+    -120,
+    142,
+    120,
+    150
+   ]
+  },
+  {
+   "id": "ESPLANADE_WING_W",
+   "kind": "lawn",
+   "cn": "纪念广场西绿地",
+   "rect": [
+    -180,
+    118,
+    -96,
+    150
+   ]
+  },
+  {
+   "id": "ESPLANADE_WING_E",
+   "kind": "lawn",
+   "cn": "纪念广场东绿地",
+   "rect": [
+    96,
+    118,
+    186,
+    150
+   ]
+  },
+  {
+   "id": "EAST_Q_LAWN_N",
+   "kind": "lawn",
+   "cn": "东区北绿地",
+   "rect": [
+    124,
+    88,
+    161,
+    120
+   ]
+  },
+  {
+   "id": "EAST_Q_PLAZA",
+   "kind": "plaza",
+   "cn": "东区广场",
+   "rect": [
+    124,
+    46,
+    161,
+    60
+   ]
+  },
+  {
+   "id": "EAST_Q_LAWN_MID",
+   "kind": "lawn",
+   "cn": "东区绿地",
+   "rect": [
+    124,
+    -88,
+    161,
+    18
+   ]
+  },
+  {
+   "id": "EAST_Q_PARKING",
+   "kind": "parking",
+   "cn": "东区停车",
+   "rect": [
+    173,
+    -88,
+    198,
+    -60
+   ]
+  },
+  {
+   "id": "VYSOTKA_PLAZA",
+   "kind": "plaza",
+   "cn": "高楼广场",
+   "rect": [
+    173,
+    -10,
+    200,
+    34
+   ]
+  },
+  {
+   "id": "SOUTH_Q_LAWN",
+   "kind": "lawn",
+   "cn": "南绿地",
+   "rect": [
+    -200,
+    -120,
+    -92,
+    -108
+   ]
+  },
+  {
+   "id": "TERMINAL_APRON",
+   "kind": "court",
+   "cn": "客运站场院",
+   "rect": [
+    -140,
+    -130,
+    140,
+    -114
+   ],
+   "surface": "asphalt_worn"
+  },
+  {
+   "id": "TERMINAL_BAYS_W",
+   "kind": "parking",
+   "cn": "西站台",
+   "rect": [
+    -108,
+    -130,
+    -76,
+    -120
+   ]
+  },
+  {
+   "id": "TERMINAL_BAYS_E",
+   "kind": "parking",
+   "cn": "东站台",
+   "rect": [
+    64,
+    -130,
+    96,
+    -120
+   ]
+  },
+  {
+   "id": "TERMINAL_PLAZA",
+   "kind": "plaza",
+   "cn": "站前广场",
+   "rect": [
+    -40,
+    -122,
+    40,
+    -114
+   ]
+  },
+  {
+   "id": "WEST_FOREST",
+   "kind": "lawn",
+   "cn": "西森林公园",
+   "rect": [
+    -200,
+    -120,
+    -179,
+    150
+   ]
+  },
+  {
+   "id": "WEST_STRIP",
+   "kind": "lawn",
+   "cn": "西侧绿带",
+   "rect": [
+    -167,
+    -74,
+    -160,
+    120
+   ]
+  },
+  {
+   "id": "WEST_STRIP_S",
+   "kind": "dirt",
+   "cn": "西侧场地",
+   "rect": [
+    -200,
+    -150,
+    -160,
+    -120
+   ]
+  },
+  {
+   "id": "MONUMENT_POOL_W",
+   "kind": "water",
+   "cn": "倒影池西",
+   "rect": [
+    -40,
+    120,
+    -14,
+    127
+   ],
+   "ellipse": false
+  },
+  {
+   "id": "MONUMENT_POOL_E",
+   "kind": "water",
+   "cn": "倒影池东",
+   "rect": [
+    14,
+    120,
+    40,
+    127
+   ],
+   "ellipse": false
+  }
+ ],
+ "blocks": [
+  {
+   "id": "W_K1",
+   "cn": "西区赫鲁晓夫楼A",
+   "type": "khrush_panel",
+   "rect": [
+    -112,
+    -66,
+    -102,
+    -22
+   ],
+   "faces": [
+    "PX"
+   ],
+   "floors": 5,
+   "sections": 4,
+   "variant": "pale_mint",
+   "seed": 11
+  },
+  {
+   "id": "W_K2",
+   "cn": "西区赫鲁晓夫楼B",
+   "type": "khrush_brick",
+   "rect": [
+    -98,
+    -66,
+    -64,
+    -54
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 5,
+   "sections": 3,
+   "variant": "silicate_brick",
+   "seed": 12
+  },
+  {
+   "id": "W_K3",
+   "cn": "西区过关楼",
+   "type": "khrush_arch",
+   "rect": [
+    -98,
+    -34,
+    -64,
+    -22
+   ],
+   "faces": [
+    "PY",
+    "NY"
+   ],
+   "floors": 5,
+   "sections": 3,
+   "variant": "pale_blue",
+   "seed": 13
+  },
+  {
+   "id": "E_K1",
+   "cn": "东区赫鲁晓夫楼A",
+   "type": "khrush_panel",
+   "rect": [
+    102,
+    -66,
+    112,
+    -22
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 5,
+   "sections": 4,
+   "variant": "pale_blue",
+   "seed": 21
+  },
+  {
+   "id": "E_K2",
+   "cn": "东区赫鲁晓夫楼B",
+   "type": "khrush_brick",
+   "rect": [
+    64,
+    -66,
+    88,
+    -54
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 5,
+   "sections": 2,
+   "variant": "plaster_patch",
+   "seed": 22
+  },
+  {
+   "id": "E_K3",
+   "cn": "东区改造楼",
+   "type": "khrush_mod",
+   "rect": [
+    64,
+    -34,
+    92,
+    -22
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 5,
+   "sections": 3,
+   "variant": "glazed_balcony",
+   "seed": 23
+  },
+  {
+   "id": "T_W",
+   "cn": "西塔楼",
+   "type": "brezhnevka_9",
+   "rect": [
+    -52,
+    -70,
+    -34,
+    -54
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 9,
+   "sections": 2,
+   "variant": "tiled_band",
+   "seed": 31
+  },
+  {
+   "id": "T_E",
+   "cn": "东塔楼",
+   "type": "brezhnevka_9",
+   "rect": [
+    34,
+    -70,
+    52,
+    -54
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 9,
+   "sections": 2,
+   "variant": "tiled_band",
+   "seed": 32
+  },
+  {
+   "id": "T_NW",
+   "cn": "西北塔楼",
+   "type": "brezhnevka_9",
+   "rect": [
+    -74,
+    46,
+    -56,
+    60
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 9,
+   "sections": 2,
+   "variant": "grey_panel",
+   "seed": 33
+  },
+  {
+   "id": "T_NE",
+   "cn": "东北塔楼",
+   "type": "brezhnevka_9",
+   "rect": [
+    96,
+    44,
+    114,
+    58
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 9,
+   "sections": 2,
+   "variant": "grey_panel",
+   "seed": 34
+  },
+  {
+   "id": "DK",
+   "cn": "文化宫",
+   "type": "dk",
+   "rect": [
+    -26,
+    -34,
+    26,
+    -12
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 2,
+   "seed": 41
+  },
+  {
+   "id": "SCHOOL",
+   "cn": "第三中学",
+   "type": "school",
+   "rect": [
+    2,
+    8,
+    50,
+    32
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 3,
+   "seed": 42,
+   "extra": "gym_wing"
+  },
+  {
+   "id": "KG",
+   "cn": "第九幼儿园",
+   "type": "kindergarten",
+   "rect": [
+    -36,
+    8,
+    -6,
+    24
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 2,
+   "seed": 43
+  },
+  {
+   "id": "BOILER",
+   "cn": "锅炉房",
+   "type": "boiler",
+   "rect": [
+    -112,
+    20,
+    -86,
+    42
+   ],
+   "faces": [
+    "PY",
+    "PX"
+   ],
+   "floors": 2,
+   "seed": 44,
+   "chimney": [
+    -108,
+    30,
+    3.2,
+    38
+   ]
+  },
+  {
+   "id": "SHOP",
+   "cn": "食品商店",
+   "type": "shop",
+   "rect": [
+    92,
+    -68,
+    112,
+    -56
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 2,
+   "seed": 45
+  },
+  {
+   "id": "GYM",
+   "cn": "体育馆",
+   "type": "gym",
+   "rect": [
+    66,
+    8,
+    88,
+    28
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 2,
+   "seed": 46
+  },
+  {
+   "id": "CLINIC",
+   "cn": "门诊部",
+   "type": "clinic",
+   "rect": [
+    -46,
+    -16,
+    -28,
+    -4
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 2,
+   "seed": 47
+  },
+  {
+   "id": "GARAGES",
+   "cn": "车库合作社",
+   "type": "garages",
+   "rect": [
+    -78,
+    18,
+    -46,
+    26
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 1,
+   "seed": 48,
+   "units": 8
+  },
+  {
+   "id": "STAD_STAND",
+   "cn": "体育场看台",
+   "type": "stadium_stand",
+   "rect": [
+    66,
+    34,
+    94,
+    39
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 1,
+   "seed": 49
+  },
+  {
+   "id": "FRAME",
+   "cn": "烂尾楼",
+   "type": "frame",
+   "rect": [
+    -114,
+    62,
+    -96,
+    76
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 5,
+   "seed": 50
+  },
+  {
+   "id": "KIOSK",
+   "cn": "售货亭",
+   "type": "kiosk",
+   "rect": [
+    -48,
+    -70,
+    -43,
+    -66
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 1,
+   "seed": 51
+  },
+  {
+   "id": "W2_K1",
+   "cn": "西二区赫鲁晓夫楼A",
+   "type": "khrush_panel",
+   "rect": [
+    -158,
+    -68,
+    -148,
+    -24
+   ],
+   "faces": [
+    "PX"
+   ],
+   "floors": 5,
+   "sections": 4,
+   "variant": "pale_mint",
+   "seed": 61
+  },
+  {
+   "id": "W2_K2",
+   "cn": "西二区赫鲁晓夫楼B",
+   "type": "khrush_brick",
+   "rect": [
+    -146,
+    -68,
+    -116,
+    -56
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 5,
+   "sections": 3,
+   "variant": "plaster_patch",
+   "seed": 62
+  },
+  {
+   "id": "W2_K3",
+   "cn": "西二区过关楼",
+   "type": "khrush_arch",
+   "rect": [
+    -146,
+    -34,
+    -118,
+    -22
+   ],
+   "faces": [
+    "PY",
+    "NY"
+   ],
+   "floors": 5,
+   "sections": 3,
+   "variant": "pale_blue",
+   "seed": 63
+  },
+  {
+   "id": "W2_GARAGES",
+   "cn": "西二车库",
+   "type": "garages",
+   "rect": [
+    -158,
+    4,
+    -136,
+    12
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 1,
+   "units": 6,
+   "seed": 64
+  },
+  {
+   "id": "BANYA",
+   "cn": "公共浴场",
+   "type": "banya",
+   "rect": [
+    -158,
+    22,
+    -138,
+    38
+   ],
+   "faces": [
+    "PX"
+   ],
+   "floors": 2,
+   "seed": 65
+  },
+  {
+   "id": "DOM_BYTA",
+   "cn": "生活服务楼",
+   "type": "dombyta",
+   "rect": [
+    -44,
+    -104,
+    -20,
+    -92
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 2,
+   "seed": 66
+  },
+  {
+   "id": "BAKERY",
+   "cn": "面包房",
+   "type": "bakery",
+   "rect": [
+    -8,
+    -102,
+    6,
+    -92
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 1,
+   "seed": 67
+  },
+  {
+   "id": "KINO",
+   "cn": "电影院",
+   "type": "cinema",
+   "rect": [
+    20,
+    -108,
+    60,
+    -92
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 2,
+   "seed": 68
+  },
+  {
+   "id": "MARKET",
+   "cn": "市场",
+   "type": "market",
+   "rect": [
+    128,
+    -64,
+    158,
+    -42
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 1,
+   "seed": 69
+  },
+  {
+   "id": "E2_GARAGES",
+   "cn": "东二车库",
+   "type": "garages",
+   "rect": [
+    128,
+    4,
+    158,
+    12
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 1,
+   "units": 6,
+   "seed": 70
+  },
+  {
+   "id": "T_E2",
+   "cn": "东二塔楼",
+   "type": "brezhnevka_9",
+   "rect": [
+    128,
+    -30,
+    146,
+    -14
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 9,
+   "sections": 2,
+   "variant": "tiled_band",
+   "seed": 71
+  },
+  {
+   "id": "T_NW2",
+   "cn": "公园西塔楼",
+   "type": "brezhnevka_9",
+   "rect": [
+    -150,
+    92,
+    -132,
+    106
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 9,
+   "sections": 2,
+   "variant": "grey_panel",
+   "seed": 72
+  },
+  {
+   "id": "T_NE2",
+   "cn": "公园东塔楼",
+   "type": "brezhnevka_9",
+   "rect": [
+    120,
+    92,
+    138,
+    106
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 9,
+   "sections": 2,
+   "variant": "grey_panel",
+   "seed": 73
+  },
+  {
+   "id": "S_KIOSK",
+   "cn": "南侧售货亭",
+   "type": "kiosk",
+   "rect": [
+    -62,
+    -100,
+    -57,
+    -94
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 1,
+   "seed": 74
+  },
+  {
+   "id": "MOTHERLAND",
+   "cn": "祖国母亲雕像",
+   "type": "statue_motherland",
+   "rect": [
+    -12,
+    138,
+    12,
+    150
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 1,
+   "height": 40,
+   "z": 2.7,
+   "seed": 101
+  },
+  {
+   "id": "BREST_RELIEF",
+   "cn": "勇气浮雕墙",
+   "type": "relief_wall",
+   "rect": [
+    -52,
+    124,
+    -12,
+    128
+   ],
+   "faces": [
+    "NY"
+   ],
+   "floors": 1,
+   "height": 6.5,
+   "seed": 102
+  },
+  {
+   "id": "METRO",
+   "cn": "地铁站亭",
+   "type": "metro_pavilion",
+   "rect": [
+    138,
+    46,
+    158,
+    54
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 1,
+   "height": 9,
+   "seed": 103
+  },
+  {
+   "id": "MSU_MAIN",
+   "cn": "国立大学主楼",
+   "type": "vysotka_main",
+   "rect": [
+    174,
+    36,
+    198,
+    74
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 14,
+   "height": 52,
+   "spire": 68,
+   "seed": 104
+  },
+  {
+   "id": "UKRAINA",
+   "cn": "乌克兰饭店",
+   "type": "vysotka_hotel",
+   "rect": [
+    176,
+    6,
+    194,
+    20
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 12,
+   "height": 42,
+   "spire": 50,
+   "seed": 105
+  },
+  {
+   "id": "MFA",
+   "cn": "外交部大楼",
+   "type": "vysotka_ministry",
+   "rect": [
+    176,
+    -26,
+    196,
+    -12
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 11,
+   "height": 38,
+   "seed": 106
+  },
+  {
+   "id": "HIT",
+   "cn": "中苏学堂",
+   "type": "institute_sino",
+   "rect": [
+    130,
+    20,
+    156,
+    44
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 5,
+   "height": 24,
+   "seed": 107
+  },
+  {
+   "id": "MUSEUM",
+   "cn": "军事博物馆",
+   "type": "museum_colonnade",
+   "rect": [
+    130,
+    62,
+    158,
+    86
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 3,
+   "height": 22,
+   "seed": 108
+  },
+  {
+   "id": "ROBOTICS",
+   "cn": "机器人研究院",
+   "type": "institute_robotics",
+   "rect": [
+    140,
+    94,
+    160,
+    112
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 3,
+   "height": 16,
+   "seed": 109
+  },
+  {
+   "id": "MOT",
+   "cn": "交通部大楼",
+   "type": "ministry_transport",
+   "rect": [
+    174,
+    -58,
+    198,
+    -40
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 8,
+   "height": 28,
+   "seed": 110
+  },
+  {
+   "id": "DRUZHBA",
+   "cn": "友谊疗养院",
+   "type": "sanatorium_druzhba",
+   "rect": [
+    130,
+    -106,
+    158,
+    -92
+   ],
+   "faces": [
+    "NX"
+   ],
+   "floors": 3,
+   "height": 12,
+   "seed": 111
+  },
+  {
+   "id": "UFO_STATION",
+   "cn": "飞碟车站",
+   "type": "bus_station_ufo",
+   "rect": [
+    -74,
+    -130,
+    -48,
+    -116
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 1,
+   "height": 10,
+   "seed": 112
+  },
+  {
+   "id": "HEX_STATION",
+   "cn": "六边形车站",
+   "type": "bus_station_hex",
+   "rect": [
+    36,
+    -130,
+    60,
+    -118
+   ],
+   "faces": [
+    "PY"
+   ],
+   "floors": 1,
+   "height": 12,
+   "seed": 113
+  }
+ ],
+ "landmarks": [
+  {
+   "id": "OBELISK",
+   "type": "obelisk",
+   "cn": "方尖碑",
+   "pos": [
+    0,
+    -52
+   ],
+   "height": 18
+  },
+  {
+   "id": "FOUNTAIN",
+   "type": "fountain_dry",
+   "cn": "干涸喷泉",
+   "pos": [
+    0,
+    -43
+   ],
+   "radius": 5
+  },
+  {
+   "id": "FLAGS",
+   "type": "flagpoles",
+   "cn": "旗杆",
+   "pos": [
+    0,
+    -67
+   ],
+   "count": 3
+  },
+  {
+   "id": "BUS_STOP",
+   "type": "bus_stop",
+   "cn": "公交站",
+   "pos": [
+    -40,
+    -71.5
+   ],
+   "rot": 0
+  },
+  {
+   "id": "TRAM_STOP",
+   "type": "tram_stop",
+   "cn": "电车站",
+   "pos": [
+    18,
+    -81
+   ],
+   "rot": 0
+  },
+  {
+   "id": "BILLBOARD_1",
+   "type": "billboard",
+   "cn": "广告牌1",
+   "pos": [
+    -96,
+    -70
+   ],
+   "rot": 0,
+   "size": [
+    9,
+    4
+   ]
+  },
+  {
+   "id": "BILLBOARD_2",
+   "type": "billboard",
+   "cn": "广告牌2",
+   "pos": [
+    70,
+    -70
+   ],
+   "rot": 0,
+   "size": [
+    8,
+    4
+   ]
+  },
+  {
+   "id": "BILLBOARD_3",
+   "type": "billboard",
+   "cn": "广告牌3",
+   "pos": [
+    22,
+    -68
+   ],
+   "rot": 180,
+   "size": [
+    7,
+    3.5
+   ]
+  },
+  {
+   "id": "POSTER_BOARD_1",
+   "type": "poster_board",
+   "cn": "宣传栏",
+   "pos": [
+    -8,
+    -70
+   ],
+   "rot": 0,
+   "size": [
+    6,
+    2.4
+   ]
+  },
+  {
+   "id": "POSTER_BOARD_2",
+   "type": "poster_board",
+   "cn": "宣传栏",
+   "pos": [
+    8,
+    -30
+   ],
+   "rot": 180,
+   "size": [
+    5,
+    2.2
+   ]
+  },
+  {
+   "id": "BILLBOARD_4",
+   "type": "billboard",
+   "cn": "广告牌4",
+   "pos": [
+    108,
+    -69.5
+   ],
+   "rot": 0,
+   "size": [
+    8,
+    4
+   ]
+  },
+  {
+   "id": "BILLBOARD_5",
+   "type": "billboard",
+   "cn": "广告牌5",
+   "pos": [
+    -150,
+    -69.5
+   ],
+   "rot": 0,
+   "size": [
+    8,
+    4
+   ]
+  },
+  {
+   "id": "POSTER_BOARD_3",
+   "type": "poster_board",
+   "cn": "宣传栏南",
+   "pos": [
+    30,
+    -89.6
+   ],
+   "rot": 180,
+   "size": [
+    5,
+    2.2
+   ]
+  },
+  {
+   "id": "PAVILION",
+   "type": "pavilion",
+   "cn": "公园凉亭",
+   "pos": [
+    54,
+    100
+   ],
+   "rot": 0
+  },
+  {
+   "id": "PARK_SIGN",
+   "type": "park_sign",
+   "cn": "公园入口",
+   "pos": [
+    -125,
+    92
+   ],
+   "rot": 0
+  },
+  {
+   "id": "BUS_STOP_2",
+   "type": "bus_stop",
+   "cn": "公交站南",
+   "pos": [
+    40,
+    -89.5
+   ],
+   "rot": 180
+  },
+  {
+   "id": "ETERNAL_FLAME",
+   "type": "eternal_flame",
+   "cn": "长明火",
+   "pos": [
+    0,
+    129
+   ],
+   "rot": 0
+  },
+  {
+   "id": "GUARD_BOX",
+   "type": "guard_box",
+   "cn": "岗亭",
+   "pos": [
+    9,
+    129
+   ],
+   "rot": 0
+  },
+  {
+   "id": "FLAG_ROW_MONUMENT",
+   "type": "flag_row",
+   "cn": "纪念旗阵",
+   "pos": [
+    26,
+    128
+   ],
+   "rot": 0
+  },
+  {
+   "id": "METRO_SIGN",
+   "type": "metro_sign",
+   "cn": "地铁标志",
+   "pos": [
+    135,
+    50
+   ],
+   "rot": 0
+  },
+  {
+   "id": "STATUE_PLAQUE",
+   "type": "plaque",
+   "cn": "碑文",
+   "pos": [
+    0,
+    136.5
+   ],
+   "rot": 0
+  }
+ ],
+ "tram": {
+  "track_y": [
+   -84.2,
+   -78.8
+  ],
+  "stop_platform": [
+   4,
+   -83.2,
+   26,
+   -79.8
+  ],
+  "poles_x_step": 24,
+  "wire_height": 5.6
+ },
+ "paths": [
+  {
+   "id": "P_BOULEVARD",
+   "cn": "广场主道",
+   "pts": [
+    [
+     0,
+     -74
+    ],
+    [
+     0,
+     -70
+    ],
+    [
+     0,
+     -52
+    ],
+    [
+     0,
+     -34
+    ]
+   ],
+   "width": 6
+  },
+  {
+   "id": "P_PLAZA_E",
+   "cn": "广场东侧道",
+   "pts": [
+    [
+     26,
+     -70
+    ],
+    [
+     26,
+     -50
+    ],
+    [
+     26,
+     -34
+    ]
+   ],
+   "width": 4
+  },
+  {
+   "id": "P_PLAZA_W",
+   "cn": "广场西侧道",
+   "pts": [
+    [
+     -26,
+     -70
+    ],
+    [
+     -26,
+     -50
+    ],
+    [
+     -26,
+     -34
+    ]
+   ],
+   "width": 4
+  },
+  {
+   "id": "P_DK",
+   "cn": "文化宫前道",
+   "pts": [
+    [
+     -26,
+     -34
+    ],
+    [
+     0,
+     -36
+    ],
+    [
+     26,
+     -34
+    ]
+   ],
+   "width": 4
+  },
+  {
+   "id": "P_W_COURT",
+   "cn": "西院步道",
+   "pts": [
+    [
+     -57.5,
+     -43
+    ],
+    [
+     -64,
+     -43
+    ],
+    [
+     -78,
+     -43
+    ],
+    [
+     -90,
+     -43
+    ],
+    [
+     -102,
+     -43
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_E_COURT",
+   "cn": "东院步道",
+   "pts": [
+    [
+     57.5,
+     -43
+    ],
+    [
+     64,
+     -43
+    ],
+    [
+     78,
+     -43
+    ],
+    [
+     90,
+     -43
+    ],
+    [
+     102,
+     -43
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_W_NORTH",
+   "cn": "西区北步道",
+   "pts": [
+    [
+     -81,
+     -6
+    ],
+    [
+     -81,
+     -18
+    ],
+    [
+     -81,
+     -22
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_E_NORTH",
+   "cn": "东区北步道",
+   "pts": [
+    [
+     78,
+     -6
+    ],
+    [
+     78,
+     -18
+    ],
+    [
+     78,
+     -22
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_SCHOOL",
+   "cn": "学校前步道",
+   "pts": [
+    [
+     26,
+     4.5
+    ],
+    [
+     26,
+     8
+    ],
+    [
+     26,
+     34
+    ],
+    [
+     26,
+     56
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_KG",
+   "cn": "幼儿园步道",
+   "pts": [
+    [
+     -81,
+     4.5
+    ],
+    [
+     -81,
+     14
+    ],
+    [
+     -36,
+     14
+    ],
+    [
+     -20,
+     26
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_BOILER",
+   "cn": "锅炉房步道",
+   "pts": [
+    [
+     -81,
+     44
+    ],
+    [
+     -86,
+     44
+    ],
+    [
+     -96,
+     44
+    ],
+    [
+     -108,
+     44
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_GARAGE",
+   "cn": "车库步道",
+   "pts": [
+    [
+     -81,
+     18
+    ],
+    [
+     -62,
+     18
+    ],
+    [
+     -48,
+     18
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_STADIUM",
+   "cn": "体育场步道",
+   "pts": [
+    [
+     62,
+     34
+    ],
+    [
+     62,
+     60
+    ],
+    [
+     66,
+     60
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_NORTH_ROAD",
+   "cn": "北环路步道",
+   "pts": [
+    [
+     -120,
+     76
+    ],
+    [
+     120,
+     76
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_SOUTH_MID",
+   "cn": "南中步道",
+   "pts": [
+    [
+     0,
+     -88
+    ],
+    [
+     0,
+     -104
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_SOUTH_W",
+   "cn": "南西步道",
+   "pts": [
+    [
+     -76,
+     -88
+    ],
+    [
+     -76,
+     -103
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_SOUTH_E",
+   "cn": "南东步道",
+   "pts": [
+    [
+     76,
+     -88
+    ],
+    [
+     76,
+     -103
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_W2_COURT",
+   "cn": "西二院步道",
+   "pts": [
+    [
+     -119,
+     -44
+    ],
+    [
+     -146,
+     -44
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_W2_DRIVE",
+   "cn": "西二巷步道",
+   "pts": [
+    [
+     -125,
+     -74
+    ],
+    [
+     -125,
+     90
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_E2_DRIVE",
+   "cn": "东二巷步道",
+   "pts": [
+    [
+     121,
+     -74
+    ],
+    [
+     121,
+     90
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_PARK_W",
+   "cn": "公园西路",
+   "pts": [
+    [
+     -125,
+     90
+    ],
+    [
+     -125,
+     98
+    ],
+    [
+     -70,
+     100
+    ],
+    [
+     -50,
+     100
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_PARK_E",
+   "cn": "公园东路",
+   "pts": [
+    [
+     121,
+     90
+    ],
+    [
+     121,
+     98
+    ],
+    [
+     70,
+     101
+    ],
+    [
+     48,
+     101
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_POND_S",
+   "cn": "池塘南道",
+   "pts": [
+    [
+     -50,
+     99
+    ],
+    [
+     -40,
+     96
+    ],
+    [
+     20,
+     96
+    ],
+    [
+     44,
+     99
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_POND_N",
+   "cn": "池塘北道",
+   "pts": [
+    [
+     -40,
+     114
+    ],
+    [
+     44,
+     114
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_MARKET",
+   "cn": "市场步道",
+   "pts": [
+    [
+     121,
+     -53
+    ],
+    [
+     127,
+     -53
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_E2_TOWER",
+   "cn": "东二塔步道",
+   "pts": [
+    [
+     121,
+     -22
+    ],
+    [
+     128,
+     -22
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_PARK_TOWERS",
+   "cn": "公园塔楼步道",
+   "pts": [
+    [
+     -132,
+     100
+    ],
+    [
+     -100,
+     100
+    ],
+    [
+     100,
+     100
+    ],
+    [
+     120,
+     100
+    ]
+   ],
+   "width": 2.5
+  },
+  {
+   "id": "P_MONUMENT_AXIS",
+   "cn": "纪念轴",
+   "pts": [
+    [
+     0,
+     90
+    ],
+    [
+     0,
+     118
+    ],
+    [
+     0,
+     132
+    ]
+   ],
+   "width": 4
+  },
+  {
+   "id": "P_MONUMENT_W",
+   "cn": "纪念西道",
+   "pts": [
+    [
+     -120,
+     120
+    ],
+    [
+     -70,
+     118
+    ],
+    [
+     -30,
+     120
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_MONUMENT_E",
+   "cn": "纪念东道",
+   "pts": [
+    [
+     120,
+     120
+    ],
+    [
+     70,
+     118
+    ],
+    [
+     30,
+     120
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_MOUND",
+   "cn": "坡道",
+   "pts": [
+    [
+     -20,
+     142
+    ],
+    [
+     -20,
+     148
+    ],
+    [
+     20,
+     148
+    ],
+    [
+     20,
+     142
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_EAST_Q_N",
+   "cn": "东区北道",
+   "pts": [
+    [
+     121,
+     104
+    ],
+    [
+     130,
+     104
+    ],
+    [
+     161,
+     104
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_EAST_Q_MID",
+   "cn": "东区中道",
+   "pts": [
+    [
+     121,
+     52
+    ],
+    [
+     140,
+     52
+    ],
+    [
+     161,
+     52
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_EAST_Q_S",
+   "cn": "东区南道",
+   "pts": [
+    [
+     121,
+     -100
+    ],
+    [
+     140,
+     -100
+    ],
+    [
+     161,
+     -104
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_VYSOTKA",
+   "cn": "高楼广场道",
+   "pts": [
+    [
+     173,
+     10
+    ],
+    [
+     198,
+     10
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_TERMINAL_W",
+   "cn": "西站台道",
+   "pts": [
+    [
+     -77,
+     -88
+    ],
+    [
+     -77,
+     -114
+    ],
+    [
+     -60,
+     -116
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_TERMINAL_E",
+   "cn": "东站台道",
+   "pts": [
+    [
+     77,
+     -88
+    ],
+    [
+     77,
+     -114
+    ],
+    [
+     46,
+     -116
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_TERMINAL_MID",
+   "cn": "站前道",
+   "pts": [
+    [
+     -40,
+     -114
+    ],
+    [
+     0,
+     -114
+    ],
+    [
+     40,
+     -114
+    ]
+   ],
+   "width": 3
+  },
+  {
+   "id": "P_WEST_PARK",
+   "cn": "森林公园道",
+   "pts": [
+    [
+     -172,
+     -40
+    ],
+    [
+     -190,
+     -20
+    ],
+    [
+     -190,
+     60
+    ],
+    [
+     -172,
+     90
+    ]
+   ],
+   "width": 2.5
+  }
+ ],
+ "prop_zones": [
+  {
+   "id": "TREES_AVENUE_ROW",
+   "type": "poplar_row",
+   "rect": [
+    -158,
+    -73,
+    158,
+    -71
+   ],
+   "step": 9
+  },
+  {
+   "id": "TREES_PLAZA_E",
+   "type": "linden_row",
+   "rect": [
+    30,
+    -70,
+    32,
+    -34
+   ],
+   "step": 7
+  },
+  {
+   "id": "TREES_PLAZA_W",
+   "type": "linden_row",
+   "rect": [
+    -32,
+    -70,
+    -30,
+    -34
+   ],
+   "step": 7
+  },
+  {
+   "id": "TREES_W_DRIVE",
+   "type": "poplar_row",
+   "rect": [
+    -52,
+    -70,
+    -50,
+    0
+   ],
+   "step": 11
+  },
+  {
+   "id": "TREES_E_DRIVE",
+   "type": "poplar_row",
+   "rect": [
+    50,
+    -70,
+    52,
+    0
+   ],
+   "step": 11
+  },
+  {
+   "id": "TREES_NORTH",
+   "type": "mixed_row",
+   "rect": [
+    -118,
+    64,
+    118,
+    72
+   ],
+   "step": 10
+  },
+  {
+   "id": "TREES_W_COURT",
+   "type": "birch_cluster",
+   "rect": [
+    -100,
+    -50,
+    -66,
+    -36
+   ],
+   "count": 5
+  },
+  {
+   "id": "TREES_E_COURT",
+   "type": "birch_cluster",
+   "rect": [
+    66,
+    -50,
+    100,
+    -36
+   ],
+   "count": 5
+  },
+  {
+   "id": "TREES_SCHOOL",
+   "type": "mixed_row",
+   "rect": [
+    2,
+    55,
+    54,
+    57
+   ],
+   "step": 8
+  },
+  {
+   "id": "TREES_KG",
+   "type": "birch_cluster",
+   "rect": [
+    -36,
+    28,
+    -6,
+    42
+   ],
+   "count": 6
+  },
+  {
+   "id": "TREES_EDGE_W",
+   "type": "poplar_row",
+   "rect": [
+    -118,
+    -64,
+    -116,
+    -24
+   ],
+   "step": 9
+  },
+  {
+   "id": "TREES_EDGE_E",
+   "type": "poplar_row",
+   "rect": [
+    116,
+    -64,
+    118,
+    -24
+   ],
+   "step": 9
+  },
+  {
+   "id": "PLAY_W",
+   "type": "playground",
+   "rect": [
+    -96,
+    -49,
+    -76,
+    -37
+   ],
+   "kind": "full"
+  },
+  {
+   "id": "PLAY_E",
+   "type": "playground",
+   "rect": [
+    76,
+    -49,
+    96,
+    -37
+   ],
+   "kind": "full"
+  },
+  {
+   "id": "PLAY_KG",
+   "type": "playground",
+   "rect": [
+    -34,
+    28,
+    -8,
+    42
+   ],
+   "kind": "kindergarten"
+  },
+  {
+   "id": "PLAY_SCHOOL",
+   "type": "playground",
+   "rect": [
+    6,
+    38,
+    20,
+    50
+   ],
+   "kind": "sport_small"
+  },
+  {
+   "id": "LAUNDRY_W",
+   "type": "laundry",
+   "rect": [
+    -100,
+    -46,
+    -78,
+    -40
+   ],
+   "count": 3
+  },
+  {
+   "id": "LAUNDRY_E",
+   "type": "laundry",
+   "rect": [
+    78,
+    -46,
+    100,
+    -40
+   ],
+   "count": 3
+  },
+  {
+   "id": "DUMPS_W",
+   "type": "dumpster",
+   "rect": [
+    -106,
+    -58,
+    -100,
+    -54
+   ],
+   "count": 2
+  },
+  {
+   "id": "DUMPS_E",
+   "type": "dumpster",
+   "rect": [
+    100,
+    -58,
+    106,
+    -54
+   ],
+   "count": 2
+  },
+  {
+   "id": "DUMPS_KG",
+   "type": "dumpster",
+   "rect": [
+    -8,
+    42,
+    -4,
+    45
+   ],
+   "count": 1
+  },
+  {
+   "id": "BENCH_PLAZA",
+   "type": "benches",
+   "rect": [
+    -30,
+    -68,
+    30,
+    -66
+   ],
+   "count": 8
+  },
+  {
+   "id": "LAMPS_PLAZA",
+   "type": "lamps",
+   "rect": [
+    -29,
+    -68,
+    29,
+    -36
+   ],
+   "step": 8,
+   "height": 5.5
+  },
+  {
+   "id": "LAMPS_AVENUE",
+   "type": "lamps",
+   "rect": [
+    -114,
+    -73.2,
+    114,
+    -72.4
+   ],
+   "step": 24,
+   "height": 8
+  },
+  {
+   "id": "LAMPS_AVE_S",
+   "type": "lamps",
+   "rect": [
+    -114,
+    -89.2,
+    114,
+    -88.4
+   ],
+   "step": 30,
+   "height": 8
+  },
+  {
+   "id": "LAMPS_W_DRIVE",
+   "type": "lamps",
+   "rect": [
+    -53,
+    -66,
+    -52.6,
+    0
+   ],
+   "step": 30,
+   "height": 6
+  },
+  {
+   "id": "LAMPS_E_DRIVE",
+   "type": "lamps",
+   "rect": [
+    52.4,
+    -66,
+    52.8,
+    0
+   ],
+   "step": 30,
+   "height": 6
+  },
+  {
+   "id": "CARS_W",
+   "type": "cars",
+   "rect": [
+    -112,
+    -68,
+    -66,
+    -66.5
+   ],
+   "count": 5,
+   "rot": 0
+  },
+  {
+   "id": "CARS_E",
+   "type": "cars",
+   "rect": [
+    66,
+    -68,
+    112,
+    -66.5
+   ],
+   "count": 5,
+   "rot": 0
+  },
+  {
+   "id": "CARS_GARAGE",
+   "type": "cars",
+   "rect": [
+    -76,
+    12,
+    -48,
+    16
+   ],
+   "count": 3,
+   "rot": 0
+  },
+  {
+   "id": "CARS_SHOP",
+   "type": "cars",
+   "rect": [
+    92,
+    -73,
+    112,
+    -72.2
+   ],
+   "count": 3,
+   "rot": 0
+  },
+  {
+   "id": "CARS_DK",
+   "type": "cars",
+   "rect": [
+    -12,
+    -10,
+    12,
+    -8
+   ],
+   "count": 3,
+   "rot": 0
+  },
+  {
+   "id": "POLES_AVENUE",
+   "type": "utility_poles",
+   "rect": [
+    -114,
+    -75.5,
+    114,
+    -75
+   ],
+   "step": 26
+  },
+  {
+   "id": "POLES_W_COURT",
+   "type": "utility_poles",
+   "rect": [
+    -100,
+    -33,
+    -66,
+    -32.6
+   ],
+   "step": 18
+  },
+  {
+   "id": "POSTERS_PLAZA",
+   "type": "poster_wall",
+   "rect": [
+    -20,
+    -35,
+    20,
+    -34.4
+   ],
+   "count": 4
+  },
+  {
+   "id": "POSTERS_DK",
+   "type": "poster_wall",
+   "rect": [
+    -6,
+    -12.2,
+    6,
+    -11.6
+   ],
+   "count": 2
+  },
+  {
+   "id": "WEEDS",
+   "type": "weeds",
+   "rect": [
+    -200,
+    -150,
+    200,
+    150
+   ],
+   "count": 60
+  },
+  {
+   "id": "PUDDLES",
+   "type": "puddles",
+   "rect": [
+    -200,
+    -150,
+    200,
+    150
+   ],
+   "count": 45
+  },
+  {
+   "id": "TRASH",
+   "type": "litter",
+   "rect": [
+    -200,
+    -150,
+    200,
+    150
+   ],
+   "count": 40
+  },
+  {
+   "id": "PLANTERS",
+   "type": "planters",
+   "rect": [
+    -30,
+    -68,
+    30,
+    -36
+   ],
+   "count": 6
+  },
+  {
+   "id": "LAMPS_COURT_W",
+   "type": "lamps",
+   "rect": [
+    -94,
+    -50,
+    -82,
+    -42
+   ],
+   "step": 99,
+   "height": 4.0
+  },
+  {
+   "id": "LAMPS_COURT_E",
+   "type": "lamps",
+   "rect": [
+    82,
+    -50,
+    94,
+    -42
+   ],
+   "step": 99,
+   "height": 4.0
+  },
+  {
+   "id": "LAMPS_COURT_W2",
+   "type": "lamps",
+   "rect": [
+    -142,
+    -52,
+    -124,
+    -40
+   ],
+   "step": 99,
+   "height": 4.0
+  },
+  {
+   "id": "LAMPS_PLAY_W",
+   "type": "lamps",
+   "rect": [
+    -92,
+    -52,
+    -86,
+    -44
+   ],
+   "step": 99,
+   "height": 3.6
+  },
+  {
+   "id": "LAMPS_PLAY_PARK",
+   "type": "lamps",
+   "rect": [
+    -46,
+    104,
+    -38,
+    110
+   ],
+   "step": 99,
+   "height": 3.4
+  },
+  {
+   "id": "LAMPS_PARK",
+   "type": "lamps",
+   "rect": [
+    -80,
+    92,
+    80,
+    116
+   ],
+   "step": 26,
+   "height": 3.2
+  },
+  {
+   "id": "LAMPS_SOUTH",
+   "type": "lamps",
+   "rect": [
+    -150,
+    -93.2,
+    150,
+    -92.4
+   ],
+   "step": 34,
+   "height": 6.0
+  },
+  {
+   "id": "LAMPS_WEST2",
+   "type": "lamps",
+   "rect": [
+    -126.5,
+    -68,
+    -125.5,
+    80
+   ],
+   "step": 30,
+   "height": 6.0
+  },
+  {
+   "id": "LAMPS_EAST2",
+   "type": "lamps",
+   "rect": [
+    122.5,
+    -68,
+    123.5,
+    80
+   ],
+   "step": 30,
+   "height": 6.0
+  },
+  {
+   "id": "PLAY_W2",
+   "type": "playground",
+   "rect": [
+    -142,
+    -52,
+    -128,
+    -36
+   ],
+   "kind": "full"
+  },
+  {
+   "id": "PLAY_PARK",
+   "type": "playground",
+   "rect": [
+    -58,
+    94,
+    -36,
+    110
+   ],
+   "kind": "full"
+  },
+  {
+   "id": "TREES_SOUTH_ROW",
+   "type": "mixed_row",
+   "rect": [
+    -156,
+    -88.9,
+    156,
+    -88.2
+   ],
+   "step": 13
+  },
+  {
+   "id": "TREES_W2_COURT",
+   "type": "birch_cluster",
+   "rect": [
+    -144,
+    -54,
+    -120,
+    -36
+   ],
+   "count": 5
+  },
+  {
+   "id": "TREES_PARK_E",
+   "type": "birch_cluster",
+   "rect": [
+    -20,
+    94,
+    40,
+    112
+   ],
+   "count": 14
+  },
+  {
+   "id": "TREES_PARK_W",
+   "type": "mixed_row",
+   "rect": [
+    -110,
+    92,
+    -70,
+    116
+   ],
+   "step": 7
+  },
+  {
+   "id": "TREES_PARK_N",
+   "type": "mixed_row",
+   "rect": [
+    -60,
+    116,
+    70,
+    118
+   ],
+   "step": 7
+  },
+  {
+   "id": "TREES_WEST2",
+   "type": "poplar_row",
+   "rect": [
+    -160,
+    -70,
+    -158,
+    -20
+   ],
+   "step": 10
+  },
+  {
+   "id": "TREES_EAST2",
+   "type": "poplar_row",
+   "rect": [
+    158,
+    -60,
+    160,
+    -10
+   ],
+   "step": 10
+  },
+  {
+   "id": "CARS_SOUTH",
+   "type": "cars",
+   "rect": [
+    -150,
+    -95.5,
+    -80,
+    -94.5
+   ],
+   "count": 5,
+   "rot": 0
+  },
+  {
+   "id": "CARS_SOUTH_E",
+   "type": "cars",
+   "rect": [
+    78,
+    -95.5,
+    150,
+    -94.5
+   ],
+   "count": 5,
+   "rot": 0
+  },
+  {
+   "id": "CARS_W2",
+   "type": "cars",
+   "rect": [
+    -146,
+    -60,
+    -126,
+    -58
+   ],
+   "count": 3,
+   "rot": 0
+  },
+  {
+   "id": "CARS_MARKET",
+   "type": "cars",
+   "rect": [
+    130,
+    -70,
+    156,
+    -68
+   ],
+   "count": 4,
+   "rot": 0
+  },
+  {
+   "id": "LAUNDRY_W2",
+   "type": "laundry",
+   "rect": [
+    -144,
+    -50,
+    -124,
+    -44
+   ],
+   "count": 3
+  },
+  {
+   "id": "DUMPS_W2",
+   "type": "dumpster",
+   "rect": [
+    -150,
+    -58,
+    -146,
+    -54
+   ],
+   "count": 1
+  },
+  {
+   "id": "BENCH_PARK",
+   "type": "benches",
+   "rect": [
+    -44,
+    96,
+    44,
+    114
+   ],
+   "count": 12
+  },
+  {
+   "id": "WEEDS_BIG",
+   "type": "weeds",
+   "rect": [
+    -200,
+    -150,
+    200,
+    150
+   ],
+   "count": 90
+  },
+  {
+   "id": "PUDDLES_BIG",
+   "type": "puddles",
+   "rect": [
+    -200,
+    -150,
+    200,
+    150
+   ],
+   "count": 30
+  },
+  {
+   "id": "TRASH_BIG",
+   "type": "litter",
+   "rect": [
+    -200,
+    -150,
+    200,
+    150
+   ],
+   "count": 30
+  },
+  {
+   "id": "TREES_PARK_S",
+   "type": "mixed_row",
+   "rect": [
+    -110,
+    91.0,
+    100,
+    92.0
+   ],
+   "step": 8
+  },
+  {
+   "id": "TREES_PARK_EDGE",
+   "type": "bare_row",
+   "rect": [
+    -160,
+    118.0,
+    160,
+    119.5
+   ],
+   "step": 7
+  },
+  {
+   "id": "TREES_SOUTH_BACK",
+   "type": "bare_row",
+   "rect": [
+    -160,
+    -113.0,
+    160,
+    -112.0
+   ],
+   "step": 9
+  },
+  {
+   "id": "TREES_W2_BACK",
+   "type": "mixed_row",
+   "rect": [
+    -159.5,
+    -70,
+    -158.0,
+    0
+   ],
+   "step": 9
+  },
+  {
+   "id": "LAMPS_ESPLANADE",
+   "type": "lamps",
+   "rect": [
+    -88,
+    120.5,
+    88,
+    121.5
+   ],
+   "step": 24,
+   "height": 5.5
+  },
+  {
+   "id": "LAMPS_MONUMENT_MOUND",
+   "type": "lamps",
+   "rect": [
+    -20,
+    143,
+    20,
+    144
+   ],
+   "step": 40,
+   "height": 3.0
+  },
+  {
+   "id": "LAMPS_EAST_Q",
+   "type": "lamps",
+   "rect": [
+    162.5,
+    -80,
+    163.5,
+    110
+   ],
+   "step": 26,
+   "height": 6.0
+  },
+  {
+   "id": "LAMPS_TERMINAL",
+   "type": "lamps",
+   "rect": [
+    -70,
+    -121.5,
+    70,
+    -120.5
+   ],
+   "step": 30,
+   "height": 6.0
+  },
+  {
+   "id": "LAMPS_VYSOTKA",
+   "type": "lamps",
+   "rect": [
+    172.5,
+    -6,
+    173.5,
+    34
+   ],
+   "step": 20,
+   "height": 5.0
+  },
+  {
+   "id": "LAMPS_WEST_PARK",
+   "type": "lamps",
+   "rect": [
+    -186,
+    -30,
+    -185,
+    90
+   ],
+   "step": 28,
+   "height": 3.4
+  },
+  {
+   "id": "TREES_WEST_FOREST",
+   "type": "birch_cluster",
+   "rect": [
+    -198,
+    -110,
+    -180,
+    146
+   ],
+   "count": 46
+  },
+  {
+   "id": "TREES_ESPLANADE",
+   "type": "mixed_row",
+   "rect": [
+    -90,
+    129,
+    90,
+    130
+   ],
+   "step": 8
+  },
+  {
+   "id": "TREES_MOUND",
+   "type": "bare_row",
+   "rect": [
+    -110,
+    147,
+    110,
+    148.5
+   ],
+   "step": 9
+  },
+  {
+   "id": "TREES_EAST_Q",
+   "type": "birch_cluster",
+   "rect": [
+    124,
+    -84,
+    160,
+    16
+   ],
+   "count": 18
+  },
+  {
+   "id": "TREES_EAST_Q_N",
+   "type": "mixed_row",
+   "rect": [
+    124,
+    88,
+    160,
+    120
+   ],
+   "step": 11
+  },
+  {
+   "id": "TREES_HWY",
+   "type": "poplar_row",
+   "rect": [
+    -196,
+    -128.5,
+    196,
+    -127.5
+   ],
+   "step": 14
+  },
+  {
+   "id": "TREES_WEST_STRIP",
+   "type": "poplar_row",
+   "rect": [
+    -163,
+    -70,
+    -161.5,
+    116
+   ],
+   "step": 9
+  },
+  {
+   "id": "BENCH_ESPLANADE",
+   "type": "benches",
+   "rect": [
+    -60,
+    126,
+    60,
+    130
+   ],
+   "count": 10
+  },
+  {
+   "id": "BENCH_EAST_Q",
+   "type": "benches",
+   "rect": [
+    126,
+    46,
+    160,
+    60
+   ],
+   "count": 8
+  },
+  {
+   "id": "CARS_VYSOTKA",
+   "type": "cars",
+   "rect": [
+    174,
+    -58,
+    196,
+    -52
+   ],
+   "count": 5,
+   "rot": 0
+  },
+  {
+   "id": "CARS_EAST_Q",
+   "type": "cars",
+   "rect": [
+    126,
+    88,
+    158,
+    86
+   ],
+   "count": 5,
+   "rot": 0
+  },
+  {
+   "id": "CARS_TERMINAL",
+   "type": "cars",
+   "rect": [
+    -100,
+    -112,
+    -60,
+    -110
+   ],
+   "count": 4,
+   "rot": 0
+  },
+  {
+   "id": "PLAY_EAST_Q",
+   "type": "playground",
+   "rect": [
+    126,
+    -20,
+    146,
+    -6
+   ],
+   "kind": "full"
+  }
+ ],
+ "nav": {
+  "anchors": [
+   [
+    "A_AVE_W",
+    -100,
+    -71.5
+   ],
+   [
+    "A_AVE_C",
+    0,
+    -71.5
+   ],
+   [
+    "A_AVE_E",
+    100,
+    -71.5
+   ],
+   [
+    "A_PLAZA_S",
+    0,
+    -69
+   ],
+   [
+    "A_PLAZA_C",
+    0,
+    -52
+   ],
+   [
+    "A_PLAZA_N",
+    0,
+    -35
+   ],
+   [
+    "A_DK",
+    0,
+    -30
+   ],
+   [
+    "A_DK_W",
+    -26,
+    -30
+   ],
+   [
+    "A_DK_E",
+    26,
+    -30
+   ],
+   [
+    "A_WCOURT",
+    -83,
+    -43
+   ],
+   [
+    "A_ECOOURT",
+    83,
+    -43
+   ],
+   [
+    "A_WDRIVE",
+    -57,
+    -40
+   ],
+   [
+    "A_EDRIVE",
+    57,
+    -40
+   ],
+   [
+    "A_MID_W",
+    -80,
+    -1
+   ],
+   [
+    "A_MID_C",
+    0,
+    -1
+   ],
+   [
+    "A_MID_E",
+    80,
+    -1
+   ],
+   [
+    "A_KG",
+    -20,
+    14
+   ],
+   [
+    "A_SCHOOL",
+    26,
+    8
+   ],
+   [
+    "A_GYM",
+    70,
+    8
+   ],
+   [
+    "A_STADIUM",
+    64,
+    34
+   ],
+   [
+    "A_BOILER",
+    -90,
+    40
+   ],
+   [
+    "A_GARAGES",
+    -62,
+    18
+   ],
+   [
+    "A_NORTH",
+    -80,
+    76
+   ],
+   [
+    "A_FLAGS",
+    0,
+    -67
+   ],
+   [
+    "A_SOUTH_C",
+    0,
+    -98
+   ],
+   [
+    "A_SOUTH_W",
+    -76,
+    -98
+   ],
+   [
+    "A_SOUTH_E",
+    76,
+    -98
+   ],
+   [
+    "A_W2_COURT",
+    -132,
+    -44
+   ],
+   [
+    "A_W2_DRIVE",
+    -125,
+    -20
+   ],
+   [
+    "A_BANYA",
+    -140,
+    30
+   ],
+   [
+    "A_MARKET",
+    121,
+    -53
+   ],
+   [
+    "A_MARKET_SQ",
+    125,
+    -50
+   ],
+   [
+    "A_PARK_W",
+    -125,
+    95
+   ],
+   [
+    "A_PARK_E",
+    121,
+    95
+   ],
+   [
+    "A_PARK_PLAY",
+    -47,
+    103
+   ],
+   [
+    "A_PAVILION",
+    54,
+    100
+   ],
+   [
+    "A_POND",
+    5,
+    100
+   ],
+   [
+    "A_T_NW2",
+    -141,
+    100
+   ],
+   [
+    "A_T_NE2",
+    129,
+    100
+   ],
+   [
+    "A_MONUMENT",
+    0,
+    124
+   ],
+   [
+    "A_MOTHERLAND",
+    0,
+    140
+   ],
+   [
+    "A_BREST",
+    -32,
+    126
+   ],
+   [
+    "A_EAST_Q_N",
+    140,
+    104
+   ],
+   [
+    "A_EAST_Q_MID",
+    140,
+    52
+   ],
+   [
+    "A_EAST_Q_S",
+    140,
+    -100
+   ],
+   [
+    "A_VYSOTKA",
+    180,
+    10
+   ],
+   [
+    "A_METRO",
+    35,
+    -64
+   ],
+   [
+    "A_TERMINAL_W",
+    -77,
+    -118
+   ],
+   [
+    "A_UFO",
+    -62,
+    -120
+   ],
+   [
+    "A_HEX",
+    48,
+    -120
+   ],
+   [
+    "A_WEST_PARK",
+    -188,
+    20
+   ],
+   [
+    "A_HWY",
+    0,
+    -136
+   ]
+  ],
+  "edges": [
+   [
+    "A_AVE_W",
+    "A_AVE_C"
+   ],
+   [
+    "A_AVE_C",
+    "A_AVE_E"
+   ],
+   [
+    "A_AVE_C",
+    "A_PLAZA_S"
+   ],
+   [
+    "A_PLAZA_S",
+    "A_FLAGS"
+   ],
+   [
+    "A_FLAGS",
+    "A_PLAZA_C"
+   ],
+   [
+    "A_PLAZA_C",
+    "A_PLAZA_N"
+   ],
+   [
+    "A_PLAZA_N",
+    "A_DK"
+   ],
+   [
+    "A_PLAZA_C",
+    "A_WCOURT"
+   ],
+   [
+    "A_PLAZA_C",
+    "A_ECOOURT"
+   ],
+   [
+    "A_WCOURT",
+    "A_WDRIVE"
+   ],
+   [
+    "A_ECOOURT",
+    "A_EDRIVE"
+   ],
+   [
+    "A_AVE_W",
+    "A_WDRIVE"
+   ],
+   [
+    "A_AVE_E",
+    "A_EDRIVE"
+   ],
+   [
+    "A_WDRIVE",
+    "A_MID_W"
+   ],
+   [
+    "A_EDRIVE",
+    "A_MID_E"
+   ],
+   [
+    "A_MID_W",
+    "A_MID_C"
+   ],
+   [
+    "A_MID_C",
+    "A_MID_E"
+   ],
+   [
+    "A_MID_W",
+    "A_KG"
+   ],
+   [
+    "A_KG",
+    "A_BOILER"
+   ],
+   [
+    "A_MID_W",
+    "A_GARAGES"
+   ],
+   [
+    "A_MID_C",
+    "A_SCHOOL"
+   ],
+   [
+    "A_MID_E",
+    "A_GYM"
+   ],
+   [
+    "A_GYM",
+    "A_STADIUM"
+   ],
+   [
+    "A_MID_W",
+    "A_NORTH"
+   ],
+   [
+    "A_MID_E",
+    "A_NORTH"
+   ],
+   [
+    "A_AVE_W",
+    "A_SOUTH_W"
+   ],
+   [
+    "A_AVE_E",
+    "A_SOUTH_E"
+   ],
+   [
+    "A_AVE_C",
+    "A_SOUTH_C"
+   ],
+   [
+    "A_SOUTH_W",
+    "A_SOUTH_C"
+   ],
+   [
+    "A_SOUTH_C",
+    "A_SOUTH_E"
+   ],
+   [
+    "A_PLAZA_N",
+    "A_W2_COURT"
+   ],
+   [
+    "A_W2_COURT",
+    "A_W2_DRIVE"
+   ],
+   [
+    "A_W2_DRIVE",
+    "A_BANYA"
+   ],
+   [
+    "A_BANYA",
+    "A_PARK_W"
+   ],
+   [
+    "A_PARK_W",
+    "A_PARK_PLAY"
+   ],
+   [
+    "A_PARK_PLAY",
+    "A_POND"
+   ],
+   [
+    "A_POND",
+    "A_PAVILION"
+   ],
+   [
+    "A_PAVILION",
+    "A_PARK_E"
+   ],
+   [
+    "A_PARK_E",
+    "A_MARKET_SQ"
+   ],
+   [
+    "A_MARKET_SQ",
+    "A_MARKET"
+   ],
+   [
+    "A_PARK_W",
+    "A_T_NW2"
+   ],
+   [
+    "A_PARK_E",
+    "A_T_NE2"
+   ],
+   [
+    "A_MID_W",
+    "A_W2_DRIVE"
+   ],
+   [
+    "A_MID_E",
+    "A_MARKET"
+   ],
+   [
+    "A_PAVILION",
+    "A_MONUMENT"
+   ],
+   [
+    "A_MONUMENT",
+    "A_MOTHERLAND"
+   ],
+   [
+    "A_MONUMENT",
+    "A_BREST"
+   ],
+   [
+    "A_BREST",
+    "A_MONUMENT"
+   ],
+   [
+    "A_T_NW2",
+    "A_MONUMENT"
+   ],
+   [
+    "A_T_NE2",
+    "A_MONUMENT"
+   ],
+   [
+    "A_MARKET",
+    "A_EAST_Q_S"
+   ],
+   [
+    "A_EAST_Q_S",
+    "A_EAST_Q_MID"
+   ],
+   [
+    "A_EAST_Q_MID",
+    "A_EAST_Q_N"
+   ],
+   [
+    "A_EAST_Q_MID",
+    "A_VYSOTKA"
+   ],
+   [
+    "A_PLAZA_N",
+    "A_METRO"
+   ],
+   [
+    "A_AVE_C",
+    "A_METRO"
+   ],
+   [
+    "A_SOUTH_C",
+    "A_HWY"
+   ],
+   [
+    "A_HWY",
+    "A_UFO"
+   ],
+   [
+    "A_HWY",
+    "A_HEX"
+   ],
+   [
+    "A_UFO",
+    "A_TERMINAL_W"
+   ],
+   [
+    "A_TERMINAL_W",
+    "A_HWY"
+   ],
+   [
+    "A_WEST_PARK",
+    "A_PARK_W"
+   ],
+   [
+    "A_BANYA",
+    "A_WEST_PARK"
+   ]
+  ]
+ },
+ "terraces": [
+  {
+   "id": "ESPLANADE_STEPS",
+   "rect": [
+    -60,
+    132,
+    60,
+    150
+   ],
+   "steps": 6,
+   "rise": 0.45,
+   "step_from": 132,
+   "platform_from": 138,
+   "axis": "PY",
+   "width": 120,
+   "clad": "granite"
+  }
+ ]
+}

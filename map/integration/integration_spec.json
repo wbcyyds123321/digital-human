@@ -1,0 +1,5788 @@
+{
+ "schema": "sbh.unity.integration.v1",
+ "generated_by": "integration/build_integration_spec.py",
+ "source_data": {
+  "nav_graph": "map/nav_graph.json (3486 nodes / 8551 edges / 43 poi / 52 route_anchors)",
+  "collision": "map/collision.json (91 AABB, player r=0.35 step=0.35 walk-under=1.75)",
+  "scene_manifest": "map/scene_manifest.json (48 buildings with cn names)",
+  "plan": "tools/plan.json (中文地名)",
+  "glb": "map/SovietBlueHour_game.glb (117MB, 51 mesh, 571 materials)",
+  "lead_runtime_files": [
+   "integration/collision_unity.json",
+   "integration/nav_compact.json",
+   "integration/anchors.json",
+   "integration/walkability_report.json"
+  ]
+ },
+ "coordinate_mapping": {
+  "formula_zh": "Unity 实际坐标 = (blender.x, blender.z, blender.y)：blender 的高度 z 进 Unity 的 y，blender 的北向 y 进 Unity 的 z（符号不变）。",
+  "blender_to_gltf": "glTF(yup) = (bx, bz, -by)  —— Blender glTF 导出器固定转换",
+  "unigltf_import": "UniGLTF ScriptedImporter 默认 ReverseZ：Unity = (gx, gy, -gz)",
+  "blender_to_unity_actual": "Unity = (gx, gy, -gz) = (bx, bz, by)",
+  "nav_json_unity_field": "nav_graph/collision/scene_manifest 的 'unity' 字段用的是 (x, z, -y)，z 轴与 Unity 实际相反，绝对不能直接当 Unity 坐标用。",
+  "collision_aabb_rule": "AABB 直接换算：unity_min = (bx_min, bz_min, by_min)，unity_max = (bx_max, bz_max, by_max)，各轴 min/max 顺序不需要交换。",
+  "unity_yaw_convention": {
+   "yaw_deg": "0 = 面朝 +Z（= Blender 北）；90 = 面朝 +X（= Blender 东）；顺时针为正",
+   "forward": "forward = (sin(yaw), 0, cos(yaw))",
+   "from_blender_dir": "yaw = atan2(dx_blender, dy_blender)",
+   "camera_pitch": "正 = 抬头；unity camera.eulerAngles.x = -pitch"
+  },
+  "verification_3_landmarks": [
+   {
+    "landmark": "SHOP",
+    "cn": "食品商店",
+    "glb_mesh": "BLD_SHOP",
+    "glb_gltf_bbox_min": [
+     91.96,
+     0.0,
+     54.8
+    ],
+    "glb_gltf_bbox_max": [
+     112.04,
+     10.22,
+     68.35
+    ],
+    "glb_node_translation": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "derived_blender_xz_bbox": [
+     91.96,
+     -68.35,
+     112.04,
+     -54.8
+    ],
+    "derived_unity_actual_bbox_min": [
+     91.96,
+     0.0,
+     -68.35
+    ],
+    "derived_unity_actual_bbox_max": [
+     112.04,
+     10.22,
+     -54.8
+    ],
+    "manifest_center_blender": [
+     102.0,
+     -62.0
+    ],
+    "manifest_center_unity_field": [
+     102.0,
+     0.0,
+     62.0
+    ],
+    "unity_actual_center_from_blender": [
+     102.0,
+     0.0,
+     -62.0
+    ],
+    "unity_actual_center_from_manifest_field_flipped": [
+     102.0,
+     0.0,
+     -62.0
+    ],
+    "wrong_if_manifest_field_used_verbatim": [
+     102.0,
+     0.0,
+     62.0
+    ],
+    "match": true,
+    "manifest_field_flip_needed": true
+   },
+   {
+    "landmark": "METRO",
+    "cn": "地铁站亭",
+    "glb_mesh": "BLD_METRO",
+    "glb_gltf_bbox_min": [
+     137.89,
+     0.0,
+     -54.05
+    ],
+    "glb_gltf_bbox_max": [
+     158.05,
+     9.0,
+     -45.95
+    ],
+    "glb_node_translation": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "derived_blender_xz_bbox": [
+     137.89,
+     45.95,
+     158.05,
+     54.05
+    ],
+    "derived_unity_actual_bbox_min": [
+     137.89,
+     0.0,
+     45.95
+    ],
+    "derived_unity_actual_bbox_max": [
+     158.05,
+     9.0,
+     54.05
+    ],
+    "manifest_center_blender": [
+     148.0,
+     50.0
+    ],
+    "manifest_center_unity_field": [
+     148.0,
+     0.0,
+     -50.0
+    ],
+    "unity_actual_center_from_blender": [
+     148.0,
+     0.0,
+     50.0
+    ],
+    "unity_actual_center_from_manifest_field_flipped": [
+     148.0,
+     0.0,
+     50.0
+    ],
+    "wrong_if_manifest_field_used_verbatim": [
+     148.0,
+     0.0,
+     -50.0
+    ],
+    "match": true,
+    "manifest_field_flip_needed": true
+   },
+   {
+    "landmark": "MOTHERLAND",
+    "cn": "祖国母亲雕像",
+    "glb_mesh": "BLD_MOTHERLAND",
+    "glb_gltf_bbox_min": [
+     -8.4,
+     2.7,
+     -149.81
+    ],
+    "glb_gltf_bbox_max": [
+     8.4,
+     41.93,
+     -137.39
+    ],
+    "glb_node_translation": [
+     0,
+     2.700000047683716,
+     0
+    ],
+    "derived_blender_xz_bbox": [
+     -8.4,
+     137.39,
+     8.4,
+     149.81
+    ],
+    "derived_unity_actual_bbox_min": [
+     -8.4,
+     2.7,
+     137.39
+    ],
+    "derived_unity_actual_bbox_max": [
+     8.4,
+     41.93,
+     149.81
+    ],
+    "manifest_center_blender": [
+     0.0,
+     144.0
+    ],
+    "manifest_center_unity_field": [
+     0.0,
+     0.0,
+     -144.0
+    ],
+    "unity_actual_center_from_blender": [
+     0.0,
+     0.0,
+     144.0
+    ],
+    "unity_actual_center_from_manifest_field_flipped": [
+     0.0,
+     0.0,
+     144.0
+    ],
+    "wrong_if_manifest_field_used_verbatim": [
+     0.0,
+     0.0,
+     -144.0
+    ],
+    "match": true,
+    "manifest_field_flip_needed": true
+   }
+  ],
+  "verification_note_zh": "三条独立证据互相印证：①GLB 里 BLD_* 网格的 glTF bbox 反推回 blender 与 scene_manifest.rect/center_blender 吻合；②nav POI 的 blender 坐标；③scene_manifest.center_unity 字段恰好是 (x,0,-y)，与 Unity 实际 (x,0,y) 差一个符号。"
+ },
+ "spawn_candidates": [
+  {
+   "id": "SP_C1_PLAZA",
+   "label_zh": "中央广场·文化宫前",
+   "unity_position": [
+    -14.0,
+    0.0,
+    -62.0
+   ],
+   "unity_position_with_ground_y": [
+    -14.0,
+    0.0,
+    -62.0
+   ],
+   "yaw_deg": 160.0,
+   "facing_zh": "南",
+   "forward_unity": [
+    0.342,
+    0.0,
+    -0.94
+   ],
+   "snapped_from_blender": [
+    -14.0,
+    -62.0
+   ],
+   "rationale_zh": "站在中央广场西南象限的广场砖上，角色面朝东南（yaw=160）；相机放到角色前侧 45°、稍高俯拍，画面里角色在中间，身后是文化宫『ДОМ КУЛЬТУРЫ』招牌、马赛克饰带、柱廊暖窗和方尖碑，远景还能看到带红星的斯大林式塔楼。地面是广场花岗岩，平整无高差。",
+   "view_forward": "广场南缘、旗杆、列宁大街与电车站、广告牌，两侧 9 层塔楼 T_W / T_E 夹出的街谷与雾",
+   "view_behind": "文化宫正立面（招牌/彩马赛克饰带/柱廊/暖黄窗）+ 方尖碑（高 18m）+ 广场铺装 + 右侧远景斯大林式塔楼",
+   "forward_first_hit": {
+    "id": "LM_POSTER_BOARD_1",
+    "kind": "prop",
+    "dist_m": 8.77
+   },
+   "behind_first_hit": {
+    "id": "DK",
+    "kind": "building",
+    "dist_m": 29.8
+   },
+   "nearby_landmarks": [
+    {
+     "id": "obelisk",
+     "label_zh": "方尖碑",
+     "distance_m": 15.04,
+     "unity_position": [
+      0.0,
+      0.0,
+      -56.5
+     ]
+    },
+    {
+     "id": "flags",
+     "label_zh": "旗杆",
+     "distance_m": 19.45,
+     "unity_position": [
+      4.8,
+      0.0,
+      -67.0
+     ]
+    },
+    {
+     "id": "bus_stop",
+     "label_zh": "公交站",
+     "distance_m": 27.95,
+     "unity_position": [
+      -40.0,
+      0.0,
+      -72.25
+     ]
+    },
+    {
+     "id": "dk",
+     "label_zh": "文化宫",
+     "distance_m": 28.65,
+     "unity_position": [
+      0.0,
+      0.0,
+      -37.0
+     ]
+    },
+    {
+     "id": "fountain",
+     "label_zh": "干涸喷泉",
+     "distance_m": 28.77,
+     "unity_position": [
+      7.6,
+      0.0,
+      -43.0
+     ]
+    },
+    {
+     "id": "bakery",
+     "label_zh": "面包房",
+     "distance_m": 30.51,
+     "unity_position": [
+      -1.0,
+      0.0,
+      -89.6
+     ]
+    }
+   ],
+   "walkable_check": {
+    "nearest_nav_node": 1792,
+    "snap_dist_m": 0.0,
+    "nav_node_kind": "zone",
+    "ground_y": 0.0,
+    "walkable": true,
+    "inside_collision": [],
+    "inside_water": [],
+    "nav_density_r4": 5
+   },
+   "cameras": {
+    "face_to_face": {
+     "unity_position": [
+      -15.61,
+      1.5,
+      -65.44
+     ],
+     "look_at": [
+      -14.0,
+      1.1,
+      -62.0
+     ],
+     "camera_yaw_deg": 25.08,
+     "pitch_deg": -6.01,
+     "fov_vertical_deg": 60.0,
+     "yawOffset": 225.0,
+     "distance": 3.8,
+     "pitch": 6.0,
+     "lookHeight": 1.1,
+     "view_bearing_deg": 25.0,
+     "clearance": {
+      "inside_collision": [],
+      "line_of_sight_blocked": [],
+      "ok": true
+     },
+     "line_of_sight_hits": [
+      [
+       "DK",
+       "building",
+       34.7
+      ],
+      [
+       "SCHOOL",
+       "building",
+       81.1
+      ]
+     ]
+    },
+    "over_shoulder": {
+     "unity_position": [
+      -15.47,
+      2.21,
+      -57.96
+     ],
+     "look_at": [
+      -14.0,
+      1.3,
+      -62.0
+     ],
+     "camera_yaw_deg": 160.01,
+     "pitch_deg": -11.95,
+     "fov_vertical_deg": 60.0,
+     "yawOffset": 0.0,
+     "distance": 4.3,
+     "pitch": 12.0,
+     "lookHeight": 1.3,
+     "view_bearing_deg": 160.0,
+     "clearance": {
+      "inside_collision": [],
+      "line_of_sight_blocked": [],
+      "ok": true
+     },
+     "line_of_sight_hits": [
+      [
+       "LM_POSTER_BOARD_1",
+       "prop",
+       13.1
+      ],
+      [
+       "BAKERY",
+       "building",
+       36.2
+      ]
+     ]
+    }
+   },
+   "ots_bg_override": null,
+   "preview_images": "previews/C1_FACE.png / previews/C1_OTS.png"
+  },
+  {
+   "id": "SP_C2_MONUMENT",
+   "label_zh": "纪念轴起点·池塘南岸",
+   "unity_position": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "unity_position_with_ground_y": [
+    0.0,
+    0.0,
+    90.0
+   ],
+   "yaw_deg": 180.0,
+   "facing_zh": "南",
+   "forward_unity": [
+    0.0,
+    0.0,
+    -1.0
+   ],
+   "snapped_from_blender": [
+    0.0,
+    90.0
+   ],
+   "rationale_zh": "北公园池塘南岸、纪念轴起点，角色面对镜头（yaw=180，即面朝南），身后依次是公园池塘、纪念广场、六级台地与祖国母亲雕像基座，左侧是打光的布列斯特勇气浮雕墙、右侧是纪念旗阵，构图有纵深（水—广场—台地—雕像四层）。注意：若要用越肩机位，请把角色同时转到 yaw=0（面向纪念轴），相机机位 (0, ~85.5) 不变，否则相机会落到池塘水面上。",
+   "view_forward": "南向：北环路、中区的第三中学/幼儿园/锅炉房烟囱一带、广场与街谷（越肩变体见 ots_bg_override）",
+   "view_behind": "公园池塘水面倒影 + 纪念广场 + 六级台地 + 祖国母亲雕像基座（雕像本体高 40m，画面顶部被裁切）+ 左侧亮灯的浮雕墙 + 右侧旗阵",
+   "forward_first_hit": {
+    "id": "DK",
+    "kind": "building",
+    "dist_m": 102.0
+   },
+   "behind_first_hit": {
+    "id": "WATER_PARK_POND",
+    "kind": "water",
+    "dist_m": 4.0
+   },
+   "nearby_landmarks": [
+    {
+     "id": "pond",
+     "label_zh": "公园池塘",
+     "distance_m": 5.22,
+     "unity_position": [
+      5.0,
+      0.0,
+      91.5
+     ]
+    },
+    {
+     "id": "esplanade",
+     "label_zh": "纪念广场",
+     "distance_m": 30.0,
+     "unity_position": [
+      0.0,
+      0.0,
+      120.0
+     ]
+    },
+    {
+     "id": "eternal_flame",
+     "label_zh": "长明火",
+     "distance_m": 36.4,
+     "unity_position": [
+      0.0,
+      0.0,
+      126.4
+     ]
+    },
+    {
+     "id": "guard_box",
+     "label_zh": "岗亭",
+     "distance_m": 37.88,
+     "unity_position": [
+      9.0,
+      0.0,
+      126.8
+     ]
+    },
+    {
+     "id": "flag_row_monument",
+     "label_zh": "纪念旗阵",
+     "distance_m": 43.44,
+     "unity_position": [
+      26.0,
+      0.0,
+      124.8
+     ]
+    },
+    {
+     "id": "statue_plaque",
+     "label_zh": "碑文",
+     "distance_m": 44.5,
+     "unity_position": [
+      0.0,
+      1.35,
+      134.5
+     ]
+    }
+   ],
+   "walkable_check": {
+    "nearest_nav_node": 397,
+    "snap_dist_m": 0.0,
+    "nav_node_kind": "path",
+    "ground_y": 0.0,
+    "walkable": true,
+    "inside_collision": [],
+    "inside_water": [],
+    "nav_density_r4": 3
+   },
+   "cameras": {
+    "face_to_face": {
+     "unity_position": [
+      0.0,
+      1.47,
+      85.8
+     ],
+     "look_at": [
+      0.0,
+      1.1,
+      90.0
+     ],
+     "camera_yaw_deg": 0.0,
+     "pitch_deg": -5.03,
+     "fov_vertical_deg": 60.0,
+     "yawOffset": 180.0,
+     "distance": 4.2,
+     "pitch": 5.0,
+     "lookHeight": 1.1,
+     "view_bearing_deg": 0.0,
+     "clearance": {
+      "inside_collision": [],
+      "line_of_sight_blocked": [],
+      "ok": true
+     },
+     "line_of_sight_hits": [
+      [
+       "WATER_PARK_POND",
+       "water",
+       8.2
+      ],
+      [
+       "LM_ETERNAL_FLAME",
+       "prop",
+       41.4
+      ],
+      [
+       "LM_STATUE_PLAQUE",
+       "prop",
+       50.5
+      ],
+      [
+       "MOTHERLAND",
+       "building",
+       52.2
+      ]
+     ]
+    },
+    "over_shoulder": {
+     "unity_position": [
+      0.0,
+      2.09,
+      85.5
+     ],
+     "look_at": [
+      0.0,
+      1.3,
+      90.0
+     ],
+     "camera_yaw_deg": 0.0,
+     "pitch_deg": -9.96,
+     "fov_vertical_deg": 60.0,
+     "yawOffset": 0.0,
+     "distance": 4.5,
+     "pitch": 10.0,
+     "lookHeight": 1.3,
+     "view_bearing_deg": 0.0,
+     "clearance": {
+      "inside_collision": [],
+      "line_of_sight_blocked": [],
+      "ok": true
+     },
+     "line_of_sight_hits": [
+      [
+       "WATER_PARK_POND",
+       "water",
+       8.5
+      ],
+      [
+       "LM_ETERNAL_FLAME",
+       "prop",
+       41.7
+      ],
+      [
+       "LM_STATUE_PLAQUE",
+       "prop",
+       50.9
+      ],
+      [
+       "MOTHERLAND",
+       "building",
+       52.5
+      ]
+     ],
+     "note_zh": "越肩机位需要把角色同时转到 yaw=0.0（面向纪念轴），相机机位不变；否则相机会落在池塘水面上。"
+    }
+   },
+   "ots_bg_override": "越肩变体（角色转向 yaw=0）：纪念轴、长明火、六级台地、祖国母亲雕像——与 C2_FACE 同一机位反向看",
+   "preview_images": "previews/C2_FACE.png"
+  },
+  {
+   "id": "SP_C3_TRAM",
+   "label_zh": "电车站台",
+   "unity_position": [
+    11.33,
+    0.25,
+    -81.5
+   ],
+   "unity_position_with_ground_y": [
+    11.33,
+    0.25,
+    -81.5
+   ],
+   "yaw_deg": 90.0,
+   "facing_zh": "东",
+   "forward_unity": [
+    1.0,
+    0.0,
+    0.0
+   ],
+   "snapped_from_blender": [
+    11.33,
+    -81.5
+   ],
+   "rationale_zh": "站台是 0.25m 高的木铺装候车台（可跨上），角色面朝东（yaw=90）；相机在西侧回拍，画面左边是一节亮着窗的红色电车，脚下是木站台与湿反光的轨道，右侧是列宁大街、路灯与广告牌，远处是雾里的街区 —— 最有『苏联蓝调』味道的一张。",
+   "view_forward": "站台与轨道向东延伸、东侧街区与路灯、雾中的街道纵深（C3_OTS 背景）",
+   "view_behind": "电车车身与亮窗 + 湿地轨道 + 木站台 + 大街路灯 + 广告牌 + 远处街区（C3_FACE 背景）",
+   "forward_first_hit": null,
+   "behind_first_hit": null,
+   "nearby_landmarks": [
+    {
+     "id": "tram_stop",
+     "label_zh": "电车站",
+     "distance_m": 7.33,
+     "unity_position": [
+      18.67,
+      0.0,
+      -81.5
+     ]
+    },
+    {
+     "id": "bakery",
+     "label_zh": "面包房",
+     "distance_m": 14.76,
+     "unity_position": [
+      -1.0,
+      0.0,
+      -89.6
+     ]
+    },
+    {
+     "id": "flags",
+     "label_zh": "旗杆",
+     "distance_m": 15.9,
+     "unity_position": [
+      4.8,
+      0.0,
+      -67.0
+     ]
+    },
+    {
+     "id": "kino",
+     "label_zh": "电影院",
+     "distance_m": 22.35,
+     "unity_position": [
+      32.0,
+      0.0,
+      -90.0
+     ]
+    },
+    {
+     "id": "obelisk",
+     "label_zh": "方尖碑",
+     "distance_m": 27.45,
+     "unity_position": [
+      0.0,
+      0.0,
+      -56.5
+     ]
+    },
+    {
+     "id": "bus_stop_2",
+     "label_zh": "公交站（南）",
+     "distance_m": 29.9,
+     "unity_position": [
+      40.0,
+      0.0,
+      -90.0
+     ]
+    }
+   ],
+   "walkable_check": {
+    "nearest_nav_node": 1756,
+    "snap_dist_m": 0.0,
+    "nav_node_kind": "platform",
+    "ground_y": 0.25,
+    "walkable": true,
+    "inside_collision": [],
+    "inside_water": [],
+    "nav_density_r4": 3
+   },
+   "cameras": {
+    "face_to_face": {
+     "unity_position": [
+      14.73,
+      1.71,
+      -81.5
+     ],
+     "look_at": [
+      11.33,
+      1.35,
+      -81.5
+     ],
+     "camera_yaw_deg": -90.0,
+     "pitch_deg": -6.04,
+     "fov_vertical_deg": 60.0,
+     "yawOffset": 180.0,
+     "distance": 3.4,
+     "pitch": 6.0,
+     "lookHeight": 1.1,
+     "view_bearing_deg": 270.0,
+     "clearance": {
+      "inside_collision": [],
+      "line_of_sight_blocked": [],
+      "ok": true
+     },
+     "line_of_sight_hits": []
+    },
+    "over_shoulder": {
+     "unity_position": [
+      7.13,
+      2.39,
+      -81.5
+     ],
+     "look_at": [
+      11.33,
+      1.5,
+      -81.5
+     ],
+     "camera_yaw_deg": 90.0,
+     "pitch_deg": -11.96,
+     "fov_vertical_deg": 60.0,
+     "yawOffset": 0.0,
+     "distance": 4.2,
+     "pitch": 12.0,
+     "lookHeight": 1.25,
+     "view_bearing_deg": 90.0,
+     "clearance": {
+      "inside_collision": [],
+      "line_of_sight_blocked": [],
+      "ok": true
+     },
+     "line_of_sight_hits": []
+    }
+   },
+   "ots_bg_override": null,
+   "preview_images": "previews/C3_FACE.png / previews/C3_OTS.png"
+  }
+ ],
+ "recommended_spawn": {
+  "id": "SP_C1_PLAZA",
+  "label_zh": "中央广场·文化宫前",
+  "unity_position": [
+   -14.0,
+   0.0,
+   -62.0
+  ],
+  "yaw_deg": 160.0,
+  "default_camera": "face_to_face",
+  "composition_zh": "面对面 3/4（相机在角色前侧 45°、俯角 6°）",
+  "reason_zh": "① 背景最有信息量：文化宫招牌 + 马赛克饰带 + 柱廊暖窗 + 方尖碑 + 远景红星塔楼，四层景深；② 地面是花岗岩广场砖，平整无高差、无遮挡物；③ 相机 3.8m 处四周都是开阔广场，右键环绕 360° 都不会插进建筑；④ 离 lead 的默认出生点 (0,0,-60) 只有 14m，可以直接替换。",
+  "vs_lead_spawn_zh": "lead 现有出生点 (0,0,-60) 朝 yaw=0：正前方 8m 就是方尖碑，会把文化宫入口完全挡住（web 端 live_r3_spawn.png 就是这个构图）。本方案把角色往西南挪 14m、转向 160°，让方尖碑落到画面右侧、文化宫当背景。"
+ },
+ "camera_candidates": [
+  {
+   "id": "CAM_01_C1_PLAZA_FACE_TO_FACE",
+   "label_zh": "面对面 3/4（展示数字人）",
+   "spawn": "SP_C1_PLAZA",
+   "unity_position": [
+    -15.61,
+    1.5,
+    -65.44
+   ],
+   "look_at": [
+    -14.0,
+    1.1,
+    -62.0
+   ],
+   "yaw_deg": 25.08,
+   "pitch_deg": -6.01,
+   "fov_vertical_deg": 60.0,
+   "rig_params": {
+    "yawOffset": 225.0,
+    "distance": 3.8,
+    "pitch": 6.0,
+    "lookHeight": 1.1
+   },
+   "background_zh": "文化宫正立面（招牌/彩马赛克饰带/柱廊/暖黄窗）+ 方尖碑（高 18m）+ 广场铺装 + 右侧远景斯大林式塔楼",
+   "occlusion_zh": "相机在开阔区域内，到角色视线无遮挡",
+   "clip_risk": [],
+   "preview": "previews/C1_FACE.png / previews/C1_OTS.png"
+  },
+  {
+   "id": "CAM_02_C1_PLAZA_OVER_SHOULDER",
+   "label_zh": "越肩（游戏跟随）",
+   "spawn": "SP_C1_PLAZA",
+   "unity_position": [
+    -15.47,
+    2.21,
+    -57.96
+   ],
+   "look_at": [
+    -14.0,
+    1.3,
+    -62.0
+   ],
+   "yaw_deg": 160.01,
+   "pitch_deg": -11.95,
+   "fov_vertical_deg": 60.0,
+   "rig_params": {
+    "yawOffset": 0.0,
+    "distance": 4.3,
+    "pitch": 12.0,
+    "lookHeight": 1.3
+   },
+   "background_zh": "广场南缘、旗杆、列宁大街与电车站、广告牌，两侧 9 层塔楼 T_W / T_E 夹出的街谷与雾",
+   "occlusion_zh": "相机在开阔区域内，到角色视线无遮挡",
+   "clip_risk": [],
+   "preview": "previews/C1_FACE.png / previews/C1_OTS.png"
+  },
+  {
+   "id": "CAM_03_C2_MONUMENT_FACE_TO_FACE",
+   "label_zh": "面对面 3/4（展示数字人）",
+   "spawn": "SP_C2_MONUMENT",
+   "unity_position": [
+    0.0,
+    1.47,
+    85.8
+   ],
+   "look_at": [
+    0.0,
+    1.1,
+    90.0
+   ],
+   "yaw_deg": 0.0,
+   "pitch_deg": -5.03,
+   "fov_vertical_deg": 60.0,
+   "rig_params": {
+    "yawOffset": 180.0,
+    "distance": 4.2,
+    "pitch": 5.0,
+    "lookHeight": 1.1
+   },
+   "background_zh": "公园池塘水面倒影 + 纪念广场 + 六级台地 + 祖国母亲雕像基座（雕像本体高 40m，画面顶部被裁切）+ 左侧亮灯的浮雕墙 + 右侧旗阵",
+   "occlusion_zh": "相机在开阔区域内，到角色视线无遮挡",
+   "clip_risk": [],
+   "preview": "previews/C2_FACE.png"
+  },
+  {
+   "id": "CAM_04_C2_MONUMENT_OVER_SHOULDER",
+   "label_zh": "越肩（游戏跟随）",
+   "spawn": "SP_C2_MONUMENT",
+   "unity_position": [
+    0.0,
+    2.09,
+    85.5
+   ],
+   "look_at": [
+    0.0,
+    1.3,
+    90.0
+   ],
+   "yaw_deg": 0.0,
+   "pitch_deg": -9.96,
+   "fov_vertical_deg": 60.0,
+   "rig_params": {
+    "yawOffset": 0.0,
+    "distance": 4.5,
+    "pitch": 10.0,
+    "lookHeight": 1.3
+   },
+   "background_zh": "越肩变体（角色转向 yaw=0）：纪念轴、长明火、六级台地、祖国母亲雕像——与 C2_FACE 同一机位反向看",
+   "occlusion_zh": "相机在开阔区域内，到角色视线无遮挡",
+   "clip_risk": [],
+   "preview": "previews/C2_FACE.png"
+  },
+  {
+   "id": "CAM_05_C3_TRAM_FACE_TO_FACE",
+   "label_zh": "面对面 3/4（展示数字人）",
+   "spawn": "SP_C3_TRAM",
+   "unity_position": [
+    14.73,
+    1.71,
+    -81.5
+   ],
+   "look_at": [
+    11.33,
+    1.35,
+    -81.5
+   ],
+   "yaw_deg": -90.0,
+   "pitch_deg": -6.04,
+   "fov_vertical_deg": 60.0,
+   "rig_params": {
+    "yawOffset": 180.0,
+    "distance": 3.4,
+    "pitch": 6.0,
+    "lookHeight": 1.1
+   },
+   "background_zh": "电车车身与亮窗 + 湿地轨道 + 木站台 + 大街路灯 + 广告牌 + 远处街区（C3_FACE 背景）",
+   "occlusion_zh": "相机在开阔区域内，到角色视线无遮挡",
+   "clip_risk": [],
+   "preview": "previews/C3_FACE.png / previews/C3_OTS.png"
+  },
+  {
+   "id": "CAM_06_C3_TRAM_OVER_SHOULDER",
+   "label_zh": "越肩（游戏跟随）",
+   "spawn": "SP_C3_TRAM",
+   "unity_position": [
+    7.13,
+    2.39,
+    -81.5
+   ],
+   "look_at": [
+    11.33,
+    1.5,
+    -81.5
+   ],
+   "yaw_deg": 90.0,
+   "pitch_deg": -11.96,
+   "fov_vertical_deg": 60.0,
+   "rig_params": {
+    "yawOffset": 0.0,
+    "distance": 4.2,
+    "pitch": 12.0,
+    "lookHeight": 1.25
+   },
+   "background_zh": "站台与轨道向东延伸、东侧街区与路灯、雾中的街道纵深（C3_OTS 背景）",
+   "occlusion_zh": "相机在开阔区域内，到角色视线无遮挡",
+   "clip_risk": [],
+   "preview": "previews/C3_FACE.png / previews/C3_OTS.png"
+  }
+ ],
+ "anchors": [
+  {
+   "id": "central_plaza",
+   "label_zh": "中央广场",
+   "position": [
+    -10.0,
+    0.0,
+    -46.0
+   ],
+   "approach_position": [
+    -6.0,
+    0.0,
+    -50.0
+   ],
+   "source": "curated",
+   "source_key": null,
+   "notes": "curated，吸附到 nav node #1852（0.00m）",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "obelisk",
+   "label_zh": "方尖碑",
+   "position": [
+    0.0,
+    0.0,
+    -56.5
+   ],
+   "approach_position": [
+    -10.0,
+    0.0,
+    -54.0
+   ],
+   "source": "nav_poi",
+   "source_key": "OBELISK",
+   "notes": "nav node #3433，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "fountain",
+   "label_zh": "干涸喷泉",
+   "position": [
+    7.6,
+    0.0,
+    -43.0
+   ],
+   "approach_position": [
+    6.0,
+    0.0,
+    -46.0
+   ],
+   "source": "nav_poi",
+   "source_key": "FOUNTAIN",
+   "notes": "nav node #3434，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "house_of_culture",
+   "label_zh": "文化宫",
+   "position": [
+    0.0,
+    0.0,
+    -37.0
+   ],
+   "approach_position": [
+    -10.0,
+    0.0,
+    -42.0
+   ],
+   "source": "nav_poi",
+   "source_key": "DK",
+   "notes": "nav node #13，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "flags_plaza",
+   "label_zh": "旗杆广场",
+   "position": [
+    4.8,
+    0.0,
+    -67.0
+   ],
+   "approach_position": [
+    -2.0,
+    0.0,
+    -62.0
+   ],
+   "source": "nav_poi",
+   "source_key": "FLAGS",
+   "notes": "nav node #3435，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "avenue_lenin",
+   "label_zh": "列宁大街",
+   "position": [
+    0.0,
+    0.0,
+    -72.0
+   ],
+   "approach_position": [
+    0.0,
+    0.0,
+    -74.0
+   ],
+   "source": "route_anchor",
+   "source_key": "A_AVE_C",
+   "notes": "nav node #1，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "bus_stop",
+   "label_zh": "公交站",
+   "position": [
+    -44.0,
+    0.0,
+    -72.25
+   ],
+   "approach_position": [
+    -52.0,
+    0.0,
+    -72.25
+   ],
+   "source": "nav_poi",
+   "source_key": "BUS_STOP",
+   "notes": "nav node #602，吸附 4.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "tram_stop",
+   "label_zh": "电车站",
+   "position": [
+    18.67,
+    0.25,
+    -81.5
+   ],
+   "approach_position": [
+    11.33,
+    0.25,
+    -81.5
+   ],
+   "source": "nav_poi",
+   "source_key": "TRAM_STOP",
+   "notes": "nav node #1758，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.25
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.25
+    }
+   }
+  },
+  {
+   "id": "shop_gastronom",
+   "label_zh": "食品商店",
+   "position": [
+    102.0,
+    0.0,
+    -70.4
+   ],
+   "approach_position": [
+    100.0,
+    0.0,
+    -72.25
+   ],
+   "source": "nav_poi",
+   "source_key": "SHOP",
+   "notes": "nav node #3440，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "kiosk",
+   "label_zh": "售货亭",
+   "position": [
+    -45.5,
+    0.0,
+    -72.4
+   ],
+   "approach_position": [
+    -48.0,
+    0.0,
+    -72.25
+   ],
+   "source": "nav_poi",
+   "source_key": "KIOSK",
+   "notes": "nav node #3441，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "boiler_house",
+   "label_zh": "锅炉房",
+   "position": [
+    -99.0,
+    0.0,
+    44.0
+   ],
+   "approach_position": [
+    -99.0,
+    0.0,
+    44.0
+   ],
+   "source": "nav_poi",
+   "source_key": "BOILER",
+   "notes": "nav node #119，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "banya",
+   "label_zh": "公共浴场",
+   "position": [
+    -135.6,
+    0.0,
+    30.0
+   ],
+   "approach_position": [
+    -135.6,
+    0.0,
+    30.0
+   ],
+   "source": "nav_poi",
+   "source_key": "BANYA",
+   "notes": "nav node #3446，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "school_3",
+   "label_zh": "第三中学",
+   "position": [
+    26.0,
+    0.0,
+    5.9
+   ],
+   "approach_position": [
+    24.0,
+    0.0,
+    3.25
+   ],
+   "source": "nav_poi",
+   "source_key": "SCHOOL",
+   "notes": "nav node #3379，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "kindergarten_9",
+   "label_zh": "第九幼儿园",
+   "position": [
+    -21.0,
+    0.0,
+    26.4
+   ],
+   "approach_position": [
+    -20.0,
+    0.0,
+    26.0
+   ],
+   "source": "nav_poi",
+   "source_key": "KG",
+   "notes": "nav node #3439，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "gym",
+   "label_zh": "体育馆",
+   "position": [
+    77.0,
+    0.0,
+    5.6
+   ],
+   "approach_position": [
+    70.0,
+    0.0,
+    6.15
+   ],
+   "source": "nav_poi",
+   "source_key": "GYM",
+   "notes": "nav node #3442，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "stadium",
+   "label_zh": "小区体育场",
+   "position": [
+    80.0,
+    0.0,
+    40.0
+   ],
+   "approach_position": [
+    80.0,
+    0.0,
+    40.0
+   ],
+   "source": "nav_poi",
+   "source_key": "STADIUM",
+   "notes": "nav node #3459，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "market",
+   "label_zh": "市场",
+   "position": [
+    125.6,
+    0.0,
+    -53.0
+   ],
+   "approach_position": [
+    121.0,
+    0.0,
+    -53.06
+   ],
+   "source": "nav_poi",
+   "source_key": "MARKET",
+   "notes": "nav node #3444，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "cinema",
+   "label_zh": "电影院",
+   "position": [
+    24.0,
+    0.0,
+    -90.0
+   ],
+   "approach_position": [
+    24.0,
+    0.0,
+    -90.0
+   ],
+   "source": "curated",
+   "source_key": null,
+   "notes": "curated，吸附到 nav node #715（0.00m）",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "bakery",
+   "label_zh": "面包房",
+   "position": [
+    -1.0,
+    0.0,
+    -89.6
+   ],
+   "approach_position": [
+    0.0,
+    0.0,
+    -88.0
+   ],
+   "source": "nav_poi",
+   "source_key": "BAKERY",
+   "notes": "nav node #3445，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "metro",
+   "label_zh": "地铁站",
+   "position": [
+    135.0,
+    0.0,
+    48.0
+   ],
+   "approach_position": [
+    127.7,
+    0.0,
+    49.5
+   ],
+   "source": "nav_poi",
+   "source_key": "METRO",
+   "notes": "nav node #3463，吸附 1.50m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "msu_main",
+   "label_zh": "国立大学主楼",
+   "position": [
+    171.6,
+    0.0,
+    55.0
+   ],
+   "approach_position": [
+    162.5,
+    0.0,
+    56.0
+   ],
+   "source": "nav_poi",
+   "source_key": "MSU_MAIN",
+   "notes": "nav node #3449，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "vysotka_plaza",
+   "label_zh": "高楼广场",
+   "position": [
+    180.71,
+    0.0,
+    -6.0
+   ],
+   "approach_position": [
+    173.0,
+    0.0,
+    -6.0
+   ],
+   "source": "curated",
+   "source_key": null,
+   "notes": "curated，吸附到 nav node #2883（2.12m）",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "mfa",
+   "label_zh": "外交部大楼",
+   "position": [
+    173.6,
+    0.0,
+    -19.0
+   ],
+   "approach_position": [
+    171.5,
+    0.0,
+    -20.0
+   ],
+   "source": "nav_poi",
+   "source_key": "MFA",
+   "notes": "nav node #3451，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "motherland",
+   "label_zh": "祖国母亲雕像",
+   "position": [
+    -4.0,
+    0.0,
+    128.5
+   ],
+   "approach_position": [
+    -4.0,
+    0.0,
+    121.5
+   ],
+   "source": "curated",
+   "source_key": null,
+   "notes": "curated，吸附到 nav node #2777（0.00m）",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "eternal_flame",
+   "label_zh": "长明火",
+   "position": [
+    0.0,
+    0.0,
+    126.4
+   ],
+   "approach_position": [
+    0.0,
+    0.0,
+    121.5
+   ],
+   "source": "nav_poi",
+   "source_key": "ETERNAL_FLAME",
+   "notes": "nav node #3460，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "monument_esplanade",
+   "label_zh": "纪念广场",
+   "position": [
+    -48.0,
+    0.0,
+    120.0
+   ],
+   "approach_position": [
+    -40.0,
+    0.0,
+    118.0
+   ],
+   "source": "curated",
+   "source_key": null,
+   "notes": "curated，吸附到 nav node #2584（0.00m）",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "brest_relief",
+   "label_zh": "勇气浮雕墙",
+   "position": [
+    -32.0,
+    0.0,
+    118.0
+   ],
+   "approach_position": [
+    -33.0,
+    0.0,
+    114.0
+   ],
+   "source": "curated",
+   "source_key": null,
+   "notes": "curated，吸附到 nav node #2683（0.00m）",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "north_park",
+   "label_zh": "北公园",
+   "position": [
+    -70.0,
+    0.0,
+    100.0
+   ],
+   "approach_position": [
+    -60.0,
+    0.0,
+    96.0
+   ],
+   "source": "curated",
+   "source_key": null,
+   "notes": "curated，吸附到 nav node #328（0.00m）",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "pond",
+   "label_zh": "公园池塘南岸",
+   "position": [
+    5.0,
+    0.0,
+    91.5
+   ],
+   "approach_position": [
+    4.0,
+    0.0,
+    90.0
+   ],
+   "source": "nav_poi",
+   "source_key": "POND",
+   "notes": "nav node #3438，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  },
+  {
+   "id": "ufo_station",
+   "label_zh": "飞碟车站",
+   "position": [
+    -61.0,
+    0.0,
+    -113.6
+   ],
+   "approach_position": [
+    -61.0,
+    0.0,
+    -113.6
+   ],
+   "source": "nav_poi",
+   "source_key": "UFO_STATION",
+   "notes": "nav node #3457，吸附 0.00m",
+   "walkable_check": {
+    "position": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    },
+    "approach": {
+     "walkable": true,
+     "nearest_nav_dist_m": 0.0,
+     "inside_collision": [],
+     "inside_water": [],
+     "ground_z": 0.0
+    }
+   }
+  }
+ ],
+ "anchor_warnings": [
+  {
+   "anchor": "bus_stop",
+   "issue": "position 种子在障碍/水面内，已回退 4.00m 到 nav 节点 #602"
+  },
+  {
+   "anchor": "metro",
+   "issue": "position 种子在障碍/水面内，已回退 1.50m 到 nav 节点 #3463"
+  }
+ ],
+ "lead_anchors_review": {
+  "note_zh": "以下是对 lead 生成的 integration/anchors.json（66 个）的评审建议，只给建议、未修改该文件。",
+  "suggestions": [
+   {
+    "id": "metro_front",
+    "current_label": "地铁站前",
+    "current_pos": [
+     32.15,
+     0.0,
+     -64.0
+    ],
+    "suggested_label": "地铁站前（先修坐标）",
+    "suggested_pos": [
+     135.0,
+     0.0,
+     48.0
+    ],
+    "reason_zh": "坐标错位：(32.15,-64) 在中央广场东南，离真正的地铁站亭 (138..158, 46..54) 约 100m。A_METRO 的 route 节点在过滤后索引错位，需要按原 nav_graph 节点 id=3482 重新解析。",
+    "severity": "high"
+   },
+   {
+    "id": "kino",
+    "current_label": "电影院",
+    "current_pos": [
+     36.0,
+     0.0,
+     -90.0
+    ],
+    "suggested_label": "电影院（КИНО）",
+    "suggested_pos": [
+     30.0,
+     0.0,
+     -89.9
+    ],
+    "reason_zh": "与 bus_stop_2 完全同坐标 (36,-90)。电影院盒子在 x20..60, z-108..-92，门口入口节点是 (30,-89.9)，把 kino 放到 30 就分开了。",
+    "severity": "high"
+   },
+   {
+    "id": "pond_north",
+    "current_label": "池塘北岸",
+    "current_pos": [
+     5.0,
+     0.0,
+     91.5
+    ],
+    "suggested_label": "池塘南岸",
+    "suggested_pos": [
+     5.0,
+     0.0,
+     91.5
+    ],
+    "reason_zh": "池塘水面在 z 94..116，z=91.5 在南岸；北岸应该是 z≈115。而且与 pond 锚点同一坐标，建议删除其一。",
+    "severity": "high"
+   },
+   {
+    "id": "pond",
+    "current_label": "公园池塘",
+    "current_pos": [
+     5.0,
+     0.0,
+     91.5
+    ],
+    "suggested_label": "公园池塘（南岸观景位）",
+    "suggested_pos": [
+     5.0,
+     0.0,
+     91.5
+    ],
+    "reason_zh": "与 pond_north 重复；这个点其实是池塘南岸的观景点，不是池塘本身。",
+    "severity": "medium"
+   },
+   {
+    "id": "motherland",
+    "current_label": "祖国母亲塑像",
+    "current_pos": [
+     -4.0,
+     0.0,
+     128.5
+    ],
+    "suggested_label": "祖国母亲雕像（纪念广场机位）",
+    "suggested_pos": [
+     -4.0,
+     0.0,
+     128.5
+    ],
+    "reason_zh": "位置在纪念广场、雕像基座南侧 10m，并不在雕像脚下；叫『雕像』会让 LLM 以为能走到雕像。雕像本体是不可进入的（底座 x±12, z138..150）。",
+    "severity": "medium"
+   },
+   {
+    "id": "fountain",
+    "current_label": "干喷泉广场",
+    "current_pos": [
+     7.6,
+     0.0,
+     -43.0
+    ],
+    "suggested_label": "干涸喷泉",
+    "suggested_pos": null,
+    "reason_zh": "『干喷泉广场』像地名；数据里是 fountain_dry / 干涸喷泉，改名后和『中央广场』不会混。",
+    "severity": "medium"
+   },
+   {
+    "id": "kiosk",
+    "current_label": "报刊亭",
+    "current_pos": [
+     -45.5,
+     0.0,
+     -72.4
+    ],
+    "suggested_label": "售货亭",
+    "suggested_pos": null,
+    "reason_zh": "plan.json 里 KIOSK 的 cn 是『售货亭』，不是报刊亭。",
+    "severity": "medium"
+   },
+   {
+    "id": "plaza_center",
+    "current_label": "广场中央",
+    "current_pos": [
+     0.0,
+     0.0,
+     -55.0
+    ],
+    "suggested_label": "广场中央（方尖碑旁）",
+    "suggested_pos": [
+     -10.0,
+     0.0,
+     -55.0
+    ],
+    "reason_zh": "(0,-55) 距 obelisk (0,-56.5) 只有 1.5m，两个锚点几乎重合；方尖碑本身占 (x±1.6, z-53.6..-50.4)，建议把广场中央挪到 (-10,-55) 让语义分开。",
+    "severity": "medium"
+   },
+   {
+    "id": "boulevard_center",
+    "current_label": "林荫大道中段",
+    "current_pos": [
+     0.0,
+     0.0,
+     -72.0
+    ],
+    "suggested_label": "广场主道路口 / 列宁大街广场路口",
+    "suggested_pos": null,
+    "reason_zh": "P_BOULEVARD 是南北向的『广场主道』（z-74..-34），AVENUE 才是东西向的『列宁大街』；(0,-72) 是两者交叉口。叫『林荫大道』容易和 plan 里的 AVENUE 混淆。",
+    "severity": "medium"
+   },
+   {
+    "id": "boulevard_west",
+    "current_label": "林荫大道西段",
+    "current_pos": [
+     -100.0,
+     0.0,
+     -72.25
+    ],
+    "suggested_label": "列宁大街西段",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "boulevard_east",
+    "current_label": "林荫大道东段",
+    "current_pos": [
+     100.0,
+     0.0,
+     -72.25
+    ],
+    "suggested_label": "列宁大街东段",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "start_point",
+    "current_label": "起始位置",
+    "current_pos": [
+     0.0,
+     0.0,
+     -60.0
+    ],
+    "suggested_label": "起始位置（保留）",
+    "suggested_pos": null,
+    "reason_zh": "和 sidewalk_center、camera_front 都在出生点 3m 内；建议只保留 start_point，另两个标成 alias 或在 LLM 提示里忽略。",
+    "severity": "low"
+   },
+   {
+    "id": "sidewalk_center",
+    "current_label": "人行道中央",
+    "current_pos": [
+     0.0,
+     0.0,
+     -60.0
+    ],
+    "suggested_label": "（建议删除，用 start_point）",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "street_center",
+    "current_label": "街道中央",
+    "current_pos": [
+     0.0,
+     0.0,
+     -72.0
+    ],
+    "suggested_label": "（与 boulevard_center 同坐标，建议删除）",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "camera_front",
+    "current_label": "观看者面前",
+    "current_pos": [
+     0.0,
+     0.0,
+     -57.6
+    ],
+    "suggested_label": "（建议删除，这是相机位不是地点）",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "store_door",
+    "current_label": "面包房门口",
+    "current_pos": [
+     -1.0,
+     0.0,
+     -89.6
+    ],
+    "suggested_label": "面包房门口（Булочная）",
+    "suggested_pos": null,
+    "reason_zh": "可以保留，和 bakery 锚点同坐标，建议只在 LLM 提示里当 bakery 的别名。",
+    "severity": "low"
+   },
+   {
+    "id": "pavilion",
+    "current_label": "公园凉亭",
+    "current_pos": [
+     54.0,
+     0.0,
+     96.0
+    ],
+    "suggested_label": "公园凉亭",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "pavilion_front",
+    "current_label": "凉亭前",
+    "current_pos": [
+     54.0,
+     0.0,
+     104.0
+    ],
+    "suggested_label": "公园凉亭（北侧）",
+    "suggested_pos": null,
+    "reason_zh": "凉亭本体在 (54,100)，104 是它的北侧空地；两个都在，标签最好能区分。",
+    "severity": "low"
+   },
+   {
+    "id": "dk_west",
+    "current_label": "文化宫西侧",
+    "current_pos": [
+     -27.85,
+     0.0,
+     -30.0
+    ],
+    "suggested_label": "文化宫西侧",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "dk_east",
+    "current_label": "文化宫东侧",
+    "current_pos": [
+     27.85,
+     0.0,
+     -30.0
+    ],
+    "suggested_label": "文化宫东侧",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "plaza_south",
+    "current_label": "广场南端",
+    "current_pos": [
+     0.0,
+     0.0,
+     -70.0
+    ],
+    "suggested_label": "广场南端",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "plaza_north",
+    "current_label": "广场北端",
+    "current_pos": [
+     0.0,
+     0.0,
+     -35.0
+    ],
+    "suggested_label": "广场北端",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   },
+   {
+    "id": "south_street_center",
+    "current_label": "南街中段",
+    "current_pos": [
+     0.0,
+     0.0,
+     -104.0
+    ],
+    "suggested_label": "南街中段",
+    "suggested_pos": null,
+    "reason_zh": "",
+    "severity": "low"
+   }
+  ]
+ },
+ "collision_boxes": [
+  {
+   "id": "GROUND_PLANE",
+   "kind": "ground",
+   "min": [
+    -220.0,
+    -1.0,
+    -170.0
+   ],
+   "max": [
+    220.0,
+    0.0,
+    170.0
+   ],
+   "blender_min": [
+    -220.0,
+    -170.0,
+    -1.0
+   ],
+   "blender_max": [
+    220.0,
+    170.0,
+    0.0
+   ],
+   "source": "map extent 400x300 + margin"
+  },
+  {
+   "id": "W_K1",
+   "kind": "building",
+   "min": [
+    -112.0,
+    0.0,
+    -66.0
+   ],
+   "max": [
+    -102.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    -112.0,
+    -66.0,
+    0.0
+   ],
+   "blender_max": [
+    -102.0,
+    -22.0,
+    14.6
+   ],
+   "source": "khrush_panel / 5 floors"
+  },
+  {
+   "id": "W_K2",
+   "kind": "building",
+   "min": [
+    -98.0,
+    0.0,
+    -66.0
+   ],
+   "max": [
+    -64.0,
+    14.6,
+    -54.0
+   ],
+   "blender_min": [
+    -98.0,
+    -66.0,
+    0.0
+   ],
+   "blender_max": [
+    -64.0,
+    -54.0,
+    14.6
+   ],
+   "source": "khrush_brick / 5 floors"
+  },
+  {
+   "id": "W_K3_W",
+   "kind": "building",
+   "min": [
+    -98.0,
+    0.0,
+    -34.0
+   ],
+   "max": [
+    -83.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    -98.0,
+    -34.0,
+    0.0
+   ],
+   "blender_max": [
+    -83.0,
+    -22.0,
+    14.6
+   ],
+   "source": "arch west"
+  },
+  {
+   "id": "W_K3_E",
+   "kind": "building",
+   "min": [
+    -79.0,
+    0.0,
+    -34.0
+   ],
+   "max": [
+    -64.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    -79.0,
+    -34.0,
+    0.0
+   ],
+   "blender_max": [
+    -64.0,
+    -22.0,
+    14.6
+   ],
+   "source": "arch east"
+  },
+  {
+   "id": "W_K3_LINTEL",
+   "kind": "arch_lintel",
+   "min": [
+    -83.0,
+    2.95,
+    -34.0
+   ],
+   "max": [
+    -79.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    -83.0,
+    -34.0,
+    2.95
+   ],
+   "blender_max": [
+    -79.0,
+    -22.0,
+    14.6
+   ],
+   "source": "walk-under arch ceiling x=-81"
+  },
+  {
+   "id": "E_K1",
+   "kind": "building",
+   "min": [
+    102.0,
+    0.0,
+    -66.0
+   ],
+   "max": [
+    112.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    102.0,
+    -66.0,
+    0.0
+   ],
+   "blender_max": [
+    112.0,
+    -22.0,
+    14.6
+   ],
+   "source": "khrush_panel / 5 floors"
+  },
+  {
+   "id": "E_K2",
+   "kind": "building",
+   "min": [
+    64.0,
+    0.0,
+    -66.0
+   ],
+   "max": [
+    88.0,
+    14.6,
+    -54.0
+   ],
+   "blender_min": [
+    64.0,
+    -66.0,
+    0.0
+   ],
+   "blender_max": [
+    88.0,
+    -54.0,
+    14.6
+   ],
+   "source": "khrush_brick / 5 floors"
+  },
+  {
+   "id": "E_K3",
+   "kind": "building",
+   "min": [
+    64.0,
+    0.0,
+    -34.0
+   ],
+   "max": [
+    92.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    64.0,
+    -34.0,
+    0.0
+   ],
+   "blender_max": [
+    92.0,
+    -22.0,
+    14.6
+   ],
+   "source": "khrush_mod / 5 floors"
+  },
+  {
+   "id": "T_W",
+   "kind": "building",
+   "min": [
+    -52.0,
+    0.0,
+    -70.0
+   ],
+   "max": [
+    -34.0,
+    26.6,
+    -54.0
+   ],
+   "blender_min": [
+    -52.0,
+    -70.0,
+    0.0
+   ],
+   "blender_max": [
+    -34.0,
+    -54.0,
+    26.6
+   ],
+   "source": "brezhnevka_9 / 9 floors"
+  },
+  {
+   "id": "T_E",
+   "kind": "building",
+   "min": [
+    34.0,
+    0.0,
+    -70.0
+   ],
+   "max": [
+    52.0,
+    26.6,
+    -54.0
+   ],
+   "blender_min": [
+    34.0,
+    -70.0,
+    0.0
+   ],
+   "blender_max": [
+    52.0,
+    -54.0,
+    26.6
+   ],
+   "source": "brezhnevka_9 / 9 floors"
+  },
+  {
+   "id": "T_NW",
+   "kind": "building",
+   "min": [
+    -74.0,
+    0.0,
+    46.0
+   ],
+   "max": [
+    -56.0,
+    26.6,
+    60.0
+   ],
+   "blender_min": [
+    -74.0,
+    46.0,
+    0.0
+   ],
+   "blender_max": [
+    -56.0,
+    60.0,
+    26.6
+   ],
+   "source": "brezhnevka_9 / 9 floors"
+  },
+  {
+   "id": "T_NE",
+   "kind": "building",
+   "min": [
+    96.0,
+    0.0,
+    44.0
+   ],
+   "max": [
+    114.0,
+    26.6,
+    58.0
+   ],
+   "blender_min": [
+    96.0,
+    44.0,
+    0.0
+   ],
+   "blender_max": [
+    114.0,
+    58.0,
+    26.6
+   ],
+   "source": "brezhnevka_9 / 9 floors"
+  },
+  {
+   "id": "DK",
+   "kind": "building",
+   "min": [
+    -26.0,
+    0.0,
+    -34.0
+   ],
+   "max": [
+    26.0,
+    12.0,
+    -12.0
+   ],
+   "blender_min": [
+    -26.0,
+    -34.0,
+    0.0
+   ],
+   "blender_max": [
+    26.0,
+    -12.0,
+    12.0
+   ],
+   "source": "dk / 2 floors"
+  },
+  {
+   "id": "SCHOOL",
+   "kind": "building",
+   "min": [
+    2.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    50.0,
+    11.0,
+    32.0
+   ],
+   "blender_min": [
+    2.0,
+    8.0,
+    0.0
+   ],
+   "blender_max": [
+    50.0,
+    32.0,
+    11.0
+   ],
+   "source": "school / 3 floors"
+  },
+  {
+   "id": "KG",
+   "kind": "building",
+   "min": [
+    -36.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    -6.0,
+    8.0,
+    24.0
+   ],
+   "blender_min": [
+    -36.0,
+    8.0,
+    0.0
+   ],
+   "blender_max": [
+    -6.0,
+    24.0,
+    8.0
+   ],
+   "source": "kindergarten / 2 floors"
+  },
+  {
+   "id": "BOILER",
+   "kind": "building",
+   "min": [
+    -112.0,
+    0.0,
+    20.0
+   ],
+   "max": [
+    -86.0,
+    9.0,
+    42.0
+   ],
+   "blender_min": [
+    -112.0,
+    20.0,
+    0.0
+   ],
+   "blender_max": [
+    -86.0,
+    42.0,
+    9.0
+   ],
+   "source": "boiler / 2 floors"
+  },
+  {
+   "id": "SHOP",
+   "kind": "building",
+   "min": [
+    92.0,
+    0.0,
+    -68.0
+   ],
+   "max": [
+    112.0,
+    9.0,
+    -56.0
+   ],
+   "blender_min": [
+    92.0,
+    -68.0,
+    0.0
+   ],
+   "blender_max": [
+    112.0,
+    -56.0,
+    9.0
+   ],
+   "source": "shop / 2 floors"
+  },
+  {
+   "id": "GYM",
+   "kind": "building",
+   "min": [
+    66.0,
+    0.0,
+    8.0
+   ],
+   "max": [
+    88.0,
+    11.5,
+    28.0
+   ],
+   "blender_min": [
+    66.0,
+    8.0,
+    0.0
+   ],
+   "blender_max": [
+    88.0,
+    28.0,
+    11.5
+   ],
+   "source": "gym / 2 floors"
+  },
+  {
+   "id": "CLINIC",
+   "kind": "building",
+   "min": [
+    -46.0,
+    0.0,
+    -16.0
+   ],
+   "max": [
+    -28.0,
+    8.0,
+    -4.0
+   ],
+   "blender_min": [
+    -46.0,
+    -16.0,
+    0.0
+   ],
+   "blender_max": [
+    -28.0,
+    -4.0,
+    8.0
+   ],
+   "source": "clinic / 2 floors"
+  },
+  {
+   "id": "GARAGES",
+   "kind": "building",
+   "min": [
+    -78.28,
+    0.0,
+    14.76
+   ],
+   "max": [
+    -45.73,
+    3.2,
+    26.35
+   ],
+   "blender_min": [
+    -78.275,
+    14.755,
+    0.0
+   ],
+   "blender_max": [
+    -45.725,
+    26.346,
+    3.2
+   ],
+   "source": "garages / 1 floors"
+  },
+  {
+   "id": "STAD_STAND",
+   "kind": "building",
+   "min": [
+    66.0,
+    0.0,
+    34.0
+   ],
+   "max": [
+    94.0,
+    4.0,
+    39.0
+   ],
+   "blender_min": [
+    66.0,
+    34.0,
+    0.0
+   ],
+   "blender_max": [
+    94.0,
+    39.0,
+    4.0
+   ],
+   "source": "stadium_stand / 1 floors"
+  },
+  {
+   "id": "FRAME",
+   "kind": "building",
+   "min": [
+    -114.0,
+    0.0,
+    62.0
+   ],
+   "max": [
+    -96.0,
+    14.0,
+    76.0
+   ],
+   "blender_min": [
+    -114.0,
+    62.0,
+    0.0
+   ],
+   "blender_max": [
+    -96.0,
+    76.0,
+    14.0
+   ],
+   "source": "frame / 5 floors"
+  },
+  {
+   "id": "KIOSK",
+   "kind": "building",
+   "min": [
+    -48.0,
+    0.0,
+    -70.0
+   ],
+   "max": [
+    -43.0,
+    3.0,
+    -66.0
+   ],
+   "blender_min": [
+    -48.0,
+    -70.0,
+    0.0
+   ],
+   "blender_max": [
+    -43.0,
+    -66.0,
+    3.0
+   ],
+   "source": "kiosk / 1 floors"
+  },
+  {
+   "id": "W2_K1",
+   "kind": "building",
+   "min": [
+    -158.0,
+    0.0,
+    -68.0
+   ],
+   "max": [
+    -148.0,
+    14.6,
+    -24.0
+   ],
+   "blender_min": [
+    -158.0,
+    -68.0,
+    0.0
+   ],
+   "blender_max": [
+    -148.0,
+    -24.0,
+    14.6
+   ],
+   "source": "khrush_panel / 5 floors"
+  },
+  {
+   "id": "W2_K2",
+   "kind": "building",
+   "min": [
+    -146.0,
+    0.0,
+    -68.0
+   ],
+   "max": [
+    -116.0,
+    14.6,
+    -56.0
+   ],
+   "blender_min": [
+    -146.0,
+    -68.0,
+    0.0
+   ],
+   "blender_max": [
+    -116.0,
+    -56.0,
+    14.6
+   ],
+   "source": "khrush_brick / 5 floors"
+  },
+  {
+   "id": "W2_K3_W",
+   "kind": "building",
+   "min": [
+    -146.0,
+    0.0,
+    -34.0
+   ],
+   "max": [
+    -134.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    -146.0,
+    -34.0,
+    0.0
+   ],
+   "blender_max": [
+    -134.0,
+    -22.0,
+    14.6
+   ],
+   "source": "arch west"
+  },
+  {
+   "id": "W2_K3_E",
+   "kind": "building",
+   "min": [
+    -130.0,
+    0.0,
+    -34.0
+   ],
+   "max": [
+    -118.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    -130.0,
+    -34.0,
+    0.0
+   ],
+   "blender_max": [
+    -118.0,
+    -22.0,
+    14.6
+   ],
+   "source": "arch east"
+  },
+  {
+   "id": "W2_K3_LINTEL",
+   "kind": "arch_lintel",
+   "min": [
+    -134.0,
+    2.95,
+    -34.0
+   ],
+   "max": [
+    -130.0,
+    14.6,
+    -22.0
+   ],
+   "blender_min": [
+    -134.0,
+    -34.0,
+    2.95
+   ],
+   "blender_max": [
+    -130.0,
+    -22.0,
+    14.6
+   ],
+   "source": "walk-under arch ceiling x=-132"
+  },
+  {
+   "id": "W2_GARAGES",
+   "kind": "building",
+   "min": [
+    -158.36,
+    0.0,
+    1.06
+   ],
+   "max": [
+    -132.23,
+    3.2,
+    12.35
+   ],
+   "blender_min": [
+    -158.358,
+    1.064,
+    0.0
+   ],
+   "blender_max": [
+    -132.234,
+    12.346,
+    3.2
+   ],
+   "source": "garages / 1 floors"
+  },
+  {
+   "id": "BANYA",
+   "kind": "building",
+   "min": [
+    -158.0,
+    0.0,
+    22.0
+   ],
+   "max": [
+    -138.0,
+    12.0,
+    38.0
+   ],
+   "blender_min": [
+    -158.0,
+    22.0,
+    0.0
+   ],
+   "blender_max": [
+    -138.0,
+    38.0,
+    12.0
+   ],
+   "source": "banya / 2 floors"
+  },
+  {
+   "id": "DOM_BYTA",
+   "kind": "building",
+   "min": [
+    -44.0,
+    0.0,
+    -104.0
+   ],
+   "max": [
+    -20.0,
+    8.0,
+    -92.0
+   ],
+   "blender_min": [
+    -44.0,
+    -104.0,
+    0.0
+   ],
+   "blender_max": [
+    -20.0,
+    -92.0,
+    8.0
+   ],
+   "source": "dombyta / 2 floors"
+  },
+  {
+   "id": "BAKERY",
+   "kind": "building",
+   "min": [
+    -8.0,
+    0.0,
+    -102.0
+   ],
+   "max": [
+    6.0,
+    6.0,
+    -92.0
+   ],
+   "blender_min": [
+    -8.0,
+    -102.0,
+    0.0
+   ],
+   "blender_max": [
+    6.0,
+    -92.0,
+    6.0
+   ],
+   "source": "bakery / 1 floors"
+  },
+  {
+   "id": "KINO",
+   "kind": "building",
+   "min": [
+    20.0,
+    0.0,
+    -108.0
+   ],
+   "max": [
+    60.0,
+    11.0,
+    -92.0
+   ],
+   "blender_min": [
+    20.0,
+    -108.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    -92.0,
+    11.0
+   ],
+   "source": "cinema / 2 floors"
+  },
+  {
+   "id": "MARKET",
+   "kind": "building",
+   "min": [
+    128.0,
+    0.0,
+    -64.0
+   ],
+   "max": [
+    158.0,
+    8.0,
+    -42.0
+   ],
+   "blender_min": [
+    128.0,
+    -64.0,
+    0.0
+   ],
+   "blender_max": [
+    158.0,
+    -42.0,
+    8.0
+   ],
+   "source": "market / 1 floors"
+  },
+  {
+   "id": "E2_GARAGES",
+   "kind": "building",
+   "min": [
+    127.71,
+    0.0,
+    -0.17
+   ],
+   "max": [
+    162.87,
+    3.2,
+    12.35
+   ],
+   "blender_min": [
+    127.706,
+    -0.172,
+    0.0
+   ],
+   "blender_max": [
+    162.87,
+    12.346,
+    3.2
+   ],
+   "source": "garages / 1 floors"
+  },
+  {
+   "id": "T_E2",
+   "kind": "building",
+   "min": [
+    128.0,
+    0.0,
+    -30.0
+   ],
+   "max": [
+    146.0,
+    26.6,
+    -14.0
+   ],
+   "blender_min": [
+    128.0,
+    -30.0,
+    0.0
+   ],
+   "blender_max": [
+    146.0,
+    -14.0,
+    26.6
+   ],
+   "source": "brezhnevka_9 / 9 floors"
+  },
+  {
+   "id": "T_NW2",
+   "kind": "building",
+   "min": [
+    -150.0,
+    0.0,
+    92.0
+   ],
+   "max": [
+    -132.0,
+    26.6,
+    106.0
+   ],
+   "blender_min": [
+    -150.0,
+    92.0,
+    0.0
+   ],
+   "blender_max": [
+    -132.0,
+    106.0,
+    26.6
+   ],
+   "source": "brezhnevka_9 / 9 floors"
+  },
+  {
+   "id": "T_NE2",
+   "kind": "building",
+   "min": [
+    120.0,
+    0.0,
+    92.0
+   ],
+   "max": [
+    138.0,
+    26.6,
+    106.0
+   ],
+   "blender_min": [
+    120.0,
+    92.0,
+    0.0
+   ],
+   "blender_max": [
+    138.0,
+    106.0,
+    26.6
+   ],
+   "source": "brezhnevka_9 / 9 floors"
+  },
+  {
+   "id": "S_KIOSK",
+   "kind": "building",
+   "min": [
+    -62.0,
+    0.0,
+    -100.0
+   ],
+   "max": [
+    -57.0,
+    3.0,
+    -94.0
+   ],
+   "blender_min": [
+    -62.0,
+    -100.0,
+    0.0
+   ],
+   "blender_max": [
+    -57.0,
+    -94.0,
+    3.0
+   ],
+   "source": "kiosk / 1 floors"
+  },
+  {
+   "id": "MOTHERLAND",
+   "kind": "building",
+   "min": [
+    -12.0,
+    0.0,
+    138.0
+   ],
+   "max": [
+    12.0,
+    40.0,
+    150.0
+   ],
+   "blender_min": [
+    -12.0,
+    138.0,
+    0.0
+   ],
+   "blender_max": [
+    12.0,
+    150.0,
+    40.0
+   ],
+   "source": "statue_motherland / 1 floors"
+  },
+  {
+   "id": "BREST_RELIEF",
+   "kind": "building",
+   "min": [
+    -52.0,
+    0.0,
+    124.0
+   ],
+   "max": [
+    -12.0,
+    6.5,
+    128.0
+   ],
+   "blender_min": [
+    -52.0,
+    124.0,
+    0.0
+   ],
+   "blender_max": [
+    -12.0,
+    128.0,
+    6.5
+   ],
+   "source": "relief_wall / 1 floors"
+  },
+  {
+   "id": "METRO",
+   "kind": "building",
+   "min": [
+    138.0,
+    0.0,
+    46.0
+   ],
+   "max": [
+    158.0,
+    9.0,
+    54.0
+   ],
+   "blender_min": [
+    138.0,
+    46.0,
+    0.0
+   ],
+   "blender_max": [
+    158.0,
+    54.0,
+    9.0
+   ],
+   "source": "metro_pavilion / 1 floors"
+  },
+  {
+   "id": "MSU_MAIN",
+   "kind": "building",
+   "min": [
+    174.0,
+    0.0,
+    36.0
+   ],
+   "max": [
+    198.0,
+    52.0,
+    74.0
+   ],
+   "blender_min": [
+    174.0,
+    36.0,
+    0.0
+   ],
+   "blender_max": [
+    198.0,
+    74.0,
+    52.0
+   ],
+   "source": "vysotka_main / 14 floors"
+  },
+  {
+   "id": "UKRAINA",
+   "kind": "building",
+   "min": [
+    176.0,
+    0.0,
+    6.0
+   ],
+   "max": [
+    194.0,
+    42.0,
+    20.0
+   ],
+   "blender_min": [
+    176.0,
+    6.0,
+    0.0
+   ],
+   "blender_max": [
+    194.0,
+    20.0,
+    42.0
+   ],
+   "source": "vysotka_hotel / 12 floors"
+  },
+  {
+   "id": "MFA",
+   "kind": "building",
+   "min": [
+    176.0,
+    0.0,
+    -26.0
+   ],
+   "max": [
+    196.0,
+    38.0,
+    -12.0
+   ],
+   "blender_min": [
+    176.0,
+    -26.0,
+    0.0
+   ],
+   "blender_max": [
+    196.0,
+    -12.0,
+    38.0
+   ],
+   "source": "vysotka_ministry / 11 floors"
+  },
+  {
+   "id": "HIT",
+   "kind": "building",
+   "min": [
+    130.0,
+    0.0,
+    20.0
+   ],
+   "max": [
+    156.0,
+    24.0,
+    44.0
+   ],
+   "blender_min": [
+    130.0,
+    20.0,
+    0.0
+   ],
+   "blender_max": [
+    156.0,
+    44.0,
+    24.0
+   ],
+   "source": "institute_sino / 5 floors"
+  },
+  {
+   "id": "MUSEUM",
+   "kind": "building",
+   "min": [
+    130.0,
+    0.0,
+    62.0
+   ],
+   "max": [
+    158.0,
+    22.0,
+    86.0
+   ],
+   "blender_min": [
+    130.0,
+    62.0,
+    0.0
+   ],
+   "blender_max": [
+    158.0,
+    86.0,
+    22.0
+   ],
+   "source": "museum_colonnade / 3 floors"
+  },
+  {
+   "id": "ROBOTICS",
+   "kind": "building",
+   "min": [
+    140.0,
+    0.0,
+    94.0
+   ],
+   "max": [
+    160.0,
+    16.0,
+    112.0
+   ],
+   "blender_min": [
+    140.0,
+    94.0,
+    0.0
+   ],
+   "blender_max": [
+    160.0,
+    112.0,
+    16.0
+   ],
+   "source": "institute_robotics / 3 floors"
+  },
+  {
+   "id": "MOT",
+   "kind": "building",
+   "min": [
+    174.0,
+    0.0,
+    -58.0
+   ],
+   "max": [
+    198.0,
+    28.0,
+    -40.0
+   ],
+   "blender_min": [
+    174.0,
+    -58.0,
+    0.0
+   ],
+   "blender_max": [
+    198.0,
+    -40.0,
+    28.0
+   ],
+   "source": "ministry_transport / 8 floors"
+  },
+  {
+   "id": "DRUZHBA",
+   "kind": "building",
+   "min": [
+    130.0,
+    0.0,
+    -106.0
+   ],
+   "max": [
+    158.0,
+    12.0,
+    -92.0
+   ],
+   "blender_min": [
+    130.0,
+    -106.0,
+    0.0
+   ],
+   "blender_max": [
+    158.0,
+    -92.0,
+    12.0
+   ],
+   "source": "sanatorium_druzhba / 3 floors"
+  },
+  {
+   "id": "UFO_STATION",
+   "kind": "building",
+   "min": [
+    -74.0,
+    0.0,
+    -130.0
+   ],
+   "max": [
+    -48.0,
+    10.0,
+    -116.0
+   ],
+   "blender_min": [
+    -74.0,
+    -130.0,
+    0.0
+   ],
+   "blender_max": [
+    -48.0,
+    -116.0,
+    10.0
+   ],
+   "source": "bus_station_ufo / 1 floors"
+  },
+  {
+   "id": "HEX_STATION",
+   "kind": "building",
+   "min": [
+    36.0,
+    0.0,
+    -130.0
+   ],
+   "max": [
+    60.0,
+    12.0,
+    -118.0
+   ],
+   "blender_min": [
+    36.0,
+    -130.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    -118.0,
+    12.0
+   ],
+   "source": "bus_station_hex / 1 floors"
+  },
+  {
+   "id": "LM_OBELISK",
+   "kind": "landmark",
+   "min": [
+    -1.6,
+    0.0,
+    -53.6
+   ],
+   "max": [
+    1.6,
+    18.0,
+    -50.4
+   ],
+   "blender_min": [
+    -1.6,
+    -53.6,
+    0.0
+   ],
+   "blender_max": [
+    1.6,
+    -50.4,
+    18.0
+   ],
+   "source": "obelisk"
+  },
+  {
+   "id": "LM_FOUNTAIN",
+   "kind": "low",
+   "min": [
+    -5.2,
+    0.0,
+    -48.2
+   ],
+   "max": [
+    5.2,
+    0.5,
+    -37.8
+   ],
+   "blender_min": [
+    -5.2,
+    -48.2,
+    0.0
+   ],
+   "blender_max": [
+    5.2,
+    -37.8,
+    0.5
+   ],
+   "source": "fountain_dry"
+  },
+  {
+   "id": "LM_FLAGS_0",
+   "kind": "pole",
+   "min": [
+    -1.58,
+    0.0,
+    -67.08
+   ],
+   "max": [
+    -1.42,
+    8.0,
+    -66.92
+   ],
+   "blender_min": [
+    -1.58,
+    -67.08,
+    0.0
+   ],
+   "blender_max": [
+    -1.42,
+    -66.92,
+    8.0
+   ],
+   "source": "flagpoles"
+  },
+  {
+   "id": "LM_FLAGS_1",
+   "kind": "pole",
+   "min": [
+    -0.08,
+    0.0,
+    -67.08
+   ],
+   "max": [
+    0.08,
+    8.0,
+    -66.92
+   ],
+   "blender_min": [
+    -0.08,
+    -67.08,
+    0.0
+   ],
+   "blender_max": [
+    0.08,
+    -66.92,
+    8.0
+   ],
+   "source": "flagpoles"
+  },
+  {
+   "id": "LM_FLAGS_2",
+   "kind": "pole",
+   "min": [
+    1.42,
+    0.0,
+    -67.08
+   ],
+   "max": [
+    1.58,
+    8.0,
+    -66.92
+   ],
+   "blender_min": [
+    1.42,
+    -67.08,
+    0.0
+   ],
+   "blender_max": [
+    1.58,
+    -66.92,
+    8.0
+   ],
+   "source": "flagpoles"
+  },
+  {
+   "id": "LM_BUS_STOP",
+   "kind": "prop",
+   "min": [
+    -41.8,
+    0.0,
+    -72.1
+   ],
+   "max": [
+    -38.2,
+    2.8,
+    -70.9
+   ],
+   "blender_min": [
+    -41.8,
+    -72.1,
+    0.0
+   ],
+   "blender_max": [
+    -38.2,
+    -70.9,
+    2.8
+   ],
+   "source": "bus_stop"
+  },
+  {
+   "id": "LM_BILLBOARD_1",
+   "kind": "prop",
+   "min": [
+    -100.5,
+    0.8,
+    -70.25
+   ],
+   "max": [
+    -91.5,
+    4.8,
+    -69.75
+   ],
+   "blender_min": [
+    -100.5,
+    -70.25,
+    0.8
+   ],
+   "blender_max": [
+    -91.5,
+    -69.75,
+    4.8
+   ],
+   "source": "billboard"
+  },
+  {
+   "id": "LM_BILLBOARD_2",
+   "kind": "prop",
+   "min": [
+    66.0,
+    0.8,
+    -70.25
+   ],
+   "max": [
+    74.0,
+    4.8,
+    -69.75
+   ],
+   "blender_min": [
+    66.0,
+    -70.25,
+    0.8
+   ],
+   "blender_max": [
+    74.0,
+    -69.75,
+    4.8
+   ],
+   "source": "billboard"
+  },
+  {
+   "id": "LM_BILLBOARD_3",
+   "kind": "prop",
+   "min": [
+    18.5,
+    0.8,
+    -68.25
+   ],
+   "max": [
+    25.5,
+    4.3,
+    -67.75
+   ],
+   "blender_min": [
+    18.5,
+    -68.25,
+    0.8
+   ],
+   "blender_max": [
+    25.5,
+    -67.75,
+    4.3
+   ],
+   "source": "billboard"
+  },
+  {
+   "id": "LM_POSTER_BOARD_1",
+   "kind": "prop",
+   "min": [
+    -11.0,
+    0.0,
+    -70.25
+   ],
+   "max": [
+    -5.0,
+    2.4,
+    -69.75
+   ],
+   "blender_min": [
+    -11.0,
+    -70.25,
+    0.0
+   ],
+   "blender_max": [
+    -5.0,
+    -69.75,
+    2.4
+   ],
+   "source": "poster_board"
+  },
+  {
+   "id": "LM_POSTER_BOARD_2",
+   "kind": "prop",
+   "min": [
+    5.5,
+    0.0,
+    -30.25
+   ],
+   "max": [
+    10.5,
+    2.2,
+    -29.75
+   ],
+   "blender_min": [
+    5.5,
+    -30.25,
+    0.0
+   ],
+   "blender_max": [
+    10.5,
+    -29.75,
+    2.2
+   ],
+   "source": "poster_board"
+  },
+  {
+   "id": "LM_BILLBOARD_4",
+   "kind": "prop",
+   "min": [
+    104.0,
+    0.8,
+    -69.75
+   ],
+   "max": [
+    112.0,
+    4.8,
+    -69.25
+   ],
+   "blender_min": [
+    104.0,
+    -69.75,
+    0.8
+   ],
+   "blender_max": [
+    112.0,
+    -69.25,
+    4.8
+   ],
+   "source": "billboard"
+  },
+  {
+   "id": "LM_BILLBOARD_5",
+   "kind": "prop",
+   "min": [
+    -154.0,
+    0.8,
+    -69.75
+   ],
+   "max": [
+    -146.0,
+    4.8,
+    -69.25
+   ],
+   "blender_min": [
+    -154.0,
+    -69.75,
+    0.8
+   ],
+   "blender_max": [
+    -146.0,
+    -69.25,
+    4.8
+   ],
+   "source": "billboard"
+  },
+  {
+   "id": "LM_POSTER_BOARD_3",
+   "kind": "prop",
+   "min": [
+    27.5,
+    0.0,
+    -89.85
+   ],
+   "max": [
+    32.5,
+    2.2,
+    -89.35
+   ],
+   "blender_min": [
+    27.5,
+    -89.85,
+    0.0
+   ],
+   "blender_max": [
+    32.5,
+    -89.35,
+    2.2
+   ],
+   "source": "poster_board"
+  },
+  {
+   "id": "LM_PAVILION",
+   "kind": "prop",
+   "min": [
+    51.9,
+    0.0,
+    97.9
+   ],
+   "max": [
+    56.1,
+    3.0,
+    102.1
+   ],
+   "blender_min": [
+    51.9,
+    97.9,
+    0.0
+   ],
+   "blender_max": [
+    56.1,
+    102.1,
+    3.0
+   ],
+   "source": "pavilion"
+  },
+  {
+   "id": "LM_PARK_SIGN",
+   "kind": "prop",
+   "min": [
+    -126.8,
+    0.0,
+    91.8
+   ],
+   "max": [
+    -123.2,
+    2.6,
+    92.2
+   ],
+   "blender_min": [
+    -126.8,
+    91.8,
+    0.0
+   ],
+   "blender_max": [
+    -123.2,
+    92.2,
+    2.6
+   ],
+   "source": "park_sign"
+  },
+  {
+   "id": "LM_BUS_STOP_2",
+   "kind": "prop",
+   "min": [
+    38.2,
+    0.0,
+    -90.1
+   ],
+   "max": [
+    41.8,
+    2.8,
+    -88.9
+   ],
+   "blender_min": [
+    38.2,
+    -90.1,
+    0.0
+   ],
+   "blender_max": [
+    41.8,
+    -88.9,
+    2.8
+   ],
+   "source": "bus_stop"
+  },
+  {
+   "id": "LM_ETERNAL_FLAME",
+   "kind": "prop",
+   "min": [
+    -1.8,
+    0.0,
+    127.2
+   ],
+   "max": [
+    1.8,
+    1.1,
+    130.8
+   ],
+   "blender_min": [
+    -1.8,
+    127.2,
+    0.0
+   ],
+   "blender_max": [
+    1.8,
+    130.8,
+    1.1
+   ],
+   "source": "eternal_flame"
+  },
+  {
+   "id": "LM_GUARD_BOX",
+   "kind": "prop",
+   "min": [
+    7.9,
+    0.0,
+    127.9
+   ],
+   "max": [
+    10.1,
+    2.7,
+    130.1
+   ],
+   "blender_min": [
+    7.9,
+    127.9,
+    0.0
+   ],
+   "blender_max": [
+    10.1,
+    130.1,
+    2.7
+   ],
+   "source": "guard_box"
+  },
+  {
+   "id": "LM_FLAG_ROW_MONUMENT_0",
+   "kind": "pole",
+   "min": [
+    19.92,
+    0.0,
+    127.92
+   ],
+   "max": [
+    20.08,
+    9.0,
+    128.08
+   ],
+   "blender_min": [
+    19.92,
+    127.92,
+    0.0
+   ],
+   "blender_max": [
+    20.08,
+    128.08,
+    9.0
+   ],
+   "source": "flag_row"
+  },
+  {
+   "id": "LM_FLAG_ROW_MONUMENT_1",
+   "kind": "pole",
+   "min": [
+    22.32,
+    0.0,
+    127.92
+   ],
+   "max": [
+    22.48,
+    9.0,
+    128.08
+   ],
+   "blender_min": [
+    22.32,
+    127.92,
+    0.0
+   ],
+   "blender_max": [
+    22.48,
+    128.08,
+    9.0
+   ],
+   "source": "flag_row"
+  },
+  {
+   "id": "LM_FLAG_ROW_MONUMENT_2",
+   "kind": "pole",
+   "min": [
+    24.72,
+    0.0,
+    127.92
+   ],
+   "max": [
+    24.88,
+    9.0,
+    128.08
+   ],
+   "blender_min": [
+    24.72,
+    127.92,
+    0.0
+   ],
+   "blender_max": [
+    24.88,
+    128.08,
+    9.0
+   ],
+   "source": "flag_row"
+  },
+  {
+   "id": "LM_FLAG_ROW_MONUMENT_3",
+   "kind": "pole",
+   "min": [
+    27.12,
+    0.0,
+    127.92
+   ],
+   "max": [
+    27.28,
+    9.0,
+    128.08
+   ],
+   "blender_min": [
+    27.12,
+    127.92,
+    0.0
+   ],
+   "blender_max": [
+    27.28,
+    128.08,
+    9.0
+   ],
+   "source": "flag_row"
+  },
+  {
+   "id": "LM_FLAG_ROW_MONUMENT_4",
+   "kind": "pole",
+   "min": [
+    29.52,
+    0.0,
+    127.92
+   ],
+   "max": [
+    29.68,
+    9.0,
+    128.08
+   ],
+   "blender_min": [
+    29.52,
+    127.92,
+    0.0
+   ],
+   "blender_max": [
+    29.68,
+    128.08,
+    9.0
+   ],
+   "source": "flag_row"
+  },
+  {
+   "id": "LM_FLAG_ROW_MONUMENT_5",
+   "kind": "pole",
+   "min": [
+    31.92,
+    0.0,
+    127.92
+   ],
+   "max": [
+    32.08,
+    9.0,
+    128.08
+   ],
+   "blender_min": [
+    31.92,
+    127.92,
+    0.0
+   ],
+   "blender_max": [
+    32.08,
+    128.08,
+    9.0
+   ],
+   "source": "flag_row"
+  },
+  {
+   "id": "LM_METRO_SIGN",
+   "kind": "prop",
+   "min": [
+    134.1,
+    0.0,
+    49.8
+   ],
+   "max": [
+    135.9,
+    3.0,
+    50.2
+   ],
+   "blender_min": [
+    134.1,
+    49.8,
+    0.0
+   ],
+   "blender_max": [
+    135.9,
+    50.2,
+    3.0
+   ],
+   "source": "metro_sign"
+  },
+  {
+   "id": "LM_STATUE_PLAQUE",
+   "kind": "prop",
+   "min": [
+    -1.4,
+    0.5,
+    136.35
+   ],
+   "max": [
+    1.4,
+    1.8,
+    136.65
+   ],
+   "blender_min": [
+    -1.4,
+    136.35,
+    0.5
+   ],
+   "blender_max": [
+    1.4,
+    136.65,
+    1.8
+   ],
+   "source": "plaque"
+  },
+  {
+   "id": "TRAM_PLATFORM",
+   "kind": "low",
+   "min": [
+    4,
+    0.0,
+    -83.2
+   ],
+   "max": [
+    26,
+    0.25,
+    -79.8
+   ],
+   "blender_min": [
+    4,
+    -83.2,
+    0.0
+   ],
+   "blender_max": [
+    26,
+    -79.8,
+    0.25
+   ],
+   "source": "tram platform"
+  },
+  {
+   "id": "WATER_PARK_POND",
+   "kind": "water",
+   "min": [
+    -30.0,
+    0.0,
+    94.0
+   ],
+   "max": [
+    40.0,
+    1.0,
+    116.0
+   ],
+   "blender_min": [
+    -30.0,
+    94.0,
+    0.0
+   ],
+   "blender_max": [
+    40.0,
+    116.0,
+    1.0
+   ],
+   "source": "water - blocked"
+  },
+  {
+   "id": "WATER_MONUMENT_POOL_W",
+   "kind": "water",
+   "min": [
+    -40.0,
+    0.0,
+    120.0
+   ],
+   "max": [
+    -14.0,
+    1.0,
+    127.0
+   ],
+   "blender_min": [
+    -40.0,
+    120.0,
+    0.0
+   ],
+   "blender_max": [
+    -14.0,
+    127.0,
+    1.0
+   ],
+   "source": "water - blocked"
+  },
+  {
+   "id": "WATER_MONUMENT_POOL_E",
+   "kind": "water",
+   "min": [
+    14.0,
+    0.0,
+    120.0
+   ],
+   "max": [
+    40.0,
+    1.0,
+    127.0
+   ],
+   "blender_min": [
+    14.0,
+    120.0,
+    0.0
+   ],
+   "blender_max": [
+    40.0,
+    127.0,
+    1.0
+   ],
+   "source": "water - blocked"
+  },
+  {
+   "id": "ESPLANADE_STEPS_STEP0",
+   "kind": "terrace_step",
+   "min": [
+    -60.0,
+    0.0,
+    132.0
+   ],
+   "max": [
+    60.0,
+    0.45,
+    133.0
+   ],
+   "blender_min": [
+    -60.0,
+    132.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    133.0,
+    0.45
+   ],
+   "source": "walkable stair step"
+  },
+  {
+   "id": "ESPLANADE_STEPS_STEP1",
+   "kind": "terrace_step",
+   "min": [
+    -60.0,
+    0.0,
+    133.0
+   ],
+   "max": [
+    60.0,
+    0.9,
+    134.0
+   ],
+   "blender_min": [
+    -60.0,
+    133.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    134.0,
+    0.9
+   ],
+   "source": "walkable stair step"
+  },
+  {
+   "id": "ESPLANADE_STEPS_STEP2",
+   "kind": "terrace_step",
+   "min": [
+    -60.0,
+    0.0,
+    134.0
+   ],
+   "max": [
+    60.0,
+    1.35,
+    135.0
+   ],
+   "blender_min": [
+    -60.0,
+    134.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    135.0,
+    1.35
+   ],
+   "source": "walkable stair step"
+  },
+  {
+   "id": "ESPLANADE_STEPS_STEP3",
+   "kind": "terrace_step",
+   "min": [
+    -60.0,
+    0.0,
+    135.0
+   ],
+   "max": [
+    60.0,
+    1.8,
+    136.0
+   ],
+   "blender_min": [
+    -60.0,
+    135.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    136.0,
+    1.8
+   ],
+   "source": "walkable stair step"
+  },
+  {
+   "id": "ESPLANADE_STEPS_STEP4",
+   "kind": "terrace_step",
+   "min": [
+    -60.0,
+    0.0,
+    136.0
+   ],
+   "max": [
+    60.0,
+    2.25,
+    137.0
+   ],
+   "blender_min": [
+    -60.0,
+    136.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    137.0,
+    2.25
+   ],
+   "source": "walkable stair step"
+  },
+  {
+   "id": "ESPLANADE_STEPS_STEP5",
+   "kind": "terrace_step",
+   "min": [
+    -60.0,
+    0.0,
+    137.0
+   ],
+   "max": [
+    60.0,
+    2.7,
+    138.0
+   ],
+   "blender_min": [
+    -60.0,
+    137.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    138.0,
+    2.7
+   ],
+   "source": "walkable stair step"
+  },
+  {
+   "id": "ESPLANADE_STEPS_PLATFORM",
+   "kind": "terrace_platform",
+   "min": [
+    -60.0,
+    0.0,
+    138.0
+   ],
+   "max": [
+    60.0,
+    2.7,
+    150.0
+   ],
+   "blender_min": [
+    -60.0,
+    138.0,
+    0.0
+   ],
+   "blender_max": [
+    60.0,
+    150.0,
+    2.7
+   ],
+   "source": "monument platform"
+  }
+ ],
+ "walkable_bounds": {
+  "recommended": "core_demo_200x160",
+  "options": [
+   {
+    "id": "core_demo_200x160",
+    "unity_min": [
+     -114.0,
+     -92.0
+    ],
+    "unity_max": [
+     90.0,
+     68.0
+    ],
+    "blender_rect": [
+     -114.0,
+     -92.0,
+     90.0,
+     68.0
+    ],
+    "size_m": [
+     204.0,
+     160.0
+    ],
+    "nav_nodes_inside": 872,
+    "note_zh": "主城区演示框：中央广场 + 文化宫 + 列宁大街 + 东西院 + 学校/幼儿园/体育馆，200×160m；覆盖推荐出生点和 C1 景点，A* 在小图上最快。"
+   },
+   {
+    "id": "core_plus_landmarks",
+    "unity_min": [
+     -160.0,
+     -92.0
+    ],
+    "unity_max": [
+     165.0,
+     100.0
+    ],
+    "blender_rect": [
+     -160.0,
+     -92.0,
+     165.0,
+     100.0
+    ],
+    "size_m": [
+     325.0,
+     192.0
+    ],
+    "nav_nodes_inside": 1710,
+    "note_zh": "折中方案：在 core 基础上向东扩到地铁/高楼群、向北扩到纪念轴，仍然排除南侧长途车站区和西二区，约 325×192m。"
+   },
+   {
+    "id": "nav_full",
+    "unity_min": [
+     -196.0,
+     -145.5
+    ],
+    "unity_max": [
+     200.0,
+     152.4
+    ],
+    "blender_rect": [
+     -196.0,
+     -145.5,
+     200.0,
+     152.4
+    ],
+    "size_m": [
+     396.0,
+     297.9
+    ],
+    "nav_nodes_inside": 3486,
+    "note_zh": "整个导航范围（=nav_graph.bounds），包含东区地铁/高楼群、纪念广场、北公园、南侧车站；节点数 ×3，路径明显变长，建议只在需要走远场景时临时扩框。"
+   }
+  ],
+  "world_bounds_unity": {
+   "min": [
+    -220.0,
+    -170.0
+   ],
+   "max": [
+    220.0,
+    170.0
+   ],
+   "note": "真正的地面碰撞盒 GROUND_PLANE 在 Unity 里是 x[-220,220] z[-170,170]（y -1..0）"
+  }
+ },
+ "landmark_names": [
+  {
+   "id": "W_K1",
+   "label_zh": "西区赫鲁晓夫楼A",
+   "unity_center": [
+    -107.0,
+    0.0,
+    -44.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_panel",
+   "manifest_center_unity_raw": [
+    -107.0,
+    0.0,
+    44.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "W_K2",
+   "label_zh": "西区赫鲁晓夫楼B",
+   "unity_center": [
+    -81.0,
+    0.0,
+    -60.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_brick",
+   "manifest_center_unity_raw": [
+    -81.0,
+    0.0,
+    60.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "W_K3",
+   "label_zh": "西区过关楼",
+   "unity_center": [
+    -81.0,
+    0.0,
+    -28.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_arch",
+   "manifest_center_unity_raw": [
+    -81.0,
+    0.0,
+    28.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "E_K1",
+   "label_zh": "东区赫鲁晓夫楼A",
+   "unity_center": [
+    107.0,
+    0.0,
+    -44.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_panel",
+   "manifest_center_unity_raw": [
+    107.0,
+    0.0,
+    44.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "E_K2",
+   "label_zh": "东区赫鲁晓夫楼B",
+   "unity_center": [
+    76.0,
+    0.0,
+    -60.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_brick",
+   "manifest_center_unity_raw": [
+    76.0,
+    0.0,
+    60.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "E_K3",
+   "label_zh": "东区改造楼",
+   "unity_center": [
+    78.0,
+    0.0,
+    -28.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_mod",
+   "manifest_center_unity_raw": [
+    78.0,
+    0.0,
+    28.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "T_W",
+   "label_zh": "西塔楼",
+   "unity_center": [
+    -43.0,
+    0.0,
+    -62.0
+   ],
+   "height_m": 26.6,
+   "floors": 9,
+   "type": "brezhnevka_9",
+   "manifest_center_unity_raw": [
+    -43.0,
+    0.0,
+    62.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "T_E",
+   "label_zh": "东塔楼",
+   "unity_center": [
+    43.0,
+    0.0,
+    -62.0
+   ],
+   "height_m": 26.6,
+   "floors": 9,
+   "type": "brezhnevka_9",
+   "manifest_center_unity_raw": [
+    43.0,
+    0.0,
+    62.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "T_NW",
+   "label_zh": "西北塔楼",
+   "unity_center": [
+    -65.0,
+    0.0,
+    53.0
+   ],
+   "height_m": 26.6,
+   "floors": 9,
+   "type": "brezhnevka_9",
+   "manifest_center_unity_raw": [
+    -65.0,
+    0.0,
+    -53.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "T_NE",
+   "label_zh": "东北塔楼",
+   "unity_center": [
+    105.0,
+    0.0,
+    51.0
+   ],
+   "height_m": 26.6,
+   "floors": 9,
+   "type": "brezhnevka_9",
+   "manifest_center_unity_raw": [
+    105.0,
+    0.0,
+    -51.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "DK",
+   "label_zh": "文化宫",
+   "unity_center": [
+    0.0,
+    0.0,
+    -23.0
+   ],
+   "height_m": 12.0,
+   "floors": 2,
+   "type": "dk",
+   "manifest_center_unity_raw": [
+    0.0,
+    0.0,
+    23.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "SCHOOL",
+   "label_zh": "第三中学",
+   "unity_center": [
+    26.0,
+    0.0,
+    20.0
+   ],
+   "height_m": 11.0,
+   "floors": 3,
+   "type": "school",
+   "manifest_center_unity_raw": [
+    26.0,
+    0.0,
+    -20.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "KG",
+   "label_zh": "第九幼儿园",
+   "unity_center": [
+    -21.0,
+    0.0,
+    16.0
+   ],
+   "height_m": 8.0,
+   "floors": 2,
+   "type": "kindergarten",
+   "manifest_center_unity_raw": [
+    -21.0,
+    0.0,
+    -16.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "BOILER",
+   "label_zh": "锅炉房",
+   "unity_center": [
+    -99.0,
+    0.0,
+    31.0
+   ],
+   "height_m": 9.0,
+   "floors": 2,
+   "type": "boiler",
+   "manifest_center_unity_raw": [
+    -99.0,
+    0.0,
+    -31.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "SHOP",
+   "label_zh": "食品商店",
+   "unity_center": [
+    102.0,
+    0.0,
+    -62.0
+   ],
+   "height_m": 9.0,
+   "floors": 2,
+   "type": "shop",
+   "manifest_center_unity_raw": [
+    102.0,
+    0.0,
+    62.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "GYM",
+   "label_zh": "体育馆",
+   "unity_center": [
+    77.0,
+    0.0,
+    18.0
+   ],
+   "height_m": 11.5,
+   "floors": 2,
+   "type": "gym",
+   "manifest_center_unity_raw": [
+    77.0,
+    0.0,
+    -18.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "CLINIC",
+   "label_zh": "门诊部",
+   "unity_center": [
+    -37.0,
+    0.0,
+    -10.0
+   ],
+   "height_m": 8.0,
+   "floors": 2,
+   "type": "clinic",
+   "manifest_center_unity_raw": [
+    -37.0,
+    0.0,
+    10.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "GARAGES",
+   "label_zh": "车库合作社",
+   "unity_center": [
+    -62.0,
+    0.0,
+    22.0
+   ],
+   "height_m": 3.2,
+   "floors": 1,
+   "type": "garages",
+   "manifest_center_unity_raw": [
+    -62.0,
+    0.0,
+    -22.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "STAD_STAND",
+   "label_zh": "体育场看台",
+   "unity_center": [
+    80.0,
+    0.0,
+    36.5
+   ],
+   "height_m": 4.0,
+   "floors": 1,
+   "type": "stadium_stand",
+   "manifest_center_unity_raw": [
+    80.0,
+    0.0,
+    -36.5
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "FRAME",
+   "label_zh": "烂尾楼",
+   "unity_center": [
+    -105.0,
+    0.0,
+    69.0
+   ],
+   "height_m": 14.0,
+   "floors": 5,
+   "type": "frame",
+   "manifest_center_unity_raw": [
+    -105.0,
+    0.0,
+    -69.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "KIOSK",
+   "label_zh": "售货亭",
+   "unity_center": [
+    -45.5,
+    0.0,
+    -68.0
+   ],
+   "height_m": 3.0,
+   "floors": 1,
+   "type": "kiosk",
+   "manifest_center_unity_raw": [
+    -45.5,
+    0.0,
+    68.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "W2_K1",
+   "label_zh": "西二区赫鲁晓夫楼A",
+   "unity_center": [
+    -153.0,
+    0.0,
+    -46.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_panel",
+   "manifest_center_unity_raw": [
+    -153.0,
+    0.0,
+    46.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "W2_K2",
+   "label_zh": "西二区赫鲁晓夫楼B",
+   "unity_center": [
+    -131.0,
+    0.0,
+    -62.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_brick",
+   "manifest_center_unity_raw": [
+    -131.0,
+    0.0,
+    62.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "W2_K3",
+   "label_zh": "西二区过关楼",
+   "unity_center": [
+    -132.0,
+    0.0,
+    -28.0
+   ],
+   "height_m": 14.6,
+   "floors": 5,
+   "type": "khrush_arch",
+   "manifest_center_unity_raw": [
+    -132.0,
+    0.0,
+    28.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "W2_GARAGES",
+   "label_zh": "西二车库",
+   "unity_center": [
+    -147.0,
+    0.0,
+    8.0
+   ],
+   "height_m": 3.2,
+   "floors": 1,
+   "type": "garages",
+   "manifest_center_unity_raw": [
+    -147.0,
+    0.0,
+    -8.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "BANYA",
+   "label_zh": "公共浴场",
+   "unity_center": [
+    -148.0,
+    0.0,
+    30.0
+   ],
+   "height_m": 12.0,
+   "floors": 2,
+   "type": "banya",
+   "manifest_center_unity_raw": [
+    -148.0,
+    0.0,
+    -30.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "DOM_BYTA",
+   "label_zh": "生活服务楼",
+   "unity_center": [
+    -32.0,
+    0.0,
+    -98.0
+   ],
+   "height_m": 8.0,
+   "floors": 2,
+   "type": "dombyta",
+   "manifest_center_unity_raw": [
+    -32.0,
+    0.0,
+    98.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "BAKERY",
+   "label_zh": "面包房",
+   "unity_center": [
+    -1.0,
+    0.0,
+    -97.0
+   ],
+   "height_m": 6.0,
+   "floors": 1,
+   "type": "bakery",
+   "manifest_center_unity_raw": [
+    -1.0,
+    0.0,
+    97.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "KINO",
+   "label_zh": "电影院",
+   "unity_center": [
+    40.0,
+    0.0,
+    -100.0
+   ],
+   "height_m": 11.0,
+   "floors": 2,
+   "type": "cinema",
+   "manifest_center_unity_raw": [
+    40.0,
+    0.0,
+    100.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "MARKET",
+   "label_zh": "市场",
+   "unity_center": [
+    143.0,
+    0.0,
+    -53.0
+   ],
+   "height_m": 8.0,
+   "floors": 1,
+   "type": "market",
+   "manifest_center_unity_raw": [
+    143.0,
+    0.0,
+    53.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "E2_GARAGES",
+   "label_zh": "东二车库",
+   "unity_center": [
+    143.0,
+    0.0,
+    8.0
+   ],
+   "height_m": 3.2,
+   "floors": 1,
+   "type": "garages",
+   "manifest_center_unity_raw": [
+    143.0,
+    0.0,
+    -8.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "T_E2",
+   "label_zh": "东二塔楼",
+   "unity_center": [
+    137.0,
+    0.0,
+    -22.0
+   ],
+   "height_m": 26.6,
+   "floors": 9,
+   "type": "brezhnevka_9",
+   "manifest_center_unity_raw": [
+    137.0,
+    0.0,
+    22.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "T_NW2",
+   "label_zh": "公园西塔楼",
+   "unity_center": [
+    -141.0,
+    0.0,
+    99.0
+   ],
+   "height_m": 26.6,
+   "floors": 9,
+   "type": "brezhnevka_9",
+   "manifest_center_unity_raw": [
+    -141.0,
+    0.0,
+    -99.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "T_NE2",
+   "label_zh": "公园东塔楼",
+   "unity_center": [
+    129.0,
+    0.0,
+    99.0
+   ],
+   "height_m": 26.6,
+   "floors": 9,
+   "type": "brezhnevka_9",
+   "manifest_center_unity_raw": [
+    129.0,
+    0.0,
+    -99.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "S_KIOSK",
+   "label_zh": "南侧售货亭",
+   "unity_center": [
+    -59.5,
+    0.0,
+    -97.0
+   ],
+   "height_m": 3.0,
+   "floors": 1,
+   "type": "kiosk",
+   "manifest_center_unity_raw": [
+    -59.5,
+    0.0,
+    97.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "MOTHERLAND",
+   "label_zh": "祖国母亲雕像",
+   "unity_center": [
+    0.0,
+    0.0,
+    144.0
+   ],
+   "height_m": 40.0,
+   "floors": 1,
+   "type": "statue_motherland",
+   "manifest_center_unity_raw": [
+    0.0,
+    0.0,
+    -144.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "BREST_RELIEF",
+   "label_zh": "勇气浮雕墙",
+   "unity_center": [
+    -32.0,
+    0.0,
+    126.0
+   ],
+   "height_m": 6.5,
+   "floors": 1,
+   "type": "relief_wall",
+   "manifest_center_unity_raw": [
+    -32.0,
+    0.0,
+    -126.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "METRO",
+   "label_zh": "地铁站亭",
+   "unity_center": [
+    148.0,
+    0.0,
+    50.0
+   ],
+   "height_m": 9.0,
+   "floors": 1,
+   "type": "metro_pavilion",
+   "manifest_center_unity_raw": [
+    148.0,
+    0.0,
+    -50.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "MSU_MAIN",
+   "label_zh": "国立大学主楼",
+   "unity_center": [
+    186.0,
+    0.0,
+    55.0
+   ],
+   "height_m": 52.0,
+   "floors": 14,
+   "type": "vysotka_main",
+   "manifest_center_unity_raw": [
+    186.0,
+    0.0,
+    -55.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "UKRAINA",
+   "label_zh": "乌克兰饭店",
+   "unity_center": [
+    185.0,
+    0.0,
+    13.0
+   ],
+   "height_m": 42.0,
+   "floors": 12,
+   "type": "vysotka_hotel",
+   "manifest_center_unity_raw": [
+    185.0,
+    0.0,
+    -13.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "MFA",
+   "label_zh": "外交部大楼",
+   "unity_center": [
+    186.0,
+    0.0,
+    -19.0
+   ],
+   "height_m": 38.0,
+   "floors": 11,
+   "type": "vysotka_ministry",
+   "manifest_center_unity_raw": [
+    186.0,
+    0.0,
+    19.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "HIT",
+   "label_zh": "中苏学堂",
+   "unity_center": [
+    143.0,
+    0.0,
+    32.0
+   ],
+   "height_m": 24.0,
+   "floors": 5,
+   "type": "institute_sino",
+   "manifest_center_unity_raw": [
+    143.0,
+    0.0,
+    -32.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "MUSEUM",
+   "label_zh": "军事博物馆",
+   "unity_center": [
+    144.0,
+    0.0,
+    74.0
+   ],
+   "height_m": 22.0,
+   "floors": 3,
+   "type": "museum_colonnade",
+   "manifest_center_unity_raw": [
+    144.0,
+    0.0,
+    -74.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "ROBOTICS",
+   "label_zh": "机器人研究院",
+   "unity_center": [
+    150.0,
+    0.0,
+    103.0
+   ],
+   "height_m": 16.0,
+   "floors": 3,
+   "type": "institute_robotics",
+   "manifest_center_unity_raw": [
+    150.0,
+    0.0,
+    -103.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "MOT",
+   "label_zh": "交通部大楼",
+   "unity_center": [
+    186.0,
+    0.0,
+    -49.0
+   ],
+   "height_m": 28.0,
+   "floors": 8,
+   "type": "ministry_transport",
+   "manifest_center_unity_raw": [
+    186.0,
+    0.0,
+    49.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "DRUZHBA",
+   "label_zh": "友谊疗养院",
+   "unity_center": [
+    144.0,
+    0.0,
+    -99.0
+   ],
+   "height_m": 12.0,
+   "floors": 3,
+   "type": "sanatorium_druzhba",
+   "manifest_center_unity_raw": [
+    144.0,
+    0.0,
+    99.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "UFO_STATION",
+   "label_zh": "飞碟车站",
+   "unity_center": [
+    -61.0,
+    0.0,
+    -123.0
+   ],
+   "height_m": 10.0,
+   "floors": 1,
+   "type": "bus_station_ufo",
+   "manifest_center_unity_raw": [
+    -61.0,
+    0.0,
+    123.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  },
+  {
+   "id": "HEX_STATION",
+   "label_zh": "六边形车站",
+   "unity_center": [
+    48.0,
+    0.0,
+    -124.0
+   ],
+   "height_m": 12.0,
+   "floors": 1,
+   "type": "bus_station_hex",
+   "manifest_center_unity_raw": [
+    48.0,
+    0.0,
+    124.0
+   ],
+   "note": "manifest 的 center_unity 是旧约定 (x,z,-y)，Unity 用 unity_center 即可"
+  }
+ ],
+ "validation": {
+  "spawn_and_camera_checks": [
+   {
+    "spawn": "SP_C1_PLAZA",
+    "camera": "face_to_face",
+    "camera_position": [
+     -15.61,
+     1.5,
+     -65.44
+    ],
+    "camera_inside_collision": [],
+    "line_of_sight_blocked": [],
+    "view_bearing_deg": 25.0,
+    "first_hit_along_axis": [
+     [
+      "DK",
+      "building",
+      34.7
+     ],
+     [
+      "SCHOOL",
+      "building",
+      81.1
+     ]
+    ]
+   },
+   {
+    "spawn": "SP_C1_PLAZA",
+    "camera": "over_shoulder",
+    "camera_position": [
+     -15.47,
+     2.21,
+     -57.96
+    ],
+    "camera_inside_collision": [],
+    "line_of_sight_blocked": [],
+    "view_bearing_deg": 160.0,
+    "first_hit_along_axis": [
+     [
+      "LM_POSTER_BOARD_1",
+      "prop",
+      13.1
+     ],
+     [
+      "BAKERY",
+      "building",
+      36.2
+     ]
+    ]
+   },
+   {
+    "spawn": "SP_C2_MONUMENT",
+    "camera": "face_to_face",
+    "camera_position": [
+     0.0,
+     1.47,
+     85.8
+    ],
+    "camera_inside_collision": [],
+    "line_of_sight_blocked": [],
+    "view_bearing_deg": 0.0,
+    "first_hit_along_axis": [
+     [
+      "WATER_PARK_POND",
+      "water",
+      8.2
+     ],
+     [
+      "LM_ETERNAL_FLAME",
+      "prop",
+      41.4
+     ],
+     [
+      "LM_STATUE_PLAQUE",
+      "prop",
+      50.5
+     ],
+     [
+      "MOTHERLAND",
+      "building",
+      52.2
+     ]
+    ]
+   },
+   {
+    "spawn": "SP_C2_MONUMENT",
+    "camera": "over_shoulder",
+    "camera_position": [
+     0.0,
+     2.09,
+     85.5
+    ],
+    "camera_inside_collision": [],
+    "line_of_sight_blocked": [],
+    "view_bearing_deg": 0.0,
+    "first_hit_along_axis": [
+     [
+      "WATER_PARK_POND",
+      "water",
+      8.5
+     ],
+     [
+      "LM_ETERNAL_FLAME",
+      "prop",
+      41.7
+     ],
+     [
+      "LM_STATUE_PLAQUE",
+      "prop",
+      50.9
+     ],
+     [
+      "MOTHERLAND",
+      "building",
+      52.5
+     ]
+    ]
+   },
+   {
+    "spawn": "SP_C3_TRAM",
+    "camera": "face_to_face",
+    "camera_position": [
+     14.73,
+     1.71,
+     -81.5
+    ],
+    "camera_inside_collision": [],
+    "line_of_sight_blocked": [],
+    "view_bearing_deg": 270.0,
+    "first_hit_along_axis": []
+   },
+   {
+    "spawn": "SP_C3_TRAM",
+    "camera": "over_shoulder",
+    "camera_position": [
+     7.13,
+     2.39,
+     -81.5
+    ],
+    "camera_inside_collision": [],
+    "line_of_sight_blocked": [],
+    "view_bearing_deg": 90.0,
+    "first_hit_along_axis": []
+   }
+  ],
+  "anchors_walkable": {
+   "total": 30,
+   "both_ok": 30
+  },
+  "nav_collision_conflicts": [
+   {
+    "id": "LM_OBELISK",
+    "issue_zh": "nav 的 P_BOULEVARD 节点 (0,-52) 正好落在方尖碑碰撞盒内；A* 会直线穿过方尖碑。Unity 端要么给这条边加代价，要么在 (0,-52) 附近把路径左右推开 3.5m。"
+   },
+   {
+    "id": "P_MONUMENT_AXIS",
+    "issue_zh": "纪念轴 nav 只有 (0,90) 与 (0,118) 两个节点，中间 28m 一条边直接跨过公园池塘；碰撞盒 WATER_PARK_POND 会挡住角色。需禁用该边或改成绕池塘的路径。"
+   },
+   {
+    "id": "BREST_RELIEF/FLAG_ROW_MONUMENT",
+    "issue_zh": "两个 nav POI 节点落在倒影池水面碰撞盒内（(-32,121.6) 与 (26,124.8)），直接当目的地会走不过去；已在锚点里改用岸上回退点。"
+   },
+   {
+    "id": "LM_FOUNTAIN",
+    "issue_zh": "干喷泉碰撞盒高 0.5m（> step 0.35），nav 却有节点穿过喷泉；Unity 里要么允许跳过 0.5m 矮沿，要么绕行。"
+   },
+   {
+    "id": "WATER_PARK_POND",
+    "issue_zh": "池塘水面碰撞盒是矩形 AABB，但水面是椭圆；四个角约 3~5m 的干地被误判为水，绕池塘时贴着 AABB 外侧走即可。"
+   },
+   {
+    "id": "TRAM_PLATFORM",
+    "issue_zh": "电车站台顶面 z=0.25（steppable），但 nav 节点 z=0；角色站在站台上时根节点 y 要用 0.25，否则会陷进站台 0.25m。"
+   }
+  ],
+  "ground_height_notes": [
+   "全图地面 y=0（GROUND_PLANE 顶面），角色根节点 y=0 即可。",
+   "台地：纪念广场六级台阶 (z 132..138, 每级 0.45m) → 平台 z 138..150 高 2.7m。角色要上台地时根节点 y=2.7。",
+   "电车站台：x 4..26, z -83.2..-79.8, 顶面 y=0.25。"
+  ]
+ },
+ "image_evidence": [
+  {
+   "path": "renders/final/CAM_HERO.png",
+   "seen_zh": "全场 3/4 鸟瞰（相机 205,-195,85 → Unity (205,85,-195)）：蓝调天空 + 雾、成片 5 层赫鲁晓夫楼与 9 层塔楼、广场暖灯、右侧祖国的白色雕像轮廓。判断：整体夜景观感成立，但地面细节在远处丢失。"
+  },
+  {
+   "path": "renders/final/CAM_PLAZA.png",
+   "seen_zh": "中央广场眼平 2.1m：文化宫『ДОМ КУЛЬТУРЫ』招牌、马赛克饰带、柱廊、海报灯箱、左侧台阶、右侧方尖碑基座。判断：这是全图最好的『数字人背景』——有招牌文字、有暖光、有地标。"
+  },
+  {
+   "path": "renders/final/CAM_DK.png",
+   "seen_zh": "文化宫近景仰拍：马赛克饰带细节 + 柱廊 + 海报 + 门厅暖光。判断：适合走近的 B 机位，不适合当默认背景（太近）。"
+  },
+  {
+   "path": "renders/final/CAM_AVE.png",
+   "seen_zh": "列宁大街公交站眼平 1.75m：候车亭、广告牌、接触网杆、蓝色巴士；画面被灯杆分割、前景偏满。判断：不做出生点，可做街景。"
+  },
+  {
+   "path": "renders/final/CAM_ESPLANADE.png",
+   "seen_zh": "纪念广场眼平 2.8m 仰拍：祖国母亲雕像全高、六面旗、长明火、左侧倒影池、脚下台阶。判断：史诗感最强，但地面仰角大，适合镜头运动而不是数字人站桩。"
+  },
+  {
+   "path": "renders/final/CAM_LM_MOTHERLAND.png",
+   "seen_zh": "雕像 30mm 近景：裙摆褶皱、举剑手臂、斗篷、花岗岩基座、右下旗阵。判断：雕像本体做得很足，但基座 3m 高，角色站旁边会被压住。"
+  },
+  {
+   "path": "renders/final/CAM_LM_MSU.png",
+   "seen_zh": "东区高楼群：莫大主楼（尖顶红星/钟塔/柱廊）+ 乌克兰饭店赭石立面对比。判断：东侧是最『斯大林式』的背景，但离出生点 180m。"
+  },
+  {
+   "path": "renders/final/CAM_VYSOTKA.png",
+   "seen_zh": "34m 高机位拍东区天际线：五座塔楼层层叠叠 + 屋顶红星 + 窗外暖光。判断：预告片镜头；地面角色只能在广场里借它当远景。"
+  },
+  {
+   "path": "renders/final/CAM_ARCH.png",
+   "seen_zh": "过关楼拱门 1.85m：4m 宽拱洞、洞内三盏暖灯、砖墙面、平房窗。判断：氛围极好但空间窄，相机 4m 会卡进拱洞，只能当特写机位。"
+  },
+  {
+   "path": "renders/final/CAM_SOUTH_ST.png",
+   "seen_zh": "电影院（КИНО/ЗИМА 霓虹）+ 雨湿大道 + 巴士 + 远处电车 + 接触网。判断：全图最『电影感』的街景，但在大道南侧，离广场 40m。"
+  },
+  {
+   "path": "web/_shots/live_r3_spawn.png",
+   "seen_zh": "web 端默认出生点 live 截图：站在 (0,-65.5) 朝北，方尖碑正好在画面正中把文化宫门厅挡住。判断：这正是不能直接用 (0,-60) yaw=0 当展示机位的原因。"
+  },
+  {
+   "path": "web/_shots/plaza_obelisk.png",
+   "seen_zh": "web 端从 (8,-62) 朝 NNE 眼平：文化宫全景 + 右侧树 + 远处塔楼。判断：确认广场平视视野开阔、没有树/杆挡住文化宫。"
+  },
+  {
+   "path": "web/_shots/esplanade_motherland.png",
+   "seen_zh": "web 端纪念广场 (34,112) 朝 WNW：雕像 + 旗阵 + 长明火 + 倒影池 + 树。判断：纪念区可走，但树列和旗杆会切画面。"
+  },
+  {
+   "path": "web/_shots/aerial_overview.png",
+   "seen_zh": "web 端高空总览：整块 400×300 地块、深蓝雾、右侧东区高楼群。判断：适合放在加载/过场，不适合地面展示。"
+  },
+  {
+   "path": "map/district_plan.png",
+   "seen_zh": "2D 总平面 400×300（北朝上）：48 栋建筑、道路/步道/广场/水面/台阶、图例与比例尺。用来核对所有坐标分区。"
+  }
+ ],
+ "renders_made": [
+  {
+   "path": "previews/C1_FACE.png",
+   "desc": "C1 面对面构图（文化宫 + 方尖碑背景）"
+  },
+  {
+   "path": "previews/C1_OTS.png",
+   "desc": "C1 越肩构图（列宁大街方向）"
+  },
+  {
+   "path": "previews/C2_FACE.png",
+   "desc": "C2 面对面构图（纪念轴 + 雕像基座 + 浮雕墙）"
+  },
+  {
+   "path": "previews/C3_FACE.png",
+   "desc": "C3 面对面构图（电车 + 木站台 + 大街）"
+  },
+  {
+   "path": "previews/C3_OTS.png",
+   "desc": "C3 越肩构图（轨道向西延伸）"
+  },
+  {
+   "path": "previews/EV_A.png",
+   "desc": "C1 眼平背景参考（与 CAM_PLAZA 同机位方向）"
+  }
+ ]
+}
