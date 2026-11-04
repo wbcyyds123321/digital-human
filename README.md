@@ -47,6 +47,20 @@
 
 <p align="center"><i>角色边走边聊，小地图显示当前位置、可去地点和实时导航；行动/对话双车道共享状态，所以不会因为说话把走路停掉。</i></p>
 
+### 3. 笔记本摄像头：看着屏幕前的用户对话
+
+<p align="center">
+  <img src="docs/images/vision-webcam-chat.jpg" width="82%">
+</p>
+
+<p align="center"><i>左上角显示「电脑摄像头：开」，右上角是实时摄像头画面；数字人在回复里直接说出了屏幕前用户的外貌和动作（黑框眼镜、戴着耳机、正在往右看），说明它真的在看人，而不是只读文字。</i></p>
+
+<p align="center">
+  <img src="docs/images/vision-both.jpg" width="82%">
+</p>
+
+<p align="center"><i>「游戏视角：开 / 电脑摄像头：开」两路视觉同时工作：一路看 Unity 场景，一路看屏幕前的用户。</i></p>
+
 ## 她现在能做什么
 
 - **听懂并做事**：自然语言指令 → 任务契约 → Lua 任务程序 → Unity 技能执行 → 真实回执校验。
