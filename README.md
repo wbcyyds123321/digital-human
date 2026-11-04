@@ -1,3 +1,5 @@
+> **🗺️ 配套地图生成器项目：[MapGen Engine →](https://github.com/wbcyyds123321/-MapGen)**
+
 # 虚拟数字人 / AI Character Interaction System
 
 一个跑在 Unity 3D 场景里的 AI 数字人原型：她能听懂自然语言，在场景里走过去、做动作、看用户和游戏世界，再开口回话；项目同时包含一套程序化城市地图生成工具链。
