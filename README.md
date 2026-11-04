@@ -61,6 +61,14 @@
 
 <p align="center"><i>「游戏视角：开 / 电脑摄像头：开」两路视觉同时工作：一路看 Unity 场景，一路看屏幕前的用户。</i></p>
 
+### 4. Unity 游戏内相机：数字人自己的视野
+
+<p align="center">
+  <img src="docs/images/vision-game-camera.jpg" width="82%">
+</p>
+
+<p align="center"><i>左上角显示「游戏视角：开 / 电脑摄像头：关」；右侧是 Unity 游戏内 EyeCamera 的实时画面。数字人根据自己看到的游戏内画面，直接描述出便利店招牌、OPEN 灯牌、自动售货机和垃圾桶，说明它看的是游戏世界本身，不是预设台词。</i></p>
+
 ## 她现在能做什么
 
 - **听懂并做事**：自然语言指令 → 任务契约 → Lua 任务程序 → Unity 技能执行 → 真实回执校验。
