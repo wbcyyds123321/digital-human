@@ -1,4 +1,8 @@
-# 仪玄数字人 · Unity AI Character Interaction System
+# 仪玄数字人 | Unity AI Character Interaction System
+
+[![Unity](https://img.shields.io/badge/Unity-2022.3%20LTS-black?logo=unity)](https://unity.com/)
+[![Vision](https://img.shields.io/badge/Vision-DeepSeek%20Flash-6f42c1)](https://github.com/wbcyyds123321/digital-human)
+[![License](https://img.shields.io/badge/License-MIT-2ea44f)](LICENSE)
 
 <p align="center">
   <img src="docs/images/showcase-soviet-map.png" alt="苏式蓝调小区中的仪玄数字人" width="100%">
@@ -16,6 +20,15 @@
 </p>
 
 > 这是一个 Unity 数字人交互系统的源码展示快照，不是下载后即可运行的完整 Unity 工程。仓库不包含角色模型、地图二进制、动画、音频、第三方包或 API Key。
+
+## 这个项目解决什么问题
+
+把“模型说它做到了”和“世界真的发生了”分开。模型负责理解、定位和规划，Unity 负责执行并返回可核验事实：
+
+- **能听懂**：文字或语音先变成带目标、动作、顺序和约束的任务契约；
+- **能看见**：视觉模型只判断当前画面中的二维位置，实体身份由 Unity 的同帧 ID/depth 绑定；
+- **能执行**：Lua/MoonSharp 任务只能调用注册工具，导航、动作、交互和语音都受运行时守卫；
+- **能解释**：最终回答引用真实回执、坐标、距离、朝向和失败原因，而不是臆造状态。
 
 ## 项目定位
 
@@ -56,7 +69,7 @@
 
 ## 核心架构
 
-~~~mermaid
+```mermaid
 flowchart TB
     U[用户 / 文字 / 语音] --> R[语义路由]
     R --> D[对话车道 / Narrator]
@@ -77,7 +90,7 @@ flowchart TB
     B -->|后续交互的目标上下文| C
     D --> O[字幕 / 流式 TTS / 表情]
     T --> O
-~~~
+```
 
 | 层次 | 技术与实现 |
 |---|---|
