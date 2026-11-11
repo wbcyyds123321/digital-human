@@ -78,7 +78,17 @@ namespace Yixuan.AI
         readonly List<ChatMessage> _history = new List<ChatMessage>();
         Coroutine _turn;
         DeepSeekClient.StreamHandle _activeStream;
-        int _voiceTurnId;
+        long _voiceTurnId;
+        long _speechEpoch;
+        long _inputEpoch;
+        string _inputSource = "direct", _inputUtteranceId = "";
+        double _inputStartedAt, _inputEndedAt;
+        bool _inputTimestampReliable;
+        double _lastExplicitUiInputUnix = -1;
+        public double ExplicitUiInputFenceUnix { get { return _lastExplicitUiInputUnix; } }
+        bool _submittingTrackedInput;
+        readonly HashSet<string> _seenVoiceUtterances = new HashSet<string>();
+        readonly Queue<string> _voiceUtteranceOrder = new Queue<string>();
         bool _assistantHistoryRecorded;
         CancellationTokenSource _cts;
         bool _loggedOfflineReply;
@@ -101,7 +111,7 @@ namespace Yixuan.AI
         // 视觉问答垫场音：Qwen 往返要 2~7s，先说一句"我看看"把干等变成"她正在看"。
         const string VisionFillerText = "嗯……我看看。";
         bool _visionFillerUsable = true;
-        int _fillerTurnId;          // 垫场音占用的 voice_server turn（正式回复复用它，避免打断）
+        long _fillerTurnId;         // 垫场音占用的 voice_server turn（正式回复复用它，避免打断）
         bool _fillerTurnActive;     // 垫场音是否真的在播（HTTP 成功后才为 true）
 
         // ---- 对外只读 ----
@@ -119,6 +129,9 @@ namespace Yixuan.AI
             }
         }
 
+        /// <summary>True after Awake clone + Start RuntimeSettings application have completed.</summary>
+        public bool InitializationComplete { get; private set; }
+
         /// <summary>最近一次说出口的话</summary>
         public string LastReply { get; private set; } = "";
 
@@ -127,7 +140,7 @@ namespace Yixuan.AI
         public float LastVisionAnswerSeconds { get; private set; } = -1f;
 
         /// <summary>是否正在处理一轮对话（非 Idle）</summary>
-        public bool IsBusy { get { return _state != State.Idle || (Missions != null && Missions.IsRunning); } }
+        public bool IsBusy { get { return _state != State.Idle || DialogueBusy || (Missions != null && Missions.IsRunning); } }
 
         // ============================================================
         //  初始化
@@ -171,10 +184,12 @@ namespace Yixuan.AI
 
             // 预热视觉问答的垫场音（让 sidecar 的 TTS 缓存里有这一句，首次用时不卡合成）
             if (Config != null && Config.VoiceEnabled && Config.VoiceInputMode != "off" &&
-                Tts != null && !string.IsNullOrEmpty(Tts.Endpoint))
+                Tts != null && !string.IsNullOrEmpty(Tts.Endpoint) &&
+                !Yixuan.SelectionLab.SelectionLabContext.IsActive)
             {
                 StartCoroutine(PrewarmVisionFiller());
             }
+            InitializationComplete = true;
         }
 
         void StopWalking(string reason)
@@ -308,6 +323,24 @@ namespace Yixuan.AI
             text = text.Trim();
             if (text.Length == 0) return;
 
+            if (!_submittingTrackedInput && !_nextTurnIsProactive)
+                TrackAcceptedInput("direct", "", UnixNow(), UnixNow(), true);
+
+            if (TryRouteSemanticInput(text)) return;
+
+            // B offline fallback only: normal Auto+TaskPlanning+API input is classified
+            // by the unified semantic route above (route=interaction visual_target ->
+            // FirstPersonTargetingService). The keyword lane is used only when that
+            // semantic routing is disabled, never as a parallel production bypass.
+            if (!SemanticInteractionRouting && TryHandleFirstPersonTargetInput(text)) return;
+
+            // Stage-5 visual-seat task lane: normal chat input first reaches the
+            // Stage-5 controller, which delegates actual sitting to the accepted
+            // Stage-4 controller. Non-Stage-5 text falls through unchanged.
+            if (Yixuan.Stage5.Stage5VisualSeatAgent.TryHandleChat(text, this)) return;
+
+            if (TryRouteNamedAnchor(text)) return;
+
             if (TryRouteMission(text)) return;
             if(RouteWithNarrator(text))return;
             if(Missions!=null&&Missions.IsRunning){StartNarrator(text,false);return;}
@@ -322,8 +355,8 @@ namespace Yixuan.AI
             BeginTurn(text);
 
             if (_turn != null) StopCoroutine(_turn);
-            bool useFullStream = Config != null && Client is DeepSeekClient && Config.StreamMode == "full" &&
-                                 VoiceInput != null && Config.VoiceInputEnabled && Config.VoiceInputMode == "duplex";
+            bool useFullStream = Config != null && Config.VoiceEnabled && !_speechMuted && Client is DeepSeekClient && Config.StreamMode == "full" &&
+                                 VoiceInput != null && Config.VoiceInputMode == "duplex";
             if (useFullStream)
             {
                 _turn = StartCoroutine(RunTurnStreaming(text));
@@ -346,7 +379,10 @@ namespace Yixuan.AI
             if (Gaze != null && (!_dialogueOnlyCancel || Missions==null || !Missions.IsRunning)) Gaze.AbandonObservationForNewTurn();
 
             // 用户新一轮输入优先：先停掉上一轮还在走的位移，避免“她一边走一边听新话”失焦。
-            StopWalking("用户新输入");
+            // Fine-map navigation is explicitly persistent across ordinary chat turns;
+            // a real stop command / mission / task still uses its own route above.
+            if (!Yixuan.WorldMap.WorldMapPanel.OwnsNavigation(Locomotion))
+                StopWalking("用户新输入");
             // P7：先确定输入来源，再决定是否执行本地云台指令。
             // 主动接话的“系统事件描述”只是数据，里面的“左边/回头”等词不能驱动云台。
             _syntheticVisualTurn = _nextTurnIsProactive;
@@ -383,6 +419,7 @@ namespace Yixuan.AI
                 _currentUserInHistory = false;
             }
             Debug.Log("[Chat] 用户 → " + text);
+            _turnInput = text;
 
             if (UI != null)
             {
@@ -393,7 +430,11 @@ namespace Yixuan.AI
 
             // 用户互动：刷新 Brain 的世界状态（疲劳/熟悉度），再挂起主动行为避免抢戏
             if (Brain != null) Brain.ReceiveStimulus(0.8f);
-            if (Director != null) Director.SuspendBrain(true);
+            if (Director != null)
+            {
+                CaptureBrainProactivePreference();
+                Director.SuspendBrain(true);
+            }
 
             // 思考中的微动作掩盖网络延迟（动作 id 走 Catalog 校验，不写死）
             if (Character != null && ActionCatalog.HasGesture("think"))
@@ -429,12 +470,50 @@ namespace Yixuan.AI
             if (string.IsNullOrEmpty(text)) return;
             text = text.Trim();
             if (text.Length == 0) return;
-            if (_state != State.Idle)
+            double now = UnixNow();
+            _lastExplicitUiInputUnix = now;
+            TrackAcceptedInput("ui", "", now, now, true);
+            if (_state != State.Idle || DialogueBusy)
             {
                 Debug.Log("[Chat] 忙碌中收到新输入 → 先打断当前轮，再提交新内容：" + text);
                 CancelDialogueTurn();
             }
-            Submit(text);
+            SubmitTrackedInput(text);
+        }
+
+        static double UnixNow() { return (System.DateTime.UtcNow - new System.DateTime(1970, 1, 1, 0, 0, 0, System.DateTimeKind.Utc)).TotalSeconds; }
+
+        void TrackAcceptedInput(string source, string utteranceId, double startedAt, double endedAt, bool reliable)
+        {
+            _inputEpoch++;
+            _inputSource = source;
+            _inputUtteranceId = utteranceId ?? "";
+            _inputStartedAt = startedAt;
+            _inputEndedAt = endedAt;
+            _inputTimestampReliable = reliable;
+        }
+
+        void SubmitTrackedInput(string text)
+        {
+            _submittingTrackedInput = true;
+            try { Submit(text); }
+            finally { _submittingTrackedInput = false; }
+        }
+
+        // Input and output are independent: muting speech must not cancel the task
+        // or prevent a fresh user utterance from interrupting the dialogue.
+        void CancelSessionVoiceOutput()
+        {
+            _speechEpoch++;
+            long turnId = _voiceTurnId, fillerId = _fillerTurnId;
+            _voiceTurnId = 0;
+            _fillerTurnId = 0;
+            _fillerTurnActive = false;
+            if (!_shuttingDown && VoiceInput != null && isActiveAndEnabled)
+            {
+                if (turnId > 0) StartCoroutine(VoiceInput.CancelSay(turnId));
+                if (fillerId > 0 && fillerId != turnId) StartCoroutine(VoiceInput.CancelSay(fillerId));
+            }
         }
 
         // ============================================================
@@ -447,9 +526,15 @@ namespace Yixuan.AI
         /// </summary>
         public void CancelCurrentTurn()
         {
+            if (!_dialogueOnlyCancel) CancelNarratorWork();
+            if (!_dialogueOnlyCancel)
+                Yixuan.Stage5.Stage5VisualSeatAgent.NotifyChatCancelled("对话取消");
+            if (!_dialogueOnlyCancel)
+                Yixuan.Pick.FirstPersonTargetingService.CancelRun("chat_cancel");
             if (!_dialogueOnlyCancel && Missions != null && Missions.IsRunning) Missions.Cancel("明确取消当前任务");
             // 取消/打断时位移也立即停（用户优先）
             if(!_dialogueOnlyCancel || Missions==null || !Missions.IsRunning)StopWalking("对话取消");
+            CancelSessionVoiceOutput();
             if (_state == State.Idle && _turn == null)
             {
                 if (VerboseLog) Debug.Log("[Chat] 已是 Idle，忽略重复取消");
@@ -484,9 +569,8 @@ namespace Yixuan.AI
                 _cts = null;
             }
 
-            if (Voice != null) Voice.Stop();
-            if (!_shuttingDown && VoiceInput != null && isActiveAndEnabled)
-                StartCoroutine(VoiceInput.CancelSay());     // sidecar 停播（幂等）
+            if (Voice != null && (_taskSpeech == null || _taskSpeech.ActiveTicket == null ||
+                _taskSpeech.ActiveTicket.Owner != null && _taskSpeech.ActiveTicket.Owner.StartsWith("dialogue-"))) Voice.Stop();
 
             // 被打断：把 AI 已说出的半句也记入历史，下一轮模型才知道"我说到哪被打断了"
             if (_state == State.Speaking && !_assistantHistoryRecorded && !string.IsNullOrEmpty(LastReply))
@@ -507,7 +591,7 @@ namespace Yixuan.AI
             }
             if (Director != null && (Missions==null||!Missions.IsRunning))
             {
-                Director.SuspendBrain(false);
+                ResumeBrainIfUserWants();
                 Director.ReturnToIdle();
             }
 
@@ -517,9 +601,36 @@ namespace Yixuan.AI
         /// <summary>来自 ASR 的文本提交：若正忙（思考/说话）先取消当前轮，再开新一轮。</summary>
         public void SubmitVoice(string text)
         {
-            if (string.IsNullOrEmpty(text)) return;
-            if (_state != State.Idle) CancelDialogueTurn();
-            Submit(text);
+            SubmitVoiceEvent(text, "voice_legacy", "", 0, 0);
+        }
+
+        public bool SubmitVoiceEvent(string text, string source, string utteranceId, double startedAt, double endedAt)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            text = text.Trim();
+            source = string.IsNullOrWhiteSpace(source) ? "asr" : source;
+            utteranceId = utteranceId ?? "";
+            double now = UnixNow();
+            bool reliable = startedAt > 0 && endedAt >= startedAt && endedAt <= now + 5 &&
+                !double.IsNaN(startedAt) && !double.IsInfinity(startedAt) && !double.IsNaN(endedAt) && !double.IsInfinity(endedAt);
+            string key = utteranceId.Length > 0 ? source + "|" + utteranceId : null;
+            string reason = key != null && _seenVoiceUtterances.Contains(key) ? "duplicate_utterance" :
+                reliable && startedAt <= _lastExplicitUiInputUnix ? "utterance_started_before_explicit_ui" : null;
+            if (reason != null)
+            {
+                SemanticNotice("voice_input_rejected", text, reason, source, utteranceId, startedAt, endedAt, reliable);
+                return false;
+            }
+            if (key != null)
+            {
+                _seenVoiceUtterances.Add(key); _voiceUtteranceOrder.Enqueue(key);
+                while (_voiceUtteranceOrder.Count > 128) _seenVoiceUtterances.Remove(_voiceUtteranceOrder.Dequeue());
+            }
+            TrackAcceptedInput(source, utteranceId, startedAt, endedAt, reliable);
+            SemanticNotice("voice_input_accepted", text, reliable ? "timestamp_verified" : "timestamp_missing_or_unreliable", source, utteranceId, startedAt, endedAt, reliable);
+            if (_state != State.Idle || DialogueBusy) CancelDialogueTurn();
+            SubmitTrackedInput(text);
+            return true;
         }
 
         // ============================================================
@@ -529,6 +640,7 @@ namespace Yixuan.AI
         System.Collections.IEnumerator RunTurnStreaming(string input)
         {
             float turnStart = Time.realtimeSinceStartup;
+            long speechEpoch = _speechEpoch;
 
             // F3：只有“看后面有什么/现在看到什么”这类依赖新视角的问题，
             // 才等云台稳定 + 一条转向后的新观察；普通聊天不等待视觉。
@@ -547,7 +659,8 @@ namespace Yixuan.AI
             bool reuseFillerTurn = _fillerTurnId > 0 && _fillerTurnActive;
             int sentenceId = reuseFillerTurn ? 1 : 0;
             int pending = 0;
-            int turnId = reuseFillerTurn ? _fillerTurnId : ++_voiceTurnId;
+            long turnId = reuseFillerTurn ? _fillerTurnId : Yixuan.Voice.VoiceInputController.NextTurnId();
+            _voiceTurnId = turnId;
             _fillerTurnId = 0;
             _fillerTurnActive = false;
             bool streamDone = false;
@@ -559,7 +672,8 @@ namespace Yixuan.AI
 
             System.Action<string, bool> enqueueTts = delegate (string text, bool last)
             {
-                if (string.IsNullOrEmpty(text)) return;
+                if (string.IsNullOrEmpty(text) || speechEpoch != _speechEpoch || _voiceTurnId != turnId ||
+                    Config == null || !Config.VoiceEnabled || _speechMuted) return;
                 int sid = ++sentenceId;
                 pending++;
                 StartCoroutine(VoiceInput.SayQueue(text, plan.emotion, plan.demeanor,
@@ -567,6 +681,7 @@ namespace Yixuan.AI
                     delegate (bool ok, string err)
                     {
                         pending--;
+                        if (speechEpoch != _speechEpoch || _voiceTurnId != turnId) return;
                         if (ok)
                         {
                             anyTtsOk = true;
@@ -582,7 +697,8 @@ namespace Yixuan.AI
                 yield break;
             }
 
-            try { stream = deep.StartStream(SafeBuildMessages(input)); }
+            List<ChatMessage> streamMessages = SafeBuildMessages(input);
+            try { stream = StreamOverride != null ? StreamOverride(streamMessages) : deep.StartStream(streamMessages); }
             catch (System.Exception e)
             {
                 Debug.LogWarning("[Chat] 启动流式失败：" + e.Message);
@@ -696,14 +812,20 @@ namespace Yixuan.AI
             }
 
             // 等所有句子 POST 完成，再通知 sidecar 收尾
-            while (pending > 0) yield return null;
+            float postDeadline = Time.realtimeSinceStartup + 65f;
+            while (pending > 0 && speechEpoch == _speechEpoch && Time.realtimeSinceStartup < postDeadline) yield return null;
 
-            if (anyTtsOk)
+            if (anyTtsOk && speechEpoch == _speechEpoch)
             {
-                yield return VoiceInput.SayFinish();
+                yield return VoiceInput.SayFinish(turnId, sentenceId);
                 float deadline = Time.realtimeSinceStartup + 120f;
-                while (VoiceInput != null && VoiceInput.IsTtsActive && Time.realtimeSinceStartup < deadline)
+                while (VoiceInput != null && VoiceInput.IsTurnActive(turnId) && speechEpoch == _speechEpoch && Time.realtimeSinceStartup < deadline)
                     yield return null;
+                if (speechEpoch == _speechEpoch && VoiceInput != null && VoiceInput.IsTurnActive(turnId))
+                {
+                    LastSpeechStatus = "语音失败：playback_timeout";
+                    yield return VoiceInput.CancelSay(turnId);
+                }
             }
             else
             {
@@ -744,7 +866,7 @@ namespace Yixuan.AI
             }
             if (Director != null)
             {
-                Director.SuspendBrain(false);
+                if (Missions == null || !Missions.IsRunning) ResumeBrainIfUserWants();
                 if (!Director.LastPlanHadGesture) Director.ReturnToIdle();
             }
             if (VerboseLog) Debug.Log("[Chat] 状态 → Idle（流式）");
@@ -813,6 +935,7 @@ namespace Yixuan.AI
         System.Collections.IEnumerator RunTurn(string input)
         {
             float turnStart = Time.realtimeSinceStartup;
+            long speechEpoch = _speechEpoch;
             // P1：非流式入口也必须走同一套“拍摄前云台规划 + 视觉准备”，
             // 流式失败回退到这里时 PrepareVisionForTurn 内部的 _visionPreparedForTurn 会直接跳过，
             // 不会重复请求；但本轮视觉证据（_visionRealtimeNote/_visionPendingNote）已保留，
@@ -1000,78 +1123,76 @@ namespace Yixuan.AI
             bool playedVoice = false;
             float audioSeconds = 0f;
 
-            bool duplexMode = Config != null && Config.VoiceInputEnabled &&
+            bool sidecarAttempted = false;
+            bool duplexMode = Config != null && Config.VoiceEnabled && !_speechMuted &&
                               Config.VoiceInputMode == "duplex" && VoiceInput != null && plan.HasReply;
 
-            // ---- P6 轻量句级流式：完整 JSON 后按句合成播放（首声比整段 TTS 快） ----
-            if (!playedVoice && duplexMode && Config.StreamMode == "light")
+            // Only validated reply text enters speech. The microphone can be off
+            // while the same sidecar continues to own playback and its AEC reference.
+            if (duplexMode && speechEpoch == _speechEpoch)
             {
-                List<string> sentences = SplitSentences(plan.reply);
+                List<string> sentences = Config.StreamMode == "light" ? SplitSentences(plan.reply) : new List<string> { plan.reply };
                 if (sentences.Count > 0)
                 {
+                    sidecarAttempted = true;
                     bool reuseFillerTurn = _fillerTurnId > 0 && _fillerTurnActive;
                     int sidBase = reuseFillerTurn ? 1 : 0;
-                    int turnId = reuseFillerTurn ? _fillerTurnId : ++_voiceTurnId;
+                    long turnId = reuseFillerTurn ? _fillerTurnId : Yixuan.Voice.VoiceInputController.NextTurnId();
+                    _voiceTurnId = turnId;
                     _fillerTurnId = 0;
                     _fillerTurnActive = false;
                     bool anyFail = false;
                     string qerr = null;
                     for (int i = 0; i < sentences.Count; i++)
                     {
+                        if (speechEpoch != _speechEpoch || !Config.VoiceEnabled || _speechMuted) break;
                         bool ok = false;
                         string err = null;
                         yield return VoiceInput.SayQueue(sentences[i], plan.emotion, plan.demeanor,
                             plan.intensity, i + 1 + sidBase, i == sentences.Count - 1, turnId,
-                            delegate (bool o, string e) { ok = o; err = e; });
+                            delegate (bool o, string e) { if (speechEpoch == _speechEpoch && _voiceTurnId == turnId) { ok = o; err = e; } });
+                        if (speechEpoch != _speechEpoch) break;
                         if (!ok) { anyFail = true; qerr = err; break; }
                     }
 
-                    if (!anyFail)
+                    if (speechEpoch == _speechEpoch && !anyFail)
                     {
-                        yield return VoiceInput.SayFinish();
+                        yield return VoiceInput.SayFinish(turnId, sentences.Count + sidBase);
                         float qDeadline = Time.realtimeSinceStartup + 90f;
-                        while (VoiceInput != null && VoiceInput.IsTtsActive && Time.realtimeSinceStartup < qDeadline)
+                        while (VoiceInput != null && VoiceInput.IsTurnActive(turnId) && speechEpoch == _speechEpoch && Time.realtimeSinceStartup < qDeadline)
                             yield return null;
-                        playedVoice = true;
-                        if (VerboseLog) Debug.Log("[Chat] 轻量句级流式播放结束（" + sentences.Count + " 句）");
+                        if (speechEpoch == _speechEpoch && VoiceInput != null)
+                        {
+                            playedVoice = VoiceInput.HasTurnStarted(turnId);
+                            qerr = VoiceInput.TurnError(turnId);
+                            if (VoiceInput.IsTurnActive(turnId))
+                            {
+                                qerr = "playback_timeout";
+                                yield return VoiceInput.CancelSay(turnId);
+                            }
+                            if (!string.IsNullOrEmpty(qerr)) Debug.LogWarning("[Chat] sidecar 语音未完成，保留字幕：" + qerr);
+                            else if (VerboseLog) Debug.Log("[Chat] sidecar 语音播放结束（" + sentences.Count + " 句）");
+                        }
                     }
-                    else
+                    else if (speechEpoch == _speechEpoch)
                     {
-                        Debug.LogWarning("[Chat] 句级流式失败，回退整段 TTS：" + (qerr ?? "未知"));
+                        // A timed-out HTTP response may already have produced audio.
+                        // Replaying the complete reply through a second player duplicates it.
+                        playedVoice = VoiceInput.HasTurnStarted(turnId);
+                        yield return VoiceInput.CancelSay(turnId);
+                        Debug.LogWarning("[Chat] sidecar 语音失败，保留字幕，不重播整段：" + (qerr ?? "未知"));
                     }
                 }
             }
 
-            if (duplexMode && !playedVoice)
-            {
-                bool sayOk = false;
-                string sayErr = null;
-                yield return VoiceInput.Say(plan.reply, plan.emotion, plan.demeanor, plan.intensity,
-                    delegate (bool ok, string err) { sayOk = ok; sayErr = err; });
-
-                if (sayOk)
-                {
-                    // 等 sidecar 的 tts.end / tts.cancelled / barge_in（事件驱动，不空转）
-                    float deadline = Time.realtimeSinceStartup + 90f;
-                    while (VoiceInput != null && VoiceInput.IsTtsActive && Time.realtimeSinceStartup < deadline)
-                        yield return null;
-                    playedVoice = true;
-                    if (VerboseLog) Debug.Log("[Chat] sidecar 语音结束（全双工模式）");
-                }
-                else
-                {
-                    Debug.LogWarning("[Chat] sidecar /say 失败，回退 Unity TTS/字幕：" + (sayErr ?? "未知"));
-                }
-            }
-
-            if (!playedVoice && Config != null && Config.VoiceEnabled && Tts != null && Voice != null && plan.HasReply)
+            if (!playedVoice && !sidecarAttempted && speechEpoch == _speechEpoch && Config != null && Config.VoiceEnabled && !_speechMuted && Tts != null && Voice != null && plan.HasReply)
             {
                 AudioClip clip = null;
                 string ttsError = null;
 
                 yield return Tts.Synthesize(plan.reply, plan.emotion, plan.demeanor, plan.intensity,
-                    delegate (AudioClip c) { clip = c; },
-                    delegate (string e) { ttsError = e; });
+                    delegate (AudioClip c) { if (speechEpoch == _speechEpoch && Config != null && Config.VoiceEnabled) clip = c; else if (c != null) Destroy(c); },
+                    delegate (string e) { if (speechEpoch == _speechEpoch) ttsError = e; });
 
                 if (clip != null)
                 {
@@ -1087,7 +1208,7 @@ namespace Yixuan.AI
                 }
             }
 
-            if (!playedVoice)
+            if (!playedVoice && speechEpoch == _speechEpoch && !sidecarAttempted)
             {
                 // 兜底：TTS 未启用 / sidecar 未启动 / 合成失败 → 按字数估算，字幕照常
                 float perChar = Config != null ? Mathf.Max(0.01f, Config.SpeechSecondsPerChar) : 0.18f;
@@ -1123,7 +1244,7 @@ namespace Yixuan.AI
             if (Director != null)
             {
                 // AIConfig.ResumeBrainDelaySec 的语义是“说完后 N 秒恢复”
-                Director.SuspendBrain(false);
+                if (Missions == null || !Missions.IsRunning) ResumeBrainIfUserWants();
 
                 // 本轮没有动作时才回 idle（有动作时让一次性动作自己播完，不打断）
                 if (!Director.LastPlanHadGesture) Director.ReturnToIdle();
@@ -1242,13 +1363,16 @@ namespace Yixuan.AI
                 // 用一个新的 turn_id + sentence_id=1：voice_server 会把"换轮"当成新一轮，
                 // 立刻清空队列并播这句；正式回复会复用这个 turn（见 RunTurnStreaming），
                 // 这样"我看看"能完整播完，而不是被下一轮 TTS 打断。
-                int fillerTurnId = ++_voiceTurnId;
+                long speechEpoch = _speechEpoch;
+                long fillerTurnId = Yixuan.Voice.VoiceInputController.NextTurnId();
+                _voiceTurnId = fillerTurnId;
                 _fillerTurnId = fillerTurnId;
                 _fillerTurnActive = false;
                 StartCoroutine(VoiceInput.SayQueue(VisionFillerText, "neutral", "", 0.45f,
                     1, false, fillerTurnId,
                     delegate (bool ok, string err)
                     {
+                        if (speechEpoch != _speechEpoch || _fillerTurnId != fillerTurnId || _voiceTurnId != fillerTurnId) return;
                         if (ok)
                         {
                             _fillerTurnActive = true;
@@ -1744,6 +1868,7 @@ namespace Yixuan.AI
         // ============================================================
         void OnDestroy()
         {
+            Yixuan.Pick.FirstPersonTargetingService.CancelRun("chat_destroy");
             _shuttingDown = true;
             CancelDialogueTurn();
             if(_narratorCancel!=null){_narratorCancel.Dispose();_narratorCancel=null;}if(_narratorConfig!=null)Destroy(_narratorConfig);

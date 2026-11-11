@@ -8,8 +8,8 @@
 //   Health Check   查看 8766 / 8767 健康状态
 //   Auto-Start On Project Open  自动启动开关（默认开）
 //
-// 相关文件：voice/voice_watchdog.ps1（启动 + 看护）
-//           voice/stop_voice.ps1（停止）
+// 相关文件：Tools/Voice/voice_watchdog.ps1（启动 + 看护）
+//           Tools/Voice/stop_voice.ps1（停止）
 // 计划任务 "Yixuan Voice Server Watchdog" 已去掉登录触发器，仅用于手动/schtasks 调用。
 
 using System;
@@ -38,7 +38,7 @@ public static class VoiceServicesAutoStart
 
     private static string VoiceDir
     {
-        get { return Path.Combine(ProjectRoot, "voice"); } // public repo layout: voice/ at project root
+        get { return Path.Combine(Path.Combine(ProjectRoot, "Tools"), "Voice"); }
     }
 
     private static string WatchdogScript

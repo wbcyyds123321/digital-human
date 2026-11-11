@@ -33,6 +33,7 @@ namespace Yixuan.AI
         public Yixuan.Vision.EyeGimbalController Gaze;
         [Tooltip("角色走路控制器（move 字段用）；留空自动查找")]
         public Yixuan.Motion.CharacterLocomotion Locomotion;
+        public ChatSession Session;
 
         /// <summary>本轮由本地关键词先转了云台时，ChatSession 置 true：忽略 LLM 的 camera 字段，避免一架云台两处打架。</summary>
         [System.NonSerialized] public bool SuppressCameraForTurn;
@@ -72,6 +73,7 @@ namespace Yixuan.AI
             if (Config == null) Config = AIConfig.FindDefault();
             if (Gaze == null) Gaze = FindObjectOfType<Yixuan.Vision.EyeGimbalController>();
             if (Locomotion == null) Locomotion = FindObjectOfType<Yixuan.Motion.CharacterLocomotion>();
+            if (Session == null) Session = FindObjectOfType<ChatSession>();
         }
 
         static void EnsureCatalog()
@@ -221,6 +223,8 @@ namespace Yixuan.AI
                               : plan.move_target));
             else
                 Debug.LogWarning("[Director] 走路失败：" + Locomotion.LastError);
+            if (ok && !string.IsNullOrEmpty(plan.move_target) && Session != null)
+                Session.TryAdoptChatNavigation(plan.move_target);
         }
 
         IEnumerator CoBodyMotion(BehaviorPlan plan)
@@ -513,7 +517,7 @@ namespace Yixuan.AI
             if (suspend)
             {
                 Brain.EnableProactive = false;
-                Debug.Log("[Director] 挂起 Brain 主动行为");
+                Debug.Log("[Director] 挂起 Brain 主动行为（t=" + Time.realtimeSinceStartup.ToString("F2") + "）");
                 return;
             }
 
@@ -527,7 +531,7 @@ namespace Yixuan.AI
                 return;
             }
             _resumeCo = StartCoroutine(ResumeBrainAfterDelay(delay));
-            Debug.Log("[Director] " + delay.ToString("F1") + "s 后恢复 Brain 主动行为");
+            Debug.Log("[Director] " + delay.ToString("F1") + "s 后恢复 Brain 主动行为（t=" + Time.realtimeSinceStartup.ToString("F2") + " scale=" + Time.timeScale.ToString("F2") + "）");
         }
 
         System.Collections.IEnumerator ResumeBrainAfterDelay(float delay)
@@ -538,9 +542,11 @@ namespace Yixuan.AI
             if (Brain != null)
             {
                 Brain.EnableProactive = true;
-                Debug.Log("[Director] 恢复 Brain 主动行为");
+                Debug.Log("[Director] 恢复 Brain 主动行为（t=" + Time.realtimeSinceStartup.ToString("F2") + "）");
             }
         }
+
+        public bool BrainResumePending { get { return _resumeCo != null; } }
 
         // ============================================================
         //  ① 表情

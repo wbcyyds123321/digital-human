@@ -3,7 +3,7 @@
 
 Run headless (the beauty blend is opened by Blender, never edited in place)::
 
-    blender -b map/SovietBlueHour_beauty.blend --python tools/export_game.py
+    D:\\Blender\\blender.exe -b map/SovietBlueHour_beauty.blend --python tools/export_game.py
 
 What it does
 ------------
@@ -42,6 +42,9 @@ import sys
 import time
 
 import bpy
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import dynamic_prepare  # noqa: E402  (node-2 dynamic vehicle/tram/flame split)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
@@ -174,8 +177,9 @@ def join_block_meshes():
                            "mats": len(obj.material_slots)}
         log("joined block", empty.name, "from", len(children), "objects ->",
             len(obj.data.vertices), "verts,", len(obj.material_slots), "mat slots")
-    # delete helper empties (parents first)
-    empties = [o for o in bpy.data.objects if o.type == "EMPTY"]
+    # delete helper empties (parents first); DYN_* wrappers are created after this pass
+    empties = [o for o in bpy.data.objects if o.type == "EMPTY"
+               and not o.name.startswith("DYN_")]
     for e in empties:
         bpy.data.objects.remove(e, do_unlink=True)
     log("deleted", len(empties), "helper empties")
@@ -187,7 +191,8 @@ def merge_site_props_vehicles():
     out = {}
     for coll_name, obj_name in (("SITE", "SITE"), ("PROPS", "PROPS"), ("VEHICLES", "VEHICLES")):
         objs = [o for o in bpy.data.objects
-                if o.type != "EMPTY" and any(c.name == coll_name for c in o.users_collection)]
+                if o.type != "EMPTY" and any(c.name == coll_name for c in o.users_collection)
+                and not dynamic_prepare.skip(o)]
         if not objs:
             log("WARN nothing to merge in collection", coll_name)
             continue
@@ -436,7 +441,11 @@ def main():
     log("beauty tris=%d verts=%d" % (tris_before, verts_before))
 
     strip_render_only()
+    dynamic_prepare.configure(os.path.dirname(os.path.dirname(ROOT)))
+    dynamic_prepare.capture_world()
+    log("dynamic prepare: captured", len(dynamic_prepare.INSTANCE.world_before), "source transforms")
     blocks = join_block_meshes()
+    dynamic_prepare.build()
     groups = merge_site_props_vehicles()
     tidy_collections()
     bpy.ops.object.select_all(action="DESELECT")
@@ -478,6 +487,7 @@ def main():
                  "materials": len(bpy.data.materials)},
         "blocks": blocks,
         "merged_groups": groups,
+        "dynamic": dynamic_prepare.summary(),
         "glb": glb,
         "glb_size_guard": glb_guard,
         "fbx_settings": {

@@ -26,7 +26,7 @@ namespace Yixuan.Motion
     /// </summary>
     public class MotionExportVerifier : MonoBehaviour
     {
-        public static string OutDir = System.IO.Path.Combine(Application.dataPath, "..", "Tools", "_verify");
+        public static string OutDir = System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "Tools", "_verify");
 
         /// <summary>要导出的动作与"等多久再导出"（秒）</summary>
         public struct Shot

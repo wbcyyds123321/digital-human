@@ -14,7 +14,7 @@ namespace Yixuan.Motion
     /// </summary>
     public class FootDiagnostic : MonoBehaviour
     {
-        public static string OutDir = System.IO.Path.Combine(Application.dataPath, "..", "Tools", "_verify", "foot");
+        public static string OutDir = System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "Tools", "_verify", "foot");
         public const float FootYMax = 0.40f;   // 脚部区域的 Y 上限
 
         public void Run()

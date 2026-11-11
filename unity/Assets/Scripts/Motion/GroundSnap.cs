@@ -66,7 +66,7 @@ namespace Yixuan.Motion
         void Awake()
         {
             _root = transform;
-            _baseRootY = _root.localPosition.y;
+            _baseRootY = _root.position.y;
             Relink();
         }
 
@@ -130,10 +130,11 @@ namespace Yixuan.Motion
                 case RefPoint.MeshLowest:
                     if (_smr == null) return 0f;
                     var m = new Mesh();
-                    _smr.BakeMesh(m);
+                    _smr.BakeMesh(m, true);
                     var vs = m.vertices;
                     float lo = 9999f;
-                    for (int i = 0; i < vs.Length; i++) if (vs[i].y < lo) lo = vs[i].y;
+                    for (int i = 0; i < vs.Length; i++)
+                        lo = Mathf.Min(lo, _smr.transform.TransformPoint(vs[i]).y);
                     Object.Destroy(m);
                     return lo;
             }
@@ -161,6 +162,14 @@ namespace Yixuan.Motion
             Vector3 p = _root.position;
             p.y = _baseRootY + _currentOffset;
             _root.position = p;
+        }
+
+        /// <summary>外部移动角色后，重新绑定当前世界高度并丢弃旧姿势的贴地偏移。</summary>
+        public void ResetAfterReposition()
+        {
+            if (_root == null) _root = transform;
+            _baseRootY = _root.position.y;
+            _currentOffset = 0f;
         }
 
         /// <summary>立刻吸附（切换动作时用，避免渐变期间穿地）</summary>

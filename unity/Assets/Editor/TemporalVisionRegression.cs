@@ -894,7 +894,7 @@ namespace Yixuan.EditorTests
             _probeObject.SetActive(false);
             var client = _probeObject.AddComponent<QwenVisionClient>();
             client.Endpoint = endpoint;
-            client.SetApiKey("local-regression-placeholder");
+            client.SetApiKey("sk-local-regression-not-a-real-key");
             var frames = new List<VisualFrame>();
             for (int index = 0; index < 4; index++) frames.Add(new VisualFrame(index * 0.5f, 2, new byte[] { 1, 2, 3 }));
             ProbeResult = "running";

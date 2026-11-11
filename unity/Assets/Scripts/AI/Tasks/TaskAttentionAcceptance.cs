@@ -9,7 +9,7 @@ namespace Yixuan.AI.Tasks
     // Explicitly started by acceptance tooling, never on ordinary scene entry.
     public class TaskAttentionAcceptance : MonoBehaviour
     {
-        public string Root="Captures/Evidence/task_attention_2026-10-24";
+        public string Root="D:/AI/GameScaling/docs/evidence/task_attention_2026-10-24";
         public bool Running; public string CurrentCase;
         public TaskAcceptanceSuite.SuiteReport Summary=new TaskAcceptanceSuite.SuiteReport();
         TaskMissionRunner r; bool oldMic,oldProactive;string oldRoot;bool oldVoice;

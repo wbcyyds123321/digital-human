@@ -4,7 +4,7 @@ using System.IO;
 using UnityEngine;
 namespace Yixuan.AI.Tasks {
  public sealed class TaskRuntimeRealAcceptance:MonoBehaviour {
-  public TaskMissionRunner Runner;public RuntimeTestReport Report;public bool Running;public string Output="Captures/Evidence/task_runtime_v2_2026-10-25";
+  public TaskMissionRunner Runner;public RuntimeTestReport Report;public bool Running;public string Output="D:/AI/GameScaling/docs/evidence/task_runtime_v2_2026-10-25";
   public void Begin(){if(Running)return;Runner=FindObjectOfType<TaskMissionRunner>();Running=true;Report=new RuntimeTestReport{suite="real configured core LLM -> independent contract -> real Lua -> real Unity; no source injection"};StartCoroutine(Run());}
   void Save(){File.WriteAllText(Path.Combine(Output,"real_report.json"),JsonUtility.ToJson(Report,true));}
   IEnumerator Case(string name,string request,string expected){

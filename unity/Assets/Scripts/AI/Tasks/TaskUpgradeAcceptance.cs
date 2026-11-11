@@ -9,7 +9,7 @@ namespace Yixuan.AI.Tasks
     // Explicitly launched; no automatic test execution in normal Play.
     public class TaskUpgradeAcceptance : MonoBehaviour
     {
-        public string Root="Captures/Evidence/task_upgrade_2026-10-24";
+        public string Root="D:/AI/GameScaling/docs/evidence/task_upgrade_2026-10-24";
         public bool Running; public string CurrentCase;
         public TaskAcceptanceSuite.SuiteReport Summary=new TaskAcceptanceSuite.SuiteReport();
         TaskMissionRunner r; bool oldMic;

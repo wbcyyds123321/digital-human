@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Yixuan.AI.Tasks {
  // Explicitly invoked acceptance harness. Fixture cases are separate from real LLM cases.
  public sealed class TaskLogFixAcceptance:MonoBehaviour {
-  public string Output="Captures/Evidence/runtime_log_fix_2026-10-25";
+  public string Output="D:/AI/GameScaling/docs/evidence/runtime_log_fix_2026-10-25";
   public bool FollowupOnly;public RuntimeTestReport Report;public bool Running;public string Current="";public bool AudioObserved;public float MaxRms,MaxMouthWeight;public bool VoiceRestored;
   ChatSession s;TaskMissionRunner r;Vector3 initial;float initialYaw;bool mic,gameView,webcam,voice,taskVoice;string evidenceRoot;float lastSample;
   public void Begin(){if(Running)return;s=FindObjectOfType<ChatSession>();r=s.Missions;initial=r.HomeCaptured?r.HomePosition:r.Motor.transform.position;initialYaw=r.HomeCaptured?r.HomeYaw:r.Motor.transform.eulerAngles.y;mic=s.VoiceInput.Enabled;gameView=s.Vision.GameViewEnabled;webcam=s.Vision.WebcamEnabled;voice=s.Config.VoiceEnabled;taskVoice=r.VoiceEnabled;evidenceRoot=r.EvidenceRoot;Report=new RuntimeTestReport{suite=FollowupOnly?"runtime log fixes followup: movement budget, dialogue references, real PCM mouth":"runtime log fixes: fixtures + real user Submit, Qwen frames and audio"};Running=true;StartCoroutine(Run());}

@@ -81,7 +81,7 @@ namespace Yixuan.Motion
             }
             UnityEngine.Object.Destroy(m);
 
-            string dir = System.IO.Path.Combine(Application.dataPath, "..", "Tools", "_verify");
+            string dir = System.IO.Path.Combine(UnityEngine.Application.dataPath, "..", "Tools", "_verify");
             System.IO.Directory.CreateDirectory(dir);
             System.IO.File.WriteAllText(dir + "\\EXP_" + tag + ".obj", sb.ToString());
 

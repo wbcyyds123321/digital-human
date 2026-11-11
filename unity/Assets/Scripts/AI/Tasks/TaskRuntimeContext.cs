@@ -15,7 +15,7 @@ namespace Yixuan.AI.Tasks {
   public static bool Allows(int mask){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]!=null&&Owners[i]!=Caller)return false;return true;}
   public static bool Acquire(string owner,int mask){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]!=null&&Owners[i]!=owner)return false;for(int i=0;i<4;i++)if((mask&(1<<i))!=0)Owners[i]=owner;return true;}
   public static bool CanContinue(string owner,int mask){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]!=null&&Owners[i]!=owner)return false;return true;}
-  public static void Release(string owner){for(int i=0;i<4;i++)if(Owners[i]==owner)Owners[i]=null;}
+  public static void Release(string owner,int mask=15){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]==owner)Owners[i]=null;}
   public static IDisposable Enter(string owner){return new Scope(owner);}
   sealed class Scope:IDisposable{string before;public Scope(string owner){before=Caller;Caller=owner;}public void Dispose(){Caller=before;}}
   [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]static void Reset(){Array.Clear(Owners,0,Owners.Length);Caller=null;}

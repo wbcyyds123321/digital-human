@@ -1,242 +1,136 @@
-> **🗺️ 配套地图生成器项目：[MapGen Engine →](https://github.com/wbcyyds123321/-MapGen)**
+> **配套地图生成器项目：[MapGen Engine →](https://github.com/wbcyyds123321/-MapGen)**
 
 # 虚拟数字人 / AI Character Interaction System
 
-一个跑在 Unity 3D 场景里的 AI 数字人原型：她能听懂自然语言，在场景里走过去、做动作、看用户和游戏世界，再开口回话；项目同时包含一套程序化城市地图生成工具链。
+一个跑在 Unity 3D 场景里的 AI 数字人原型：能听、能说、能看当前画面，能在场景里走动、做动作、选择物体，并把自然语言请求落成真实可验证的 Unity 行为。项目同时包含程序化城市/街区地图生成工具链。
 
-> 毕业设计（进行中）。当前已跑通**单数字人闭环**；下一步是同一张大地图里并行多个数字人、玩家可控角色进入，最终让玩家和数字人一起「造世界」。
+> 毕业设计（进行中）。当前是**阶段性源码开源**，不是封装好的可安装应用或完整游戏工程。
 
 - 演示视频：https://space.bilibili.com/503297296
 - 项目仓库：https://github.com/wbcyyds123321/digital-human
+- 本次阶段说明：[docs/progress-2026-11-11.md](docs/progress-2026-11-11.md)
 
 <p align="center">
   <img src="docs/images/runtime-hero.jpg" width="82%">
 </p>
 
-<p align="center"><i>Unity 大地图里的数字人：场景、第三人称相机、角色表现与运行时交互都在同一套系统里。</i></p>
+<p align="center"><i>Unity 大地图里的数字人：场景、第三人称相机、角色表现与运行时交互在同一套系统里。</i></p>
 
 ---
 
-## 项目状态：阶段性源码开源（不是成品游戏）
+## 项目状态：阶段性源码开源
 
-**本项目目前只是阶段性的源码开源，不是已经封装好的可安装应用或游戏。**
+**当前仓库只包含源码和架构文档，不是已经封装的完整 Unity 工程。**
 
-- 没有针对普通用户体验做任何优化；
-- 后续还会继续改动，所以目前没有封装成可以直接安装、即点即用的应用包/游戏发行版；
-- 现阶段主要用于代码与架构展示、审稿；
-- 要运行仍需自行准备 Unity 工程、第三方依赖、角色/地图素材和 API 配置。
+- 不含角色 VRM/MMD 模型、美术贴图、动画资产、地图 GLB/BLEND/渲染图、音频和第三方 Unity 包；
+- 不含 `Library/`、`Temp/`、`Logs/`、`Captures/`、内部 AI 工作记录、本机缓存或任何 API Key；
+- 运行前需要自行准备 Unity 工程、依赖包、角色/地图资产和 API 配置；
+- 代码与实验仍在变化，接口和行为以仓库当前源码为准。
 
-等后续版本稳定后，再考虑打包与发行。
+## 目前已经打通的能力
 
----
+- **对话与任务**：自然语言 → 意图/任务契约 → Lua 任务程序 → Unity 工具执行 → 真实回执；行动和对话分车道，支持边走边说、打断、暂停和插入-继续。
+- **第一人称画面选中**：当前 EyeCamera 原始 RGB → 视觉模型输出归一化点/框 → 同帧实体 ID/depth 绑定 → 真实转动 Eye → 新帧中心确认 → 共享选中记录、高亮和坐标事实。视觉输入只有原图，不包含 ID 图、候选 overlay、目录位置或答案。
+- **当前验证范围**：白色选中实验室 B1–B6 六个普通语义用例通过，包括红方块、同色绿方块的当前画面左右区分、代词追问零新增定位、被遮挡球 `not_found`、第二视点蓝球、蓝球左侧黄色圆柱；相对方位语义有生产转换边界保护和否定/后置否定检查。
+- **视觉服务**：产品默认使用 DeepSeek 官方兼容接口、`deepseek-flash` 单模型、单张原图、无跨服务 fallback；保留原始响应/HTTP/耗时/诊断。不可用或配额失败会如实记录 blocked，不循环重试。
+- **白色选中实验室**：独立白盒场景，7 个显式稳定 ID 实例、两个同模绿色方块、白色不透明屏风、准星、高亮、坐标和顶视小地图；有 `A/B` 观察点与编辑器构建工具。
+- **语音链路**：Unity `<->` Python voice sidecar 的 AEC/VAD/ASR/流式 TTS/口型链路；TTS 队列按 turn/service/token 隔离，支持真实 barge-in 取消、UI 输入打断和首音频确认。注入 WAV、ASR、TTS 生命周期的受控验证已覆盖；真人麦克风/口音/噪声/回声仍待实测。
+- **场景交互模块**：`Stage4` 座椅坐下/起身、`Stage5` 视觉座椅选择、`Dynamic` 车辆/电车/动态实体与驾驶/交互入口、`WorldMap` 大地图数据/导航 provider。README 不把这些“代码链路存在”冒充为最新一轮全量回归；完整驾驶、座椅、上下车和复杂地图识别仍需单独验收。
+- **地图生成**：程序化苏联蓝调街区工具链：2D 规划 → GPT-Image/参考图 → Blender 模块化生成 → GLB → 碰撞 AABB/导航图/中文锚点/地面高度图。详见 [map/README.md](map/README.md)。
 
 ## 效果预览
 
-### 1. 数字人 HUD：地图、任务、角色、视觉、语音都在一个控制台里
+### 1. 数字人 HUD：地图、任务、角色、视觉、语音在一个控制台
 
 <p align="center">
   <img src="docs/images/runtime-hud.jpg" width="49%">
   <img src="docs/images/runtime-task.jpg" width="49%">
 </p>
 
-<p align="center"><i>左：地图页 + 小地图 + 点选导航；右：任务执行页（LLM 生成计划 → Unity 技能 → 真实回执）。</i></p>
-
-### 2. 边走边说：小地图点选目的地，角色一边走一边对话
+### 2. 边走边说：地图点选目的地，角色一边走一边对话
 
 <p align="center">
   <img src="docs/images/runtime-walk.jpg" width="82%">
 </p>
 
-<p align="center"><i>角色边走边聊，小地图显示当前位置、可去地点和实时导航；行动/对话双车道共享状态，所以不会因为说话把走路停掉。</i></p>
-
-### 3. 笔记本摄像头：看着屏幕前的用户对话
+### 3. 摄像头看用户，以及 Unity 相机看游戏世界
 
 <p align="center">
   <img src="docs/images/vision-webcam-chat.jpg" width="82%">
-</p>
-
-<p align="center"><i>左上角显示「电脑摄像头：开」，右上角是实时摄像头画面；数字人在回复里直接说出了屏幕前用户的外貌和动作（黑框眼镜、戴着耳机、正在往右看），说明它真的在看人，而不是只读文字。</i></p>
-
-<p align="center">
   <img src="docs/images/vision-both.jpg" width="82%">
-</p>
-
-<p align="center"><i>「游戏视角：开 / 电脑摄像头：开」两路视觉同时工作：一路看 Unity 场景，一路看屏幕前的用户。</i></p>
-
-### 4. Unity 游戏内相机：数字人自己的视野
-
-<p align="center">
   <img src="docs/images/vision-game-camera.jpg" width="82%">
 </p>
 
-<p align="center"><i>左上角显示「游戏视角：开 / 电脑摄像头：关」；右侧是 Unity 游戏内 EyeCamera 的实时画面。数字人根据自己看到的游戏内画面，直接描述出便利店招牌、OPEN 灯牌、自动售货机和垃圾桶，说明它看的是游戏世界本身，不是预设台词。</i></p>
+## 快速打开白色选中实验室
 
-## 她现在能做什么
+1. 用 Unity 2022.3 打开一个完整工程，确认所需第三方包/角色/地图资产就绪。
+2. 在完整工程中使用 `Assets/Editor/SelectionLab/SelectionLabBuilder.cs` 的菜单构建/接入白盒场景（本仓库只含源码，不附带场景和模型资产）。
+3. 进入 Play；默认观察点 A，`1`/`2` 在提交前切换 A/B 观察点，鼠标手动转视角。
+4. 在聊天框输入类似：`选中眼前的红色方块，告诉我它和我的位置，别移动。`
+5. `T` 是保留的人工准星确认键；自动视觉选中流程不要求按 T。
 
-- **听懂并做事**：自然语言指令 → 任务契约 → Lua 任务程序 → Unity 技能执行 → 真实回执校验。
-- **边走边说**：行动/对话双车道，支持打断、暂停-插入-继续；做不下去会给出明确原因（不可达 / 歧义 / 超时）。
-- **看得见**：VLM 两路视觉——笔记本摄像头看用户，Unity 相机看游戏世界；当前用于对话/观察，也为后续「自己看地图、判断改造」打底。
-- **说得出**：全双工语音链路（AEC / VAD / ASR + 流式 TTS + 口型同步），支持边说边听、被打断会停。
-- **演得像**：15 种表情、10 种神态、16 个角色技能，VRM / MMD 骨骼 + 表情/口型/头发物理。
-- **能改世界**：程序化地图工具链（2D 规划 → GPT-Image 参考图 → Blender 模块化生成 → GLB + 导航/碰撞/锚点/地面高度 + 中文名/坐标映射）。
-
----
-
-## 地图生成工具链：程序化生成一座「苏联蓝调小区」
-
-这个项目里的大地图不是手工摆出来的，而是按「先规划、再生成、最后接运行时数据」的流程做的。地图为 **400×300 m** 的苏联蓝调风格街区，包含住宅、公共文化、工业、地标四类建筑。
-
-### 1. 先出 2D 规划
-
-先由 `make_plan.py` 输出总平面图与 `plan.json`：道路、地块、建筑类型、朝向、地标位置先确定，再进入 Blender。
-
-<p align="center">
-  <img src="docs/images/map-plan.jpg" width="88%">
-</p>
-
-<p align="center"><i>程序化生成的总平面图：48 栋建筑、17 条街道、39 个地块，住宅/公共/工业/地标分类和中文图例都在图里。</i></p>
-
-### 2. 参考图定风格与比例
-
-生成之前先用 GPT-Image 产出小地图、建筑三视图、材质、立面细节等 **104 张参考图**，再配 **52 张苏联建筑真实照片**做对照，先定风格、比例和材质，而不是直接开始堆模型。
-
-### 3. Blender 模块化生成
-
-`build.py` 读取 `plan.json`，调用 `mod_residential.py` / `mod_civic.py` / `mod_industrial.py` / `mod_landmark_*.py` 等模块，生成：
-
-- **34 类建筑模块**、**48 栋建筑**、**38,454 个对象**、约 **142 万三角面**；
-- 每栋建筑按「体块 → 立面 → 窗户/门/招牌 → 材质」分层生成；
-- 地标单独建、单独 QA，满意后才放回地图。
-
-<p align="center">
-  <img src="docs/images/map-hero.jpg" width="49%">
-  <img src="docs/images/map-street.jpg" width="49%">
-</p>
-
-<p align="center"><i>左：蓝调时刻的街区鸟瞰；右：街道视角。玻璃、石材、砖墙、招牌材质都是按参考图逐项定的。</i></p>
-
-### 4. 住宅楼与材质：赫鲁晓夫楼
-
-住宅楼是整张地图里量最大、也最能看出「苏联蓝调」的部分：5 层砖混/预制板楼、封闭阳台、单元门斗、窗框、外墙风化和暖黄窗光，都是按参考图和真实照片逐项调的。
-
-<p align="center">
-  <img src="docs/images/map-court-e.jpg" width="49%">
-  <img src="docs/images/map-court-w.jpg" width="49%">
-</p>
-
-<p align="center"><i>左：住宅内院的砖墙、封闭阳台和楼栋转角；右：院里的儿童游乐场、路灯和楼体材质。窗户、门斗、晾衣杆、墙面色差都在生成时按楼栋/楼层变化。</i></p>
-
-### 5. 地标建筑：国立大学主楼
-
-地标单独建、单独 QA，满意后才放回地图。下面主楼这种体量会同时检查塔冠、钟面、旗帜、窗格和夜间亮灯。
-
-<p align="center">
-  <img src="docs/images/map-msu.jpg" width="62%">
-</p>
-
-<p align="center"><i>国立大学主楼：塔冠、钟面、尖顶与立面窗格近景。</i></p>
-
-### 6. 导出给 Unity 用的运行时数据
-
-地图生成完不是只导一个 GLB，还同时产出运行时数据：
-
-- **91 个碰撞 AABB**：角色和相机的碰撞、避障；
-- **3,486 节点 / 8,551 边导航图**：A* 寻路直接用；
-- **46 个中文语义锚点**：模型/Agent 说「去面包房」时能定位到具体坐标；
-- **1m 地面高度图**：角色动态贴地，广场和草地不会悬空或陷进去；
-- **中文名 + 坐标映射表**：每栋建筑 / 地点一份，给 VLM 和后续 Agent 查表用，而不是让模型猜坐标。
-
----
+> 实验室场景为了测试隔离会关闭默认语音输入/TTS；主场景恢复常规语音行为。具体参考 `docs/progress-2026-11-11.md`。
 
 ## 核心架构
 
-### 1. 行动车道 / 对话车道
+- **行动车道**：`ChatSession` → 任务契约（目标/次数/顺序/禁止项/成功条件）→ `TaskLuaRuntime` → `TaskToolRegistry` 的 `game.*` 技能 → Unity 真实回执。
+- **对话车道**：独立 LLM 请求，负责聊天、进度和看图，不直接控制身体；两车道共享会话状态。
+- **视觉选中**：`PickService` 的 RGB/ID/depth 同帧捕获 + `EntityPickRegistry` 稳定实体 + `FirstPersonTargetingService` 的点/框绑定、真实 Eye 转向、新帧中心确认 + `SelectionBroker` 共享事实。
+- **语音**：`voice/voice_server.py` 独立 sidecar；Unity 侧通过 VoiceInputController/TaskSpeechQueue 做流式播放、打断和口型。
 
-- **行动车道**：`ChatSession` → 任务契约（目标、次数、顺序、禁止项、成功条件）→ `TaskLuaRuntime` 执行 Lua 程序 → `TaskToolRegistry` 里的 `game.*` 技能 → Unity 真实回执。
-- **对话车道**：独立的一次 LLM 请求，只负责聊天、进度和看图，不直接控制身体。
-- 两条车道共享对话状态，所以可以边走边说；模型只负责出方案，执行与完成判定交给 Unity。
+关键入口：
 
-关键代码：
 - `unity/Assets/Scripts/AI/ChatSession.cs`
-- `unity/Assets/Scripts/AI/Tasks/TaskMissionRunner.cs`
-- `unity/Assets/Scripts/AI/Tasks/TaskLuaRuntime.cs`
-- `unity/Assets/Scripts/AI/Tasks/TaskToolRegistry.cs`
-
-### 2. 视觉与语音
-
-- `QwenVisionClient` 走 OpenAI 兼容接口，支持普通问答、视频帧、取消/超时与回退模型；摄像头和 Unity 相机两个来源共用同一套视觉链路。
-- `voice/voice_server.py` 是独立语音 sidecar：AEC / VAD / 本地 ASR / 流式 TTS / 打断控制；Unity 侧通过 UDP 接收口型数据。
-
-关键代码：
-- `unity/Assets/Scripts/Vision/QwenVisionClient.cs`
+- `unity/Assets/Scripts/Selection/FirstPersonTargetingService.cs`
+- `unity/Assets/Scripts/Selection/PickService.cs`
+- `unity/Assets/Scripts/Selection/EntityPickRegistry.cs`
+- `unity/Assets/Scripts/Stage4/Stage4SeatController.cs`
+- `unity/Assets/Scripts/Dynamic/DynamicActorSystem.cs`
 - `voice/voice_server.py`
-
-### 3. 导航与地图
-
-- 大地图模式不依赖场景里的 `Ground`：障碍来自 AABB，寻路走导航图，语义地点来自中文锚点；角色用地面高度图动态贴地。
-- 地图工具链输出 GLB/FBX、碰撞 AABB、导航图、中文锚点、1m 地面高度图，以及「中文名 + 坐标」映射表，让模型/Agent 能查表说「去面包房」，而不是猜坐标。
-
-关键代码：
-- `unity/Assets/Scripts/World/WorldData.cs`
-- `unity/Assets/Scripts/Motion/GroundSnap.cs`
-- `map/tools/make_plan.py`
 - `map/tools/build.py`
 - `map/integration/make_unity_data.py`
-
----
 
 ## 仓库结构
 
 ```text
 unity/
-  Assets/Scripts/        # 运行时 C#：AI / 任务 / 导航 / 视觉 / 语音 / UI / 角色
-  Assets/Editor/         # 编辑器工具：地图迁移、任务场景构建、回归检查
+  Assets/Scripts/        # 运行时 C#：AI / 任务 / 导航 / 视觉 / 选中 / 语音 / UI / 角色
+  Assets/Editor/         # 编辑器工具：地图迁移、场景构建、回归检查、SelectionLab
   ProjectSettings/       # 仅保留 ProjectVersion
-voice/                   # Python 语音 sidecar（AEC / VAD / ASR / TTS / 打断）
+voice/                   # Python 语音 sidecar 脚本与说明
 map/
   tools/                 # Blender + Python 程序化地图生成
-  integration/           # 导出 Unity 运行时数据（导航 / 碰撞 / 锚点 / 地面高度）
+  integration/           # 导出 Unity 运行时数据（碰撞/导航/锚点/地面高度）
 docs/
-  architecture.md        # 项目技术总览（架构 / 数据流 / 模型 / 指标）
-  roadmap.md             # 下一版方向：VLM 改地图 / 双全工语音 / Agent 注入
+  architecture.md        # 总体技术架构
+  roadmap.md             # 后续方向
+  progress-2026-11-11.md # 本项目阶段进展与验收边界
   images/                # README 截图（运行时 + 地图生成结果）
 ```
 
-## 建议先看这些
+## 建议先看
 
-1. `docs/architecture.md`：全局架构、双车道、任务契约、数据流和指标。
-2. `unity/Assets/Scripts/AI/ChatSession.cs` 和 `AI/Tasks/TaskMissionRunner.cs`：一句话如何变成可执行、可验证的任务。
-3. `unity/Assets/Scripts/AI/Tasks/TaskToolRegistry.cs`：角色技能如何注册并被 Lua 调用。
-4. `voice/voice_server.py`：语音 sidecar 的 AEC / VAD / ASR / 流式 TTS 组织方式。
-5. `map/tools/build.py` + `map/integration/make_unity_data.py`：地图从 2D 规划到 Unity 数据的完整链路。
+1. `docs/architecture.md`：总体架构、双车道、任务契约、数据流和指标。
+2. `docs/progress-2026-11-11.md`：相对上一版公开快照的进展、已验证/未验证边界。
+3. `unity/Assets/Scripts/Selection/FirstPersonTargetingService.cs` + `PickService.cs`：当前画面物体选中的真实链路。
+4. `unity/Assets/Scripts/AI/ChatSession.cs` + `AI/Tasks/TaskMissionRunner.cs`：一句话如何变成可执行、可验证的任务。
+5. `voice/voice_server.py`：AEC/VAD/ASR/流式 TTS/打断的 sidecar 组织方式。
 
 ## 技术栈
 
-- Unity 2022.3.62f3c1 + URP；C#；VRM / UniGLTF / lilToon / MMD 骨骼 + 变形桥接。
-- Python 3.11+ 语音 sidecar；本地 ASR、流式 TTS、AEC/VAD。
-- LLM / VLM 通过可配置 endpoint 接入（规划、对话、视觉可独立换模型）。
-- Blender + Python 程序化地图生成；GPT-Image 参考图；GLB/FBX 导出。
+- Unity 2022.3.62f3c1 + URP；C#；VRM/UniGLTF/lilToon/MMD 骨骼 + 变形桥接。
+- Python 3.11+ 语音 sidecar；本地 ASR、流式 TTS、AEC/VAD、口型数据。
+- LLM/VLM 通过可配置 endpoint 接入；当前视觉产品链为 DeepSeek `deepseek-flash`，不把密钥写入仓库。
+- Blender + Python 程序化地图生成；GLB/FBX 导出与 Unity 运行时数据生成。
 
-## 关于本仓库的说明
+## 验收边界与已知限制
 
-这是一个**源代码 + 架构文档**仓库，不是可直接运行的完整 Unity 工程：
-
-- **不包含**角色 VRM / MMD 模型、美术贴图、动画资产、地图 GLB/BLEND/渲染图、模型权重、TTS 参考音频；
-- **不包含**内部 agent 记录、`Logs/`、`Captures/`、本地缓存与任何 API Key；
-- 第三方 Unity 包（VRM / UniGLTF / lilToon / ADB / Unity MCP 等）不在此仓库中，README 只说明依赖关系；
-- 代码通过环境变量或本地配置文件读取密钥，仓库内没有任何可用的 API key；
-- `docs/images/` 里的截图是项目运行/地图生成结果，用于展示效果，不代表完整工程可一键复现。
-
-如果你需要完整工程或美术资源，请通过 GitHub / Bilibili 联系作者。
-
-## Roadmap
-
-- **A. 地图 VLM → 外部 Agent → 地图工具链**：数字人自己看地图、提改造方案，外挂 Agent 细化后调用工具链生成并热插拔。
-- **B. 双全工语音**：全双工 + 全工具，像打电话一样边说边调工具。
-- **C. Agent 生成地图 / 脚本 / 插件**：从数据级生成走到代码级注入。
-
-详见 `docs/roadmap.md`。
+- 当前源码开源不等于完整工程；缺少模型/地图/第三方包时不能直接运行。
+- 视觉选中的白盒用例已验证，但不代表复杂苏联地图全场景识别准确率；真实车/椅样本是有限功能样本。
+- 驾驶、座椅、上下车等模块在源码中已有链路；最新白盒轮未重跑完整回归，不能据此宣称全部场景验收完成。
+- 真人麦克风、口音、环境噪声、回声、AEC 和主观听感仍 pending；录音注入/受控 TTS 事件不等于真人声学验收。
+- 独立外观图审受外部服务限制，不作为本仓库当前验收承诺。
 
 ## License
 
-源代码采用 [MIT License](LICENSE)。角色模型、贴图、音频、地图资产与第三方包不在本仓库内，不适用该许可证；如需使用请联系作者确认授权。
+源代码采用 [MIT License](LICENSE)。角色模型、贴图、音频、地图资产与第三方包不包含在本仓库内，不适用本许可证；如需使用请联系作者确认授权。

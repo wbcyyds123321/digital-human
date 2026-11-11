@@ -117,9 +117,11 @@ namespace Yixuan.Vision
         }
 
         string _cameraOwner;
+        bool _trackingAllowsBodyAssist;
         void Update(){using(Yixuan.AI.Tasks.TaskAuthority.Enter(_cameraOwner))UpdateOwned();}
         void UpdateOwned()
         {
+            if(!Yixuan.AI.Tasks.TaskAuthority.CanContinue(_cameraOwner,2))return;
             float dt = Time.unscaledDeltaTime;
             if (dt <= 0f) return;
 
@@ -135,7 +137,12 @@ namespace Yixuan.Vision
             if (State == GazeState.Tracking)
             {
                 if (_trackTarget == null) BeginRecenter();
-                else SetTargetFromWorld(_trackTarget.position);
+                else if (!_bodyAssistPending)
+                {
+                    float yaw=RelativeYawToWorld(_trackTarget.position);
+                    if(TryBodyAssist(yaw,_trackingAllowsBodyAssist))TargetYaw=HomeYaw;
+                    else SetTargetFromWorld(_trackTarget.position);
+                }
             }
 
             float k = 1f - Mathf.Exp(-Mathf.Max(0.01f, Smooth) * dt);
@@ -194,6 +201,7 @@ namespace Yixuan.Vision
         public void TurnRelative(float yaw, float pitch, float holdSeconds = -1f, bool allowBodyAssist = true)
         {
             if(!Yixuan.AI.Tasks.TaskAuthority.Allows(2))return;
+            _cameraOwner=Yixuan.AI.Tasks.TaskAuthority.Caller;
             // 新观察命令替换旧观察：先把自己发起的身体配合收掉，避免两个观察任务叠转。
             CancelOwnedBodyAssistTurn();
             ResetObservationStatus();
@@ -225,6 +233,8 @@ namespace Yixuan.Vision
         public void Track(Transform target, float holdSeconds = -1f, bool allowBodyAssist = true)
         {
             if(!Yixuan.AI.Tasks.TaskAuthority.Allows(2))return;
+            _cameraOwner=Yixuan.AI.Tasks.TaskAuthority.Caller;
+            _trackingAllowsBodyAssist=allowBodyAssist;
             _trackTarget = target;
             if (target == null)
             {
@@ -241,7 +251,7 @@ namespace Yixuan.Vision
                 TargetYaw = HomeYaw;
                 TargetPitch = ClampPitchRelative(desiredPitch);
                 LastCommand = "身体配合看 " + target.name;
-                State = GazeState.Commanded;
+                State = GazeState.Tracking;
                 _holdUntil = Time.time + (holdSeconds > 0f ? holdSeconds : DefaultHoldSeconds * 2f);
                 return;
             }
@@ -257,7 +267,7 @@ namespace Yixuan.Vision
         bool TryBodyAssist(float desiredRelativeYaw, bool allowBodyAssist)
         {
             float absYaw = Mathf.Abs(desiredRelativeYaw);
-            if (!LimitRelativeRange || absYaw <= Mathf.Abs(MaxRelativeYaw)) return false;
+            if (!LimitRelativeRange || absYaw <= Mathf.Abs(MaxRelativeYaw) + 0.01f) return false;
 
             LastObservationOutOfRange = true;
             if (!allowBodyAssist)
@@ -373,7 +383,7 @@ namespace Yixuan.Vision
 
         void SetTargetFromWorld(Vector3 worldPos)
         {
-            TargetYaw = ClampYawRelative(RelativeYawToWorld(worldPos));
+            TargetYaw = NormalizeYaw(HomeYaw + ClampYawRelative(RelativeYawToWorld(worldPos)));
             TargetPitch = ClampPitchRelative(RelativePitchToWorld(worldPos));
         }
 

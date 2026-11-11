@@ -5,15 +5,98 @@ using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace Yixuan.Vision
 {
+    public enum VisionProvider { DeepSeek = 0, Qwen = 1 }
+
+    /// <summary>Only allowlisted, redacted provider fields; never retain HTTP bodies or headers.</summary>
+    public sealed class VisionServiceDiagnostic
+    {
+        public int HttpStatus;
+        public string Model = "", Category = "", ProviderCode = "", ProviderMessage = "", RequestId = "";
+
+        public string Summary
+        {
+            get
+            {
+                string reason = Category == "quota_exhausted" ? "视觉服务明确报告额度不足" :
+                    Category == "authentication_failed" ? "视觉服务身份验证失败" :
+                    Category == "access_denied" ? "视觉服务拒绝访问，具体原因见服务诊断" :
+                    Category == "rate_limited" ? "视觉服务当前限流" : "视觉服务请求失败";
+                return reason + "（HTTP " + HttpStatus + "，模型=" + Model +
+                    (string.IsNullOrEmpty(ProviderCode) ? "" : "，错误码=" + ProviderCode) +
+                    (string.IsNullOrEmpty(RequestId) ? "" : "，请求ID=" + RequestId) + "）";
+            }
+        }
+
+        internal static VisionServiceDiagnostic Parse(int status, string model, string raw,
+            string headerRequestId, string secret)
+        {
+            string code = "", message = "", requestId = "";
+            if (!string.IsNullOrEmpty(raw) && raw.Length <= 65536)
+            {
+                try
+                {
+                    using (var reader = new Newtonsoft.Json.JsonTextReader(new StringReader(raw)) { MaxDepth = 12 })
+                    {
+                        var root = JObject.Load(reader);
+                        var error = root["error"] as JObject;
+                        code = Scalar(error == null ? null : error["code"]);
+                        if (string.IsNullOrEmpty(code)) code = Scalar(root["code"]);
+                        message = Scalar(error == null ? null : error["message"]);
+                        if (string.IsNullOrEmpty(message)) message = Scalar(root["message"]);
+                        requestId = Scalar(root["request_id"]);
+                        if (string.IsNullOrEmpty(requestId)) requestId = Scalar(root["requestId"]);
+                    }
+                }
+                catch (Newtonsoft.Json.JsonException) { } // HTML/malformed replies still retain their HTTP status.
+            }
+            string evidence = code + " " + message;
+            bool quota = status == 402
+                || evidence.IndexOf("Insufficient Balance", StringComparison.OrdinalIgnoreCase) >= 0
+                || evidence.IndexOf("FreeTierOnly", StringComparison.OrdinalIgnoreCase) >= 0
+                || evidence.IndexOf("Free quota exhausted", StringComparison.OrdinalIgnoreCase) >= 0
+                || evidence.IndexOf("insufficient_quota", StringComparison.OrdinalIgnoreCase) >= 0
+                || evidence.IndexOf("余额不足", StringComparison.OrdinalIgnoreCase) >= 0;
+            return new VisionServiceDiagnostic
+            {
+                HttpStatus = status, Model = Redact(model, secret, 100),
+                Category = quota ? "quota_exhausted" : status == 401 ? "authentication_failed" :
+                    status == 403 ? "access_denied" : status == 429 ? "rate_limited" : "http_error",
+                ProviderCode = Redact(code, secret, 120), ProviderMessage = Redact(message, secret, 400),
+                RequestId = Redact(string.IsNullOrEmpty(requestId) ? headerRequestId : requestId, secret, 120)
+            };
+        }
+
+        static string Scalar(JToken token)
+        {
+            return token != null && (token.Type == JTokenType.String || token.Type == JTokenType.Integer)
+                ? token.ToString() : "";
+        }
+
+        internal static string Redact(string value, string secret, int limit)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            if (!string.IsNullOrEmpty(secret)) value = value.Replace(secret, "[redacted]");
+            value = Regex.Replace(value, @"sk-[a-zA-Z0-9_-]+", "[redacted]", RegexOptions.IgnoreCase);
+            value = Regex.Replace(value, @"Bearer\s+[^\s,;""'<>]+", "Bearer [redacted]", RegexOptions.IgnoreCase);
+            value = Regex.Replace(value, @"data:[^\s""'<>]+", "[data redacted]", RegexOptions.IgnoreCase);
+            value = Regex.Replace(value, @"((?:api[_-]?key|access[_-]?token|token|password|secret)[""']?\s*[=:]\s*)(?:""(?:\\.|[^""\\])*""|'(?:\\.|[^'\\])*'|[^\s,;""'<>]+)",
+                "$1[redacted]", RegexOptions.IgnoreCase);
+            value = Regex.Replace(value, @"[\x00-\x1f\x7f]", " ");
+            return value.Length <= limit ? value : value.Substring(0, limit) + "...";
+        }
+    }
+
     /// <summary>
-    /// 千问视觉请求客户端：把 EyeCamera / 电脑摄像头的 JPEG 或视频帧序列发到配置的 Qwen 模型，
-    /// 拿回中文场景描述。key 只从本地文件读取，不写进场景/日志。
+    /// 视觉请求客户端：默认把截图发给 DeepSeek，Qwen 仅保留为显式选择。
+    /// 保留原类名与脚本 GUID 兼容已有场景；凭据不写进场景/日志。
     ///
     /// ★ 为什么不用 UnityWebRequest：
     ///   实测每次新建 HTTPS 连接（TLS 握手）会让同样的请求延迟从 ~0.9s 抖到 2~3s；
@@ -21,15 +104,15 @@ namespace Yixuan.Vision
     /// </summary>
     public partial class QwenVisionClient : MonoBehaviour
     {
-        // 2026-11-02：qwen3.7-flash / qwen3-vl-plus 的免费额度耗尽（403 AllocationQuota.FreeTierOnly），
-        // 换用同一网关下有额度、且同样支持图片输入的 qwen3.5-omni-flash（实测 0.4~0.6s，中文描述准确）。
-        // 另外保留一条回退链：主模型额度/限流/不支持图片时自动换下一个，不必等到 5 分钟退避。
-        public const string DefaultModel = "qwen3.5-omni-flash";
-        [Tooltip("主视觉模型；旧场景序列化的旧模型名会在 Awake 被统一替换成本值")]
+        public const string DefaultModel = "deepseek-flash";
+        public const string DefaultEndpoint = "https://api.deepseek.com/chat/completions";
+        [Tooltip("默认使用官方 DeepSeek 图片接口；Qwen 需要明确选择，不自动跨服务回退")]
+        public VisionProvider Provider = VisionProvider.DeepSeek;
+        [Tooltip("运行时按所选服务统一设置模型、地址和回退链，兼容旧场景序列化值")]
         public string Model = DefaultModel;
-        [Tooltip("主模型不可用（额度耗尽/限流/不支持图片）时按顺序回退的模型（同一 endpoint）")]
-        public string[] FallbackModels = { "qwen-vl-ocr", "deepseek-v4.1-flash-1017", "qwen3.8-omni-flash" };
-        public string Endpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+        [Tooltip("仅显式选择 Qwen 时使用；DeepSeek 固定单模型，无跨服务回退")]
+        public string[] FallbackModels = new string[0];
+        public string Endpoint = DefaultEndpoint;
         [Tooltip("后台观察的最大输出 token（48 太短，描述容易只剩一句；64 更完整）")]
         public int MaxTokens = 64;
         [Tooltip("实时问答的最大输出 token（回答要短，但留出“看不清”之类完整句子的空间）")]
@@ -59,32 +142,48 @@ namespace Yixuan.Vision
         public bool HasKey { get { return !string.IsNullOrEmpty(_apiKey); } }
         public string LastError { get; private set; }
         long _blockedUntilTicks;string _serviceStatus;
+        VisionServiceDiagnostic _blockedDiagnostic;
         public bool ServiceBlocked {get {return DateTime.UtcNow.Ticks<System.Threading.Interlocked.Read(ref _blockedUntilTicks);}}
         public string ServiceStatus {get {return ServiceBlocked?_serviceStatus:"视觉服务待命";}}
-        public void ResetServiceBackoff(){System.Threading.Interlocked.Exchange(ref _blockedUntilTicks,0);_serviceStatus=null;LastError=null;}
-        void BlockService(string raw,int seconds){_serviceStatus=raw;System.Threading.Interlocked.Exchange(ref _blockedUntilTicks,DateTime.UtcNow.AddSeconds(seconds).Ticks);}
+        public void ResetServiceBackoff(){System.Threading.Interlocked.Exchange(ref _blockedUntilTicks,0);_serviceStatus=null;_blockedDiagnostic=null;LastError=null;}
+        void BlockService(string message,int seconds,VisionServiceDiagnostic diagnostic=null){_serviceStatus=message;_blockedDiagnostic=diagnostic;System.Threading.Interlocked.Exchange(ref _blockedUntilTicks,DateTime.UtcNow.AddSeconds(seconds).Ticks);}
         public int LastPromptTokens { get; private set; }
         public int LastCompletionTokens { get; private set; }
 
         void Awake()
         {
-            // 场景序列化会保留旧模型名；统一用当前的主模型，并补全回退链。
-            Model = DefaultModel;
-            if (FallbackModels == null || FallbackModels.Length == 0)
-                FallbackModels = new[] { "qwen-vl-ocr", "deepseek-v4.1-flash-1017", "qwen3.8-omni-flash" };
             LoadKey();
-            Debug.Log("[Vision] 视觉模型=" + Model + "；回退=" + string.Join(",", FallbackModels) + "；HasKey=" + HasKey);
+            Debug.Log("[Vision] 服务=" + Provider + "；视觉模型=" + Model + "；HasKey=" + HasKey);
+        }
+
+        void ConfigureProvider()
+        {
+            // 三项一起迁移，不能把旧场景的 Qwen 地址/回退模型与 DeepSeek 凭据混用。
+            bool deepseek = Provider == VisionProvider.DeepSeek;
+            Model = deepseek ? DefaultModel : "qwen3.5-omni-flash";
+            Endpoint = deepseek ? DefaultEndpoint : "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+            FallbackModels = deepseek ? new string[0] :
+                new[] { "qwen-vl-ocr", "deepseek-v4.1-flash-1017", "qwen3.8-omni-flash" };
         }
 
         public bool LoadKey()
         {
+            ConfigureProvider();
             _apiKey = null;
+            if (Provider == VisionProvider.DeepSeek)
+            {
+                // 打包场景中的配置有显式引用，不一定在 Resources 中。
+                var session = FindObjectOfType<Yixuan.AI.ChatSession>();
+                var config = session != null && session.Config != null ? session.Config : Yixuan.AI.AIConfig.FindDefault();
+                if (config != null) _apiKey = config.ApiKey;
+                if (!HasKey) Debug.LogWarning("[Vision] 未找到 DeepSeek API key，请检查既有 AI 对话配置。");
+                return HasKey;
+            }
             var candidates = new List<string>();
 
 #if UNITY_EDITOR
             // 编辑器测试：之前用户已经放好的本地 key
-            candidates.Add(Path.Combine(Directory.GetCurrentDirectory(), "_vision_poc", "qwen_apikey.txt"));
-            candidates.Add(Path.Combine(Directory.GetCurrentDirectory(), "_vision_poc", "qwen_apikey.txt"));
+            // Editor fallback: configure the key in the Inspector or environment; never read a private local path.
 #endif
             // 打包后：放到 persistentDataPath，或手动填到 Inspector
             candidates.Add(Path.Combine(Application.persistentDataPath, "qwen_apikey.txt"));
@@ -140,13 +239,13 @@ namespace Yixuan.Vision
             }
             if (!HasKey) yield break;
             string json = "{\"model\":\"" + JsonEscape(Model) + "\",\"messages\":[{\"role\":\"user\",\"content\":\"回复OK\"}],"
-                        + "\"max_tokens\":2,\"enable_thinking\":false}";
+                        + "\"max_tokens\":2," + ThinkingJson + "}";
             CancellationTokenSource cts = new CancellationTokenSource();
             Task<string> task = null;
             try { task = PostJsonAsync(json, cts.Token); }
             catch (Exception e)
             {
-                Debug.Log("[Vision] Qwen 预热启动失败（不影响主流程）：" + e.Message);
+                Debug.Log("[Vision] 视觉预热启动失败（不影响主流程）：" + e.Message);
                 cts.Dispose();
                 yield break;
             }
@@ -154,9 +253,9 @@ namespace Yixuan.Vision
             while (!task.IsCompleted && Time.realtimeSinceStartup - t0 < 20f)
                 yield return null;
             if (task.IsCompleted && !task.IsFaulted)
-                Debug.Log("[Vision] Qwen 预热完成（" + (Time.realtimeSinceStartup - t0).ToString("F2") + "s，连接已复用）");
+                Debug.Log("[Vision] 视觉预热完成（" + (Time.realtimeSinceStartup - t0).ToString("F2") + "s，连接已复用）");
             else
-                Debug.Log("[Vision] Qwen 预热超时/失败（不影响主流程）");
+                Debug.Log("[Vision] 视觉预热超时/失败（不影响主流程）");
             cts.Dispose();
         }
 
@@ -222,7 +321,7 @@ namespace Yixuan.Vision
             if(ServiceBlocked){LastError=ServiceStatus;if(onError!=null)onError(LastError);yield break;}
             if (!HasKey && !LoadKey())
             {
-                LastError = "未找到 Qwen API key";
+                LastError = "未找到 " + Provider + " API key";
                 if (onError != null) onError(LastError);
                 yield break;
             }
@@ -276,19 +375,24 @@ namespace Yixuan.Vision
         /// <summary>实际发 HTTP 的 async 方法：复用单例 HttpClient 的连接（keep-alive）。</summary>
         sealed class VisionServiceException : Exception
         {
+            public readonly VisionServiceDiagnostic Diagnostic;
+            public readonly bool FromBackoff;
             public VisionServiceException(string message) : base(message) { }
+            public VisionServiceException(string message, VisionServiceDiagnostic diagnostic, bool fromBackoff = false) : base(message)
+            { Diagnostic = diagnostic; FromBackoff = fromBackoff; }
         }
 
-        async Task<string> PostJsonAsync(string json, CancellationToken ct)
+        async Task<string> PostJsonAsync(string json, CancellationToken ct, Action<string, int> observe = null,
+            int attemptsPerModel = 3, bool allowFallbacks = true)
         {
-            if (ServiceBlocked) throw new VisionServiceException(ServiceStatus);
-            var chain = ModelChain();
+            if (ServiceBlocked) throw new VisionServiceException(ServiceStatus, _blockedDiagnostic, true);
+            var chain = allowFallbacks ? ModelChain() : new List<string> { string.IsNullOrEmpty(Model) ? DefaultModel : Model };
             string lastError = null;
             for (int mi = 0; mi < chain.Count; mi++)
             {
                 string model = chain[mi];
                 string body = SwapModel(json, chain[0], model);
-                for (int attempt = 0; attempt < 3; attempt++)
+                for (int attempt = 0; attempt < attemptsPerModel; attempt++)
                 {
                     if (ct.IsCancellationRequested) throw new OperationCanceledException(ct);
                     try
@@ -301,36 +405,42 @@ namespace Yixuan.Vision
                                                        .ConfigureAwait(false))
                             {
                                 string raw = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
-                                if (resp.IsSuccessStatusCode) return raw;
                                 int code = (int)resp.StatusCode;
-                                bool quota = ContainsQuota(raw);
+                                if (observe != null) observe(model, code);
+                                if (resp.IsSuccessStatusCode) return raw;
+                                IEnumerable<string> requestIds;
+                                string requestId = "";
+                                if (resp.Headers.TryGetValues("x-request-id", out requestIds) ||
+                                    resp.Headers.TryGetValues("x-dashscope-request-id", out requestIds))
+                                    foreach (string id in requestIds) { requestId = id; break; }
+                                var diagnostic = VisionServiceDiagnostic.Parse(code, model, raw, requestId, _apiKey);
+                                bool quota = diagnostic.Category == "quota_exhausted";
                                 bool retryable = code == 429 || code >= 500;
                                 // 额度耗尽 / 模型不可用 / 不支持图片：如果还有回退模型就直接换，不整段退避。
                                 if ((quota || code == 404 || code == 403 || code == 400) && mi + 1 < chain.Count)
                                 {
-                                    lastError = "model " + model + " HTTP " + code + " " + Truncate(raw, 120);
+                                    lastError = diagnostic.Summary;
                                     Debug.LogWarning("[Vision] 模型 " + model + " 不可用（HTTP " + code + "），回退到 " +
-                                                     chain[mi + 1] + "：" + Truncate(raw, 140));
+                                                     chain[mi + 1] + "：" + diagnostic.Summary);
                                     break; // 跳到下一个模型
                                 }
-                                if (retryable && attempt < 2)
+                                if (retryable && attempt + 1 < attemptsPerModel)
                                 {
                                     Debug.LogWarning("[Vision] 模型 " + model + " HTTP " + code + "，第 " + (attempt + 1) + " 次重试");
-                                    await Task.Delay(1200 * (attempt + 1)).ConfigureAwait(false);
+                                    await Task.Delay(1200 * (attempt + 1), ct).ConfigureAwait(false);
                                     continue;
                                 }
                                 if (quota || code == 401 || code == 403)
                                 {
-                                    BlockService("视觉服务的免费额度已耗尽/拒绝访问（已尝试 " + chain.Count +
-                                                 " 个模型，主模型=" + chain[0] + "），暂时无法识别画面；已暂停重复请求五分钟。", 300);
-                                    throw new VisionServiceException(ServiceStatus);
+                                    BlockService(diagnostic.Summary + "；已暂停重复请求五分钟。", 300, diagnostic);
+                                    throw new VisionServiceException(ServiceStatus, diagnostic);
                                 }
                                 if (code == 429)
                                 {
-                                    BlockService("视觉服务当前限流（HTTP 429），已暂停重试 30 秒；稍后把“游戏内视角”关→开即可恢复。", 30);
-                                    throw new VisionServiceException(ServiceStatus);
+                                    BlockService(diagnostic.Summary + "；已暂停重复请求 30 秒。", 30, diagnostic);
+                                    throw new VisionServiceException(ServiceStatus, diagnostic);
                                 }
-                                throw new VisionServiceException("HTTP " + code + " " + Truncate(raw, 200));
+                                throw new VisionServiceException(diagnostic.Summary, diagnostic);
                             }
                         }
                     }
@@ -338,8 +448,8 @@ namespace Yixuan.Vision
                     catch (OperationCanceledException) { throw; }
                     catch (Exception e)
                     {
-                        lastError = e.Message;
-                        if (attempt < 2) { await Task.Delay(800 * (attempt + 1)).ConfigureAwait(false); continue; }
+                        lastError = VisionServiceDiagnostic.Redact(e.Message, _apiKey, 400);
+                        if (attempt + 1 < attemptsPerModel) { await Task.Delay(800 * (attempt + 1), ct).ConfigureAwait(false); continue; }
                         break;
                     }
                 }
@@ -351,7 +461,7 @@ namespace Yixuan.Vision
         {
             var list = new List<string>();
             if (!string.IsNullOrEmpty(Model)) list.Add(Model);
-            if (FallbackModels != null)
+            if (Provider == VisionProvider.Qwen && FallbackModels != null)
             {
                 for (int i = 0; i < FallbackModels.Length; i++)
                 {
@@ -361,15 +471,6 @@ namespace Yixuan.Vision
             }
             if (list.Count == 0) list.Add(DefaultModel);
             return list;
-        }
-
-        static bool ContainsQuota(string raw)
-        {
-            if (string.IsNullOrEmpty(raw)) return false;
-            return raw.IndexOf("FreeTierOnly", StringComparison.OrdinalIgnoreCase) >= 0
-                || raw.IndexOf("Free quota exhausted", StringComparison.OrdinalIgnoreCase) >= 0
-                || raw.IndexOf("insufficient_quota", StringComparison.OrdinalIgnoreCase) >= 0
-                || raw.IndexOf("余额不足", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         static string SwapModel(string json, string from, string to)
@@ -425,8 +526,13 @@ namespace Yixuan.Vision
             }
             if (!first) sb.Append(',');
             sb.Append("{\"type\":\"text\",\"text\":\"").Append(JsonEscape(prompt)).Append("\"}");
-            sb.Append("]}],\"max_tokens\":").Append(maxTokens).Append(",\"enable_thinking\":false}");
+            sb.Append("]}],\"max_tokens\":").Append(maxTokens).Append(',').Append(ThinkingJson).Append('}');
             return sb.ToString();
+        }
+
+        string ThinkingJson
+        {
+            get { return Provider == VisionProvider.DeepSeek ? "\"thinking\":{\"type\":\"disabled\"}" : "\"enable_thinking\":false"; }
         }
 
         static void AppendImage(StringBuilder sb, byte[] jpg, ref bool first)

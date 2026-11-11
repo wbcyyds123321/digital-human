@@ -1,6 +1,6 @@
 # SovietBlueHour GLB → Unity（URP）导入报告
 
-- **工程**：`<项目根目录>`（Unity 2022.3.62f3c1，URP 14.0.12，Linear 色彩空间）
+- **工程**：`<project>`（Unity 2022.3.62f3c1，URP 14.0.12，Linear 色彩空间）
 - **执行**：unity-import-engineer（task-2），2026-11-02
 - **源资产**：`Maps/SovietBlueHour/map/SovietBlueHour_game.glb`（117,624,704 B / 117.62 MB，Khronos glTF Blender I/O v5.2.41 导出）
 - **导入方式**：工程自带 **UniGLTF `GlbScriptedImporter`**（`Packages/com.vrmc.gltf`），`m_reverseAxis = Z`、`m_renderPipeline = UniversalRenderPipeline`
@@ -287,7 +287,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File "Logs/map_import/run_stage1.
 ```
 
 也可以在编辑器里直接用菜单 `UnityLITF/地图/①…⑤`。
-Unity 路径：`<UnityEditor.exe>`；批处理必须整段字符串传 `-ArgumentList`（`run_stage1.ps1` 已处理）。
+Unity 路径：`D:\Unity\2022.3.62f3c1\Editor\Unity.exe`；批处理必须整段字符串传 `-ArgumentList`（`run_stage1.ps1` 已处理）。
 
 ---
 

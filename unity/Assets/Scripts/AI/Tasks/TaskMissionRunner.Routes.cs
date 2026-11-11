@@ -24,7 +24,7 @@ namespace Yixuan.AI.Tasks {
    ScriptRoute route;string target=argument,id=null;
    if(_scriptRoutes.TryGetValue(argument,out route)){target=route.target;id=route.id;if(route.done)throw new Exception("route_already_completed");}
    else {if(argument.StartsWith("route_",StringComparison.Ordinal))throw new Exception("unknown_or_stale_route_handle");target=ResolveCodeTarget(argument);}
-   var s=new MissionStep{kind="route_progress",target_id=target,route_id=id,route_fraction=1,timeout=120};
+   var s=new MissionStep{kind="route_progress",target_id=target,route_id=id,route_fraction=1,timeout=0};
    if(options!=null){
     var f=options.Get("to_fraction");var d=options.Get("distance");bool hf=f.Type!=MoonSharp.Interpreter.DataType.Nil&&f.Type!=MoonSharp.Interpreter.DataType.Void,hd=d.Type!=MoonSharp.Interpreter.DataType.Nil&&d.Type!=MoonSharp.Interpreter.DataType.Void;
     if(hf&&hd)throw new Exception("route_choose_fraction_or_distance");
@@ -58,20 +58,21 @@ namespace Yixuan.AI.Tasks {
    _lastScriptRoute=route;
    if(route.done){Fail(r,"route_already_completed");yield break;}
    if(TaskTargetCatalog.FlatDistance(Motor.transform.position,route.lastPosition)>0.04f){Fail(r,"route_resume_position_changed");yield break;}
-   if(route.objectTarget!=null&&(route.objectTarget.Object==null&&!route.objectTarget.IsAnchor||TaskTargetCatalog.FlatDistance(route.objectTarget.Position,route.face)>0.25f)){Fail(r,"route_target_moved_or_destroyed");yield break;}
+   if(route.objectTarget!=null&&(!route.objectTarget.IsAvailable||TaskTargetCatalog.FlatDistance(route.objectTarget.Position,route.face)>0.25f)){Fail(r,"route_target_moved_or_destroyed");yield break;}
    float end=s.distance>0?Mathf.Min(route.total,route.travelled+s.distance):route.total*s.route_fraction;
    if(end<route.travelled-0.005f||end<=route.travelled+0.001f&&route.total>0.025f){Fail(r,"route_progress_must_advance");yield break;}
    r.route_id=route.id;r.route_total=route.total;r.target_position=route.objectTarget!=null?route.face:route.destination;r.approach_position=route.destination;
    var segment=new List<Vector3>{Motor.transform.position};float offset=0;
    for(int i=1;i<route.points.Count;i++){offset+=TaskTargetCatalog.FlatDistance(route.points[i-1],route.points[i]);if(offset>route.travelled+0.002f&&offset<end-0.002f)segment.Add(route.points[i]);}
    Vector3 endpoint=PointOnRoute(route,end);segment.Add(endpoint);r.route.AddRange(segment);
+   if(!ConfigureNavigationBudget(s,r))yield break;
    ClearAttention();if(Gimbal!=null)Gimbal.Center();float radius=Motor.ArriveRadius;Motor.ArriveRadius=0.008f;
    try{
     if(TaskTargetCatalog.FlatDistance(Motor.transform.position,endpoint)>0.008f){
      if(!Motor.MoveAlongPath(segment)){Fail(r,"route_start_failed: "+Motor.LastStatus+" "+Motor.LastError);yield break;}
      var previous=Motor.transform.position;r.attempts=1;
      while(Motor.HasTarget){
-      if(route.objectTarget!=null&&(route.objectTarget.Object==null&&!route.objectTarget.IsAnchor||TaskTargetCatalog.FlatDistance(route.objectTarget.Position,route.face)>0.25f)){Motor.Stop("路径目标变化","cancelled");Fail(r,"route_target_moved_or_destroyed");yield break;}
+      if(route.objectTarget!=null&&(!route.objectTarget.IsAvailable||TaskTargetCatalog.FlatDistance(route.objectTarget.Position,route.face)>0.25f)){Motor.Stop("路径目标变化","cancelled");Fail(r,"route_target_moved_or_destroyed");yield break;}
       r.path_length+=TaskTargetCatalog.FlatDistance(previous,Motor.transform.position);previous=Motor.transform.position;yield return null;
      }
      if(Motor.LastStatus!="arrived"){Fail(r,"route_motion_failed: "+Motor.LastStatus+" "+Motor.LastError);yield break;}

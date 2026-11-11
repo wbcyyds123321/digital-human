@@ -13,8 +13,9 @@ namespace Yixuan.AI.Tasks
         public static bool Resolve(TaskDestination t, out Vector3 point, out string source)
         {
             point = Vector3.zero; source = "";
-            if (t == null || !t.IsAnchor && t.Object == null) return false;
+            if (t == null || !t.IsAvailable) return false;
             if (t.LookAt != null) { point=t.LookAt.position; source="explicit_look_at_pose"; return true; }
+            if (t.LivePosition != null) { point=t.Position; source="live_entity_position"; return true; }
             if (t.IsAnchor) { point=t.AnchorPosition + Vector3.up*1.5f; source="anchor_eye_level"; return true; }
             var renderers=t.Object.GetComponentsInChildren<Renderer>();
             Bounds bounds=new Bounds(); bool found=false;
@@ -69,14 +70,17 @@ namespace Yixuan.AI.Tasks
             var target=Catalog.Get(s.target_id); Vector3 point; string source;
             if(!TaskAttentionFocus.Resolve(target,out point,out source)) {Fail(r,"attention_target_missing");yield break;}
             ClearAttention();
-            r.target_path=target.Path;r.target_position=target.Position;r.focus_position=point;r.focus_source=source;r.camera_only=s.camera_only;
+            r.target_path=target.Path;r.target_position=target.Position;r.focus_position=point;r.focus_source=source;r.camera_only=s.camera_only;r.body_facing=s.body_facing;
             Vector3 start=Motor.transform.position;float startYaw=Motor.transform.eulerAngles.y;
             Vector3 delta=point-(Gimbal.YawPivot!=null?Gimbal.YawPivot.position:EyeCamera.transform.position);
+            Vector3 bodyDelta=target.Position-Motor.transform.position;bodyDelta.y=0;
+            if(s.body_facing&&bodyDelta.sqrMagnitude<0.0001f){Fail(r,"body_facing_direction_undefined");yield break;}
+            float bodyYaw=Mathf.Atan2(bodyDelta.x,bodyDelta.z)*Mathf.Rad2Deg;
             float worldYaw=Mathf.Atan2(delta.x,delta.z)*Mathf.Rad2Deg;
             float relative=Mathf.DeltaAngle(startYaw+Gimbal.BaseYaw+Gimbal.HomeYaw,worldYaw);
-            if(!s.camera_only && Gimbal.BodyAssist && Gimbal.LimitRelativeRange && Mathf.Abs(relative)>Mathf.Abs(Gimbal.MaxRelativeYaw))
+            if(s.body_facing || !s.camera_only && Gimbal.BodyAssist && Gimbal.LimitRelativeRange && Mathf.Abs(relative)>Mathf.Abs(Gimbal.MaxRelativeYaw)+0.01f)
             {
-                yield return TurnTo(worldYaw-Gimbal.BaseYaw-Gimbal.HomeYaw);
+                yield return TurnTo(s.body_facing?bodyYaw:worldYaw-Gimbal.BaseYaw-Gimbal.HomeYaw);
                 if(Motor.IsTurning) {Fail(r,"attention_body_turn_timeout");yield break;}
             }
             _attentionPoint=new GameObject("TaskAttentionFocusPoint");_attentionPoint.hideFlags=HideFlags.DontSave;
@@ -94,6 +98,8 @@ namespace Yixuan.AI.Tasks
                 r.position_drift=Vector3.Distance(start,Motor.transform.position);
                 r.body_rotation=Mathf.Abs(Mathf.DeltaAngle(startYaw,Motor.transform.eulerAngles.y));
                 if(r.position_drift>0.03f) {Fail(r,"attention_unexpected_translation");yield break;}
+                r.facing_error=s.body_facing?Mathf.Abs(Mathf.DeltaAngle(Motor.transform.eulerAngles.y,bodyYaw)):0f;
+                if(s.body_facing&&r.facing_error>0.5f){Fail(r,"target_body_heading_not_reached");yield break;}
                 if(s.camera_only && r.body_rotation>0.5f) {Fail(r,"attention_body_moved_without_permission");yield break;}
                 if(!Gimbal.IsObservationSettling)
                 {
@@ -109,7 +115,7 @@ namespace Yixuan.AI.Tasks
             yield return new WaitForEndOfFrame();
             byte[] jpg=CaptureFrame();r.frame_path=Path.Combine(RunDirectory,s.id+"_look_at.jpg");File.WriteAllBytes(r.frame_path,jpg);
             using(var sha=SHA256.Create()) r.frame_sha256=BitConverter.ToString(sha.ComputeHash(jpg)).Replace("-","").ToLowerInvariant();
-            r.reason="视角已稳定指向"+target.Name+"，保持注视；这是几何对准，未进行视觉语义识别";
+            r.reason=(s.body_facing?"身体及视角已对准":"视角已稳定指向")+target.Name+"，保持注视；这是几何对准，未进行视觉语义识别";
         }
     }
 }

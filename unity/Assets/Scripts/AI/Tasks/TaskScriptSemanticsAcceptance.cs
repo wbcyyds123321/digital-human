@@ -5,7 +5,7 @@ using System.IO;
 using UnityEngine;
 namespace Yixuan.AI.Tasks {
  public sealed class TaskScriptSemanticsAcceptance:MonoBehaviour {
-  public string Output="Captures/Evidence/runtime_semantics_2026-10-25";public bool FollowupOnly;public bool Running;public string Current;public RuntimeTestReport Report;
+  public string Output="D:/AI/GameScaling/docs/evidence/runtime_semantics_2026-10-25";public bool FollowupOnly;public bool Running;public string Current;public RuntimeTestReport Report;
   ChatSession session;TaskMissionRunner r;bool mic,voice,taskVoice;string evidenceRoot,wave,lamp;TaskInputMode mode;
   public void Begin(){if(Running)return;session=FindObjectOfType<ChatSession>();r=session.Missions;r.ResolveRefs();mic=session.VoiceInput.Enabled;voice=session.Config.VoiceEnabled;taskVoice=r.VoiceEnabled;mode=session.InputMode;evidenceRoot=r.EvidenceRoot;
    foreach(var g in TaskGestureSkills.Available())if((g.Label??"").Contains("挥手")){wave=g.Id;break;}

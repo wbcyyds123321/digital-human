@@ -19,6 +19,9 @@ namespace Yixuan.Vision
 
         [Header("显示")]
         public bool ShowPreview = true;
+
+        /// <summary>True when the eye-frame preview is actually displayed this frame.</summary>
+        public bool PreviewVisible { get; private set; }
         [Tooltip("统一 HUD 的视觉标签可开关这个画中画")]
         public bool PreviewEnabled = true;
         public bool ShowViewCone = true;
@@ -179,6 +182,7 @@ namespace Yixuan.Vision
 
             // 主视角现在是第三人称跟随；只有打开“游戏视角”时才显示眼睛小窗/视锥，避免挡主画面。
             bool visible = PreviewEnabled && (!OnlyWhenGameView || (Observer != null && Observer.GameViewEnabled));
+            PreviewVisible = visible;
             if (_canvas != null && _canvas.gameObject.activeSelf != visible)
                 _canvas.gameObject.SetActive(visible);
             if (_cone != null) _cone.enabled = visible && ShowViewCone;

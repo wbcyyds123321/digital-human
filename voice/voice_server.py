@@ -31,6 +31,7 @@ import struct
 import sys
 import threading
 import time
+import uuid
 import wave
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -214,6 +215,7 @@ class StreamSentence:
         self.error = None
         self.stop = threading.Event()
         self.first_ms = 0
+        self.audio_received = False
         self.t0 = time.time()
         self.thread = threading.Thread(target=self._run, daemon=True)
         self.thread.start()
@@ -227,14 +229,17 @@ class StreamSentence:
                 pcm32 = np.frombuffer(b, dtype="<i2").astype(np.float32) / 32768.0
                 if len(pcm32) == 0:
                     return
-                if self.first_ms == 0:
+                if not self.audio_received:
                     self.first_ms = int((time.time() - t0) * 1000)
+                self.audio_received = True
                 n_out = max(1, int(len(pcm32) * CAP_SR / 32000))
                 pcm48 = np.interp(np.linspace(0, len(pcm32) - 1, n_out),
                                   np.arange(len(pcm32)), pcm32).astype(np.float32)
                 self.audio_q.put(pcm48)
 
             with TTS_STREAM_SEM:
+                if self.stop.is_set():
+                    return
                 chunks, total = self.server.tts_mod.minimax_stream(
                     self.text, self.voice_id, self.mm_emotion, self.speed, self.vol,
                     on_audio, timeout=10)
@@ -245,14 +250,16 @@ class StreamSentence:
         except Exception as e:  # noqa: BLE001
             self.error = e
             # 已经播出去一部分后再回退整句 = 复读；只在"一个字都没出"时回退
-            if self.first_ms == 0:
+            if not self.audio_received:
                 log(f"[TTS-STREAM] sentence#{self.sentence_id} 流失败（无音频），回退整句：{e}")
                 if not self.stop.is_set():
                     try:
                         mp3 = self.server.synth(self.text, self.voice_id, self.emotion,
                                                self.demeanor, self.intensity)
                         pcm48, _ = self.server._decode_mp3(mp3)
-                        self.audio_q.put(pcm48)
+                        if not self.stop.is_set():
+                            self.audio_q.put(pcm48)
+                            self.error = None
                     except Exception as e2:  # noqa: BLE001
                         self.error = e2
                         log(f"[TTS-STREAM] sentence#{self.sentence_id} 回退也失败：{e2}")
@@ -260,6 +267,27 @@ class StreamSentence:
                 log(f"[TTS-STREAM] sentence#{self.sentence_id} 流中途失败，保留已播部分（不回退）：{e}")
         finally:
             self.done = True
+
+
+class PlaybackTurn:
+    """One playback generation owns its queue and stop flag, including during teardown."""
+
+    def __init__(self, turn_id, token):
+        self.turn_id = turn_id
+        self.token = token
+        self.stop = threading.Event()
+        self.items = queue.Queue()
+        self.pending = {}
+        self.requested = set()
+        self.in_flight = set()
+        self.producers = set()
+        self.next_sentence_id = 1
+        self.last_sentence_id = None
+        self.legacy_finish = False
+        self.closed = False
+        self.failed = False
+        self.audio_started = False
+        self.thread = None
 
 
 class VoiceServer:
@@ -309,6 +337,9 @@ class VoiceServer:
         self.pending_items = {}                 # sentence_id -> (pcm48, ref16, is_last)
         self.next_sentence_id = 1
         self.current_turn_id = None
+        self.playback_turn = None
+        self.latest_turn_id = 0
+        self.service_id = uuid.uuid4().hex
         self.tts_last_ms = 0
         self.tts_fail = 0
         self.tts_slow = 0
@@ -334,6 +365,10 @@ class VoiceServer:
         self.audio_stats = {"segments": 0, "preroll_samples": 0, "queue_drops": 0}
         self.asr_timer = None
         self.mic_ready = False
+        self.utterance_id = 0
+        self.utterance_started_at = 0.0
+        self.utterance_ended_at = 0.0
+        self.utterance_source = "mic"
 
         self.asr_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="asr")
         self.voice_id = VOICE_ID
@@ -388,7 +423,8 @@ class VoiceServer:
     def emit(self, kind, **payload):
         with self.events_cv:
             # Allocate sequence under the same lock as append; audio/ASR/TTS emit concurrently.
-            ev = {"seq": self.event_seq, "type": kind, "t": round(time.time(), 3)}
+            ev = {"seq": self.event_seq, "type": kind, "t": round(time.time(), 3),
+                  "service_id": self.service_id}
             ev.update(payload)
             self.event_seq += 1
             self.events.append(ev)
@@ -412,7 +448,7 @@ class VoiceServer:
     def capture_loop(self):
         def cb(indata, nframes, t, status):
             try:
-                self.mic_q.put_nowait(indata[:, 0].copy())
+                self.mic_q.put_nowait((indata[:, 0].copy(), time.time()))
                 self.mic_ready = True
             except queue.Full:
                 self.audio_stats["queue_drops"] += 1
@@ -448,99 +484,104 @@ class VoiceServer:
                         break
 
     # ---------------- 播放线程 ----------------
-    def _play_worker(self, pcm48, ref16, token):
-        self.stop_play.clear()
-        baseline = self.mic_index
-        with self.lock:
-            self.play_start_mic = baseline
-            self.play_ref_start = self.ref_index
-            self.playing = True
-            self.barge_this_play = False
-            self.barge_cooldown_until = 0.0
-        self.emit("tts.start", token=token)
-        log(f"[SAY] 开始播放 {len(pcm48)/CAP_SR:.2f}s")
+    def _playback_reply(self, ctx, accepted, reason="", duration=0.0):
+        return {"ok": True, "accepted": accepted, "ignored": not accepted,
+                "reason": reason, "turn_id": ctx.turn_id if ctx else None,
+                "token": ctx.token if ctx else 0, "duration": round(duration, 2),
+                "service_id": self.service_id, "playback_protocol": 2}
 
-        try:
-            with sd.OutputStream(device=SPK_DEVICE, samplerate=CAP_SR, channels=1,
-                                 blocksize=BLOCK48, dtype="float32") as ost:
-                for i in range(0, len(pcm48) - BLOCK48, BLOCK48):
-                    if self.stop_play.is_set() or token != self.play_token:
-                        log("[SAY] 被打断/取消，停止播放")
-                        break
-                    ost.write(pcm48[i:i + BLOCK48].reshape(-1, 1))
-                    self.mouth.feed(pcm48[i:i + BLOCK48])
-                    # 参考块（与播放同步推进）
-                    b = i // BLOCK48
-                    ref_block = ref16[b * BLOCK16:(b + 1) * BLOCK16]
-                    with self.lock:
-                        self.ref_ring[self.ref_index] = ref_block
-                        self.ref_index += 1
-                        while len(self.ref_ring) > 3000:
-                            self.ref_ring.popitem(last=False)
-        except Exception as e:  # noqa: BLE001
-            log(f"[!] 播放失败：{e}")
-            self.emit("error", msg=f"播放失败: {e}")
-        finally:
-            with self.lock:
-                if token == self.play_token:
-                    self.playing = False
-            if self.stop_play.is_set():
-                self.emit("tts.cancelled", token=token)
-            else:
-                self.emit("tts.end", token=token)
-            self.mouth.silence()
-            log("[SAY] 播放结束")
-
-    def say(self, text, voice_id=None, emotion="", demeanor="", intensity=0.6):
-        """合成 → 解码 → 开始播放（异步）。返回音频时长（秒）。"""
-        mp3 = self.synth(text, voice_id, emotion, demeanor, intensity)
-        return self.play_mp3(mp3)
-
-    def play_mp3(self, mp3: bytes):
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as f:
-            f.write(mp3)
-            tmp = f.name
-        try:
-            d48 = miniaudio.decode_file(tmp, output_format=miniaudio.SampleFormat.FLOAT32,
-                                        nchannels=1, sample_rate=CAP_SR)
-            pcm48 = np.array(d48.samples, dtype=np.float32)
-            d16 = miniaudio.decode_file(tmp, output_format=miniaudio.SampleFormat.FLOAT32,
-                                        nchannels=1, sample_rate=PROC_SR)
-            ref16 = np.array(d16.samples, dtype=np.float32)
-        finally:
-            try:
-                os.unlink(tmp)
-            except OSError:
-                pass
-
-        with self.lock:
-            self.play_token += 1
-            token = self.play_token
-        self.stop_play.set()   # 让旧播放线程停下
-        if self.play_thread is not None and self.play_thread.is_alive():
-            self.play_thread.join(timeout=1.0)
-        self.stop_play.clear()
-        self.play_thread = threading.Thread(target=self._play_worker,
-                                            args=(pcm48, ref16, token), daemon=True)
-        self.play_thread.start()
-        return len(pcm48) / CAP_SR
-
-    def cancel(self):
-        with self.lock:
-            self.play_token += 1
-            self.queue_end = False
-        self.stop_play.set()
-        self.mouth.silence()
-        # 清空分句队列（流式播放时）
+    def _retire_turn_locked(self, ctx):
+        if ctx is None:
+            return
+        ctx.closed = True
+        ctx.stop.set()
+        for producer in ctx.producers:
+            producer.stop.set()
+        ctx.pending.clear()
         while True:
             try:
-                self.say_queue.get_nowait()
+                ctx.items.get_nowait()
             except queue.Empty:
                 break
+
+    def _reserve_sentence(self, turn_id, sentence_id, barge_enabled=None):
+        """Reserve ownership BEFORE slow synthesis; stale HTTP work cannot reclaim a turn."""
+        with self.lock:
+            ctx = self.playback_turn
+            if turn_id > 0 and (turn_id < self.latest_turn_id or
+                                (turn_id == self.latest_turn_id and
+                                 (ctx is None or ctx.turn_id != turn_id))):
+                return None, self._playback_reply(ctx, False, "stale_turn")
+            if ctx is not None and turn_id == ctx.turn_id and ctx.closed and turn_id > 0:
+                return None, self._playback_reply(ctx, False, "closed_turn")
+            if ctx is None or turn_id != ctx.turn_id or ctx.closed:
+                self._retire_turn_locked(ctx)
+                self.play_token += 1
+                ctx = PlaybackTurn(turn_id, self.play_token)
+                self.playback_turn = ctx
+                self.current_turn_id = turn_id
+                self.latest_turn_id = max(self.latest_turn_id, turn_id)
+                self.stop_play = ctx.stop
+                self.say_queue = ctx.items
+                self.pending_items = ctx.pending
+                self.queue_end = False
+                self.playing = False
+            if sentence_id <= 0:
+                sentence_id = max(ctx.requested, default=0) + 1
+            if sentence_id in ctx.requested:
+                return None, self._playback_reply(ctx, False, "duplicate_sentence")
+            if ctx.last_sentence_id is not None and sentence_id > ctx.last_sentence_id:
+                return None, self._playback_reply(ctx, False, "past_finish")
+            if barge_enabled is not None:
+                self.barge_enabled = bool(barge_enabled)
+            ctx.requested.add(sentence_id)
+            ctx.in_flight.add(sentence_id)
+            return (ctx, sentence_id), None
+
+    def say(self, text, voice_id=None, emotion="", demeanor="", intensity=0.6, turn_id=0,
+            barge_enabled=None):
+        """Whole-text speech uses the same generation fence as streamed sentences."""
+        if turn_id == 0:
+            with self.lock:
+                self._retire_turn_locked(self.playback_turn)
+        return self.enqueue_sentence(text, voice_id, emotion, demeanor, intensity,
+                                     sentence_id=1, is_last=True, turn_id=turn_id,
+                                     force_static=True, barge_enabled=barge_enabled)
+
+    def play_mp3(self, mp3: bytes):
+        # Legacy in-process entry point: enqueue already synthesized audio in its own turn.
+        reservation, rejected = self._reserve_sentence(0, 0)
+        if rejected:
+            return 0.0
+        ctx, sid = reservation
+        pcm48, ref16 = self._decode_mp3(mp3)
+        self._publish_sentence(ctx, sid, ("static", pcm48, ref16, sid, True), True)
+        return len(pcm48) / CAP_SR
+
+    def cancel(self, turn_id=None):
+        with self.lock:
+            ctx = self.playback_turn
+            if turn_id is not None and (ctx is None or turn_id != ctx.turn_id):
+                if turn_id > self.latest_turn_id:
+                    # Cancellation can overtake a slow/not-yet-accepted /say_queue POST.
+                    # Keep a tombstone so its late request cannot restart cancelled speech.
+                    self._retire_turn_locked(ctx)
+                    self.play_token += 1
+                    ctx = PlaybackTurn(turn_id, self.play_token)
+                    self.playback_turn = ctx
+                    self.current_turn_id = turn_id
+                    self.latest_turn_id = turn_id
+                    self.stop_play = ctx.stop
+                    self.say_queue = ctx.items
+                    self.pending_items = ctx.pending
+                else:
+                    return self._playback_reply(ctx, False, "stale_turn")
+            self._retire_turn_locked(ctx)
+            self.playing = False
+            self.queue_end = False
+            self.mouth.silence()
         log("[SAY] /cancel")
-        return True
+        return self._playback_reply(ctx, True)
 
     # ---------------- 流式 TTS 队列（分句边合成边播） ----------------
     def _decode_mp3(self, mp3: bytes):
@@ -563,18 +604,40 @@ class VoiceServer:
         return pcm48, ref16
 
     def enqueue_sentence(self, text, voice_id=None, emotion="", demeanor="", intensity=0.6,
-                         sentence_id=0, is_last=False, turn_id=0):
+                         sentence_id=0, is_last=False, turn_id=0, force_static=False,
+                         barge_enabled=None):
         """把一句加入播放队列：优先缓存；否则 MiniMax 流式 PCM（TTS_STREAM=1），失败回退整句。"""
-        t0 = time.time()
         if self.tts_mod is None:
             raise RuntimeError("tts_server 未加载")
+        reservation, rejected = self._reserve_sentence(turn_id, sentence_id, barge_enabled)
+        if rejected:
+            return rejected
+        ctx, sentence_id = reservation
+        try:
+            item, duration = self._synthesize_sentence(ctx, text, voice_id, emotion, demeanor,
+                                                       intensity, sentence_id, is_last, force_static)
+        except Exception as error:
+            with self.lock:
+                ctx.in_flight.discard(sentence_id)
+                ctx.failed = True
+                self._retire_turn_locked(ctx)
+                if ctx is self.playback_turn:
+                    self.playing = False
+            self.emit("error", msg=f"TTS 合成失败: {error}", turn_id=ctx.turn_id, token=ctx.token)
+            raise
+        accepted = self._publish_sentence(ctx, sentence_id, item, is_last)
+        return self._playback_reply(ctx, accepted, "" if accepted else "retired_during_synthesis",
+                                    duration)
 
+    def _synthesize_sentence(self, ctx, text, voice_id, emotion, demeanor, intensity,
+                             sentence_id, is_last, force_static):
+        t0 = time.time()
         item = None
         duration = 0.0
         vid = voice_id or self.voice_id
         mm_emotion, speed, vol = self.tts_mod.resolve_voice_params(emotion, demeanor, intensity)
         cp = self.tts_mod.cache_path(text, vid, mm_emotion, speed, vol)
-        use_stream = os.environ.get("TTS_STREAM", "1") != "0"
+        use_stream = not force_static and os.environ.get("TTS_STREAM", "1") != "0"
 
         if self.tts_mod.USE_CACHE and cp.exists():
             mp3 = cp.read_bytes()
@@ -585,11 +648,18 @@ class VoiceServer:
         elif use_stream:
             item = StreamSentence(self, text, vid, emotion, demeanor, intensity,
                                   mm_emotion, speed, vol, sentence_id, is_last)
+            with self.lock:
+                if ctx.closed or ctx is not self.playback_turn:
+                    item.stop.set()
+                else:
+                    ctx.producers.add(item)
             log(f"[TTS-STREAM] sentence#{sentence_id} 开始流式（{len(text)}字）")
         else:
             mp3 = None
             last_err = None
             for attempt in range(2):
+                if ctx.stop.is_set():
+                    return ("static", np.zeros(0), np.zeros(0), sentence_id, is_last), 0.0
                 t_attempt = time.time()
                 try:
                     mp3 = self.synth(text, voice_id, emotion, demeanor, intensity)
@@ -608,89 +678,119 @@ class VoiceServer:
             log(f"[STREAM] sentence#{sentence_id} {len(text)}字 synth={synth_ms}ms "
                 f"dur={duration:.2f}s last={is_last}")
 
+        return item, duration
+
+    def _publish_sentence(self, ctx, sentence_id, item, is_last):
         with self.lock:
-            worker_alive = self.queue_thread is not None and self.queue_thread.is_alive()
-            new_turn = (turn_id != self.current_turn_id)
-            if new_turn:
-                self.current_turn_id = turn_id
-                self.play_token += 1
-                self.stop_play.set()
-                self.queue_end = False
-                self.pending_items = {}
-                self.next_sentence_id = 1
-                while True:
-                    try:
-                        self.say_queue.get_nowait()
-                    except queue.Empty:
-                        break
-                self.queue_thread = threading.Thread(target=self._queue_worker,
-                                                     args=(self.play_token,), daemon=True)
-                self.queue_thread.start()
-            elif not worker_alive:
-                self.play_token += 1
-                self.queue_end = False
-                self.stop_play.clear()
-                self.queue_thread = threading.Thread(target=self._queue_worker,
-                                                     args=(self.play_token,), daemon=True)
-                self.queue_thread.start()
-
-            self.pending_items[sentence_id] = item
-            while self.next_sentence_id in self.pending_items:
-                it = self.pending_items.pop(self.next_sentence_id)
-                self.say_queue.put(it)
-                is_last_item = it.is_last if isinstance(it, StreamSentence) else it[4]
-                if is_last_item:
-                    self.queue_end = True
-                self.next_sentence_id += 1
-
-        return duration
-
-    def finish_queue(self):
-        """标记本轮分句已全部入队；队列播完（且没有更多句子）时发 tts.end。"""
-        with self.lock:
-            self.queue_end = True
-            worker_alive = self.queue_thread is not None and self.queue_thread.is_alive()
-            empty = self.say_queue.empty()
-            # 兜底：如果有乱序/缺号的缓冲，按 id 顺序直接冲掉，避免永久丢失
-            if self.pending_items:
-                for sid in sorted(self.pending_items.keys()):
-                    self.say_queue.put(self.pending_items.pop(sid))
-                empty = False
-        if not worker_alive and empty:
-            self.emit("tts.end", token=self.play_token)
-        log("[SAY] /say_finish（队列收尾）")
+            ctx.in_flight.discard(sentence_id)
+            if ctx.closed or ctx.stop.is_set() or ctx is not self.playback_turn:
+                if isinstance(item, StreamSentence):
+                    item.stop.set()
+                return False
+            ctx.pending[sentence_id] = item
+            if is_last:
+                ctx.last_sentence_id = sentence_id
+            while ctx.next_sentence_id in ctx.pending:
+                ctx.items.put(ctx.pending.pop(ctx.next_sentence_id))
+                ctx.next_sentence_id += 1
+            if ctx.legacy_finish:
+                for sid in sorted(ctx.pending):
+                    ctx.items.put(ctx.pending[sid])
+                ctx.pending.clear()
+                ctx.next_sentence_id = ctx.last_sentence_id + 1
+            if ctx.thread is None:
+                ctx.thread = threading.Thread(target=self._queue_worker, args=(ctx,), daemon=True)
+                self.queue_thread = ctx.thread
+                ctx.thread.start()
         return True
 
-    def _write_block(self, ost, block, token):
+    def finish_queue(self, turn_id=None, last_sentence_id=None):
+        """标记本轮分句已全部入队；队列播完（且没有更多句子）时发 tts.end。"""
+        with self.lock:
+            ctx = self.playback_turn
+            if turn_id is not None and (ctx is None or ctx.turn_id != turn_id):
+                # A finish may arrive before the first POST /say_queue. Reserve the turn
+                # without starting a player; the declared last id keeps it open for arrivals.
+                if turn_id > self.latest_turn_id and last_sentence_id is not None:
+                    self._retire_turn_locked(ctx)
+                    self.play_token += 1
+                    ctx = PlaybackTurn(turn_id, self.play_token)
+                    self.playback_turn = ctx
+                    self.current_turn_id = turn_id
+                    self.latest_turn_id = turn_id
+                    self.stop_play = ctx.stop
+                    self.say_queue = ctx.items
+                    self.pending_items = ctx.pending
+                    self.playing = False
+                else:
+                    return self._playback_reply(ctx, False, "stale_turn")
+            if ctx is None:
+                return self._playback_reply(ctx, True)
+            if ctx.closed:
+                return self._playback_reply(ctx, False, "closed_turn")
+            ctx.last_sentence_id = (max(ctx.requested, default=0) if last_sentence_id is None
+                                    else max(0, int(last_sentence_id)))
+            self.queue_end = True
+            # Older clients omit a declared last id. Flush their already received gaps.
+            if last_sentence_id is None:
+                ctx.legacy_finish = True
+                for sid in sorted(ctx.pending):
+                    ctx.items.put(ctx.pending[sid])
+                ctx.pending.clear()
+                ctx.next_sentence_id = ctx.last_sentence_id + 1
+            if ctx.thread is None and ctx.last_sentence_id == 0 and not ctx.in_flight:
+                ctx.closed = True
+                self.playing = False
+                empty_finished = True
+            else:
+                empty_finished = False
+        if empty_finished:
+            self.emit("tts.end", token=ctx.token, turn_id=ctx.turn_id, failed=ctx.failed)
+        log("[SAY] /say_finish（队列收尾）")
+        return self._playback_reply(ctx, True)
+
+    def _write_block(self, ost, block, ctx):
         """写一个 20ms 播放块 + mouth + AEC 参考；返回 False 表示被取消。"""
-        if self.stop_play.is_set() or token != self.play_token:
+        if ctx.stop.is_set() or ctx.closed or ctx is not self.playback_turn:
             return False
         ost.write(block.reshape(-1, 1))
-        self.mouth.feed(block)
         ref_block = block[::3]           # 48k → 16k（960 → 320）
         with self.lock:
+            if ctx.stop.is_set() or ctx.closed or ctx is not self.playback_turn:
+                return False
+            first_audio = not ctx.audio_started
+            ctx.audio_started = True
+            self.mouth.feed(block)
             self.ref_ring[self.ref_index] = ref_block
             self.ref_index += 1
             while len(self.ref_ring) > 3000:
                 self.ref_ring.popitem(last=False)
+        if first_audio:
+            # A queue worker may wait on cloud PCM for seconds after tts.start. Only
+            # acknowledge audio after the output driver accepted its first real block.
+            self.emit("tts.audio_start", turn_id=ctx.turn_id, token=ctx.token)
         return True
 
-    def _play_stream_sentence(self, ost, item, token):
+    def _play_stream_sentence(self, ost, item, ctx):
         """边收 MiniMax 流式 PCM 边播；队列空但未完成时短暂等待。"""
         with self.lock:
+            if ctx.stop.is_set() or ctx.closed or ctx is not self.playback_turn:
+                item.stop.set()
+                return False
             self.play_start_mic = self.mic_index
             self.play_ref_start = self.ref_index
-        self.emit("tts.sentence_start", sentence_id=item.sentence_id)
+        self.emit("tts.sentence_start", sentence_id=item.sentence_id,
+                  turn_id=ctx.turn_id, token=ctx.token)
         buf = np.zeros(0, dtype=np.float32)
         try:
             while True:
-                if self.stop_play.is_set() or token != self.play_token:
+                if ctx.stop.is_set() or ctx.closed or ctx is not self.playback_turn:
                     item.stop.set()
                     return False
                 try:
                     chunk = item.audio_q.get(timeout=0.05)
                 except queue.Empty:
-                    if item.done:
+                    if item.done and item.audio_q.empty():
                         break
                     continue
                 if len(chunk) > 0:
@@ -698,96 +798,102 @@ class VoiceServer:
                 while len(buf) >= BLOCK48:
                     block = buf[:BLOCK48]
                     buf = buf[BLOCK48:]
-                    if not self._write_block(ost, block, token):
+                    if not self._write_block(ost, block, ctx):
                         item.stop.set()
                         return False
             if len(buf) > 0:
                 block = np.zeros(BLOCK48, dtype=np.float32)
                 block[:len(buf)] = buf[:BLOCK48]
-                if not self._write_block(ost, block, token):
+                if not self._write_block(ost, block, ctx):
                     item.stop.set()
                     return False
-            self.emit("tts.sentence_end", sentence_id=item.sentence_id)
+            self.emit("tts.sentence_end", sentence_id=item.sentence_id,
+                      turn_id=ctx.turn_id, token=ctx.token, failed=bool(item.error))
             if item.error:
+                ctx.failed = True
+                self.emit("error", msg=f"TTS 流不完整: {item.error}",
+                          turn_id=ctx.turn_id, token=ctx.token)
                 log(f"[TTS-STREAM] sentence#{item.sentence_id} 播放结束（有错误：{item.error}）")
             return True
         finally:
             item.stop.set()
 
-    def _queue_worker(self, token):
+    def _queue_worker(self, ctx):
         """顺序播放队列里的句子；每句都写入 AEC 参考；队列空且已 finish 时发 tts.end。"""
         cancelled = False
-        self.stop_play.clear()
         with self.lock:
+            if ctx.closed or ctx.stop.is_set() or ctx is not self.playback_turn:
+                return
             self.playing = True
             self.barge_this_play = False
             self.barge_cooldown_until = 0.0
-        self.emit("tts.start", token=token)
+        self.emit("tts.start", token=ctx.token, turn_id=ctx.turn_id)
         log("[SAY] 队列播放开始")
         try:
             with sd.OutputStream(device=SPK_DEVICE, samplerate=CAP_SR, channels=1,
                                  blocksize=BLOCK48, dtype="float32") as ost:
                 while True:
-                    if self.stop_play.is_set() or token != self.play_token:
+                    if ctx.stop.is_set() or ctx.closed or ctx is not self.playback_turn:
                         cancelled = True
                         break
 
                     try:
-                        item = self.say_queue.get(timeout=0.05)
+                        item = ctx.items.get(timeout=0.05)
                     except queue.Empty:
                         with self.lock:
-                            end = self.queue_end
+                            end = (ctx.last_sentence_id is not None and not ctx.in_flight
+                                   and ctx.next_sentence_id > ctx.last_sentence_id
+                                   and ctx.items.empty())
+                            if end:
+                                ctx.closed = True
                         if end:
                             break
                         continue
 
                     if isinstance(item, StreamSentence):
-                        if not self._play_stream_sentence(ost, item, token):
+                        if not self._play_stream_sentence(ost, item, ctx):
                             cancelled = True
                             break
                         continue
 
                     _, pcm48, ref16, sid, _ = item
                     with self.lock:
+                        if ctx.stop.is_set() or ctx.closed or ctx is not self.playback_turn:
+                            cancelled = True
+                            break
                         self.play_start_mic = self.mic_index
                         self.play_ref_start = self.ref_index
-                    self.emit("tts.sentence_start", sentence_id=sid)
+                    self.emit("tts.sentence_start", sentence_id=sid,
+                              turn_id=ctx.turn_id, token=ctx.token)
                     ok = True
-                    for i in range(0, len(pcm48) - BLOCK48, BLOCK48):
-                        if self.stop_play.is_set() or token != self.play_token:
+                    for i in range(0, len(pcm48), BLOCK48):
+                        block = pcm48[i:i + BLOCK48]
+                        if len(block) < BLOCK48:
+                            block = np.pad(block, (0, BLOCK48 - len(block)))
+                        if not self._write_block(ost, block, ctx):
                             ok = False
                             cancelled = True
                             break
-                        ost.write(pcm48[i:i + BLOCK48].reshape(-1, 1))
-                        self.mouth.feed(pcm48[i:i + BLOCK48])
-                        b = i // BLOCK48
-                        ref_block = ref16[b * BLOCK16:(b + 1) * BLOCK16]
-                        with self.lock:
-                            self.ref_ring[self.ref_index] = ref_block
-                            self.ref_index += 1
-                            while len(self.ref_ring) > 3000:
-                                self.ref_ring.popitem(last=False)
                     if not ok:
                         break
-                    self.emit("tts.sentence_end", sentence_id=sid)
+                    self.emit("tts.sentence_end", sentence_id=sid,
+                              turn_id=ctx.turn_id, token=ctx.token)
         except Exception as e:  # noqa: BLE001
             log(f"[!] 队列播放失败：{e}")
-            self.emit("error", msg=f"队列播放失败: {e}")
+            ctx.failed = True
+            self.emit("error", msg=f"队列播放失败: {e}", turn_id=ctx.turn_id, token=ctx.token)
         finally:
             with self.lock:
-                if token == self.play_token:
+                if ctx is self.playback_turn:
                     self.playing = False
-                self.queue_end = False
-            while True:
-                try:
-                    self.say_queue.get_nowait()
-                except queue.Empty:
-                    break
+                    self.queue_end = False
+                    self.mouth.silence()
+                cancelled = cancelled or ctx.stop.is_set() or ctx is not self.playback_turn
+                self._retire_turn_locked(ctx)
             if cancelled:
-                self.emit("tts.cancelled", token=token)
+                self.emit("tts.cancelled", token=ctx.token, turn_id=ctx.turn_id)
             else:
-                self.emit("tts.end", token=token)
-            self.mouth.silence()
+                self.emit("tts.end", token=ctx.token, turn_id=ctx.turn_id, failed=ctx.failed)
             log("[SAY] 队列播放结束")
 
     # ---------------- 处理线程 ----------------
@@ -805,12 +911,19 @@ class VoiceServer:
         barge = False
         last_emit = 0.0
         inject = np.zeros(0, dtype=np.float32)
+        injected_segment = False
 
         while self.running:
             try:
-                block48 = self.mic_q.get(timeout=0.2)
+                captured = self.mic_q.get(timeout=0.2)
             except queue.Empty:
                 continue
+            # Preserve capture time across a processing/ASR backlog. Offline producers may
+            # still enqueue a bare ndarray; that legacy path uses its processing timestamp.
+            if isinstance(captured, tuple):
+                block48, captured_at = captured
+            else:
+                block48, captured_at = captured, time.time()
             mic16 = dec3(block48)
             # 注入测试语音（模拟近端用户）
             while True:
@@ -823,6 +936,7 @@ class VoiceServer:
                 except queue.Empty:
                     break
             if len(inject) > 0:
+                injected_segment = True
                 n = min(len(inject), len(mic16))
                 mic16 = mic16.copy()
                 mic16[:n] += inject[:n]
@@ -871,9 +985,16 @@ class VoiceServer:
                             if can_barge:
                                 self.barge_this_play = True
                                 self.barge_cooldown_until = now + 2.0
+                                interrupted_turn = self.playback_turn
+                                self._retire_turn_locked(interrupted_turn)
                         if can_barge:
-                            self.stop_play.set()
-                            self.emit("barge_in", reason="user_speech", rms=round(rms, 5))
+                            self.emit("barge_in", reason="user_speech", rms=round(rms, 5),
+                                      turn_id=interrupted_turn.turn_id if interrupted_turn else None,
+                                      token=interrupted_turn.token if interrupted_turn else 0,
+                                      source="injected" if injected_segment else "mic",
+                                      utterance_id=str(self.utterance_id),
+                                      vad_started_at=(self.utterance_started_at or
+                                                      captured_at - self.barge_streak * BLOCK16 / PROC_SR))
                             log(f"[BARGE] 用户开口 → 停播 (rms={rms:.4f}, 确认={self.barge_streak}帧)")
                         self.barge_streak = 0
                 else:
@@ -883,8 +1004,18 @@ class VoiceServer:
                     speech_active = True
                     seg_audio = []
                     with self.lock:
+                        if not self.utterance.parts and self.utterance.pending == 0:
+                            self.utterance_id += 1
+                            self.utterance_started_at = captured_at - len(proc) / PROC_SR
+                            self.utterance_source = "mic"
+                        if injected_segment:
+                            self.utterance_source = "injected"
                         self.utterance.speech_start(time.monotonic())
-                    self.emit("vad.start", rms=round(rms, 5), playing=bool(self.playing))
+                        utterance_id = self.utterance_id
+                        started_at = self.utterance_started_at
+                    self.emit("vad.start", rms=round(rms, 5), playing=bool(self.playing),
+                              utterance_id=str(utterance_id), vad_started_at=started_at,
+                              source="injected" if injected_segment else "mic")
                 seg_audio.append(proc.copy())
             else:
                 self.barge_streak = 0
@@ -900,7 +1031,17 @@ class VoiceServer:
                 if samples.size == 0 and seg_audio:
                     samples = np.concatenate(seg_audio) if seg_audio else np.zeros(0)
                 seg_rms = float(np.sqrt(np.mean(samples ** 2)) + 1e-12) if samples.size else 0.0
+                segment_started_at = captured_at - (self.audio_history.total - segment_start) / PROC_SR
+                segment_ended_at = segment_started_at + len(samples) / PROC_SR
                 with self.lock:
+                    if not self.utterance_started_at:
+                        self.utterance_id += 1
+                        self.utterance_started_at = segment_started_at
+                    else:
+                        self.utterance_started_at = min(self.utterance_started_at, segment_started_at)
+                    self.utterance_ended_at = segment_ended_at
+                    if injected_segment:
+                        self.utterance_source = "injected"
                     self.utterance.speech_end(time.monotonic())
                 if samples.size > 0 and seg_rms >= gate:
                     padded, prefix = self.audio_history.segment(segment_start, samples)
@@ -912,7 +1053,10 @@ class VoiceServer:
                     log(f"[VAD] 丢弃弱段落 rms={seg_rms:.5f} < gate={gate:.5f}")
                 seg_audio = []
                 speech_active = False
-                self.emit("vad.end", barge=self.barge_this_play)
+                self.emit("vad.end", barge=self.barge_this_play,
+                          utterance_id=str(self.utterance_id), vad_ended_at=self.utterance_ended_at,
+                          source=self.utterance_source)
+                injected_segment = False
                 barge = False
 
     def _schedule_asr_flush_locked(self, delay=0.2):
@@ -953,8 +1097,14 @@ class VoiceServer:
                 return
             text = self.utterance.take()
             self.asr_buf = ""
+            metadata = {"utterance_id": str(self.utterance_id),
+                        "vad_started_at": self.utterance_started_at,
+                        "vad_ended_at": self.utterance_ended_at,
+                        "source": self.utterance_source}
+            self.utterance_started_at = 0.0
+            self.utterance_ended_at = 0.0
         if text:
-            self.emit("asr.final", text=text, ms=800)
+            self.emit("asr.final", text=text, ms=800, **metadata)
             log(f"[ASR] final → {text}")
 
     # ---------------- 校准 ----------------
@@ -1064,6 +1214,7 @@ class Handler(BaseHTTPRequestHandler):
         srv: VoiceServer = self.server.vs
         if self.path.startswith("/health"):
             self._json(200, {"ok": True, "playing": srv.playing, "voice_id": srv.voice_id,
+                             "service_id": srv.service_id, "playback_protocol": 2,
                              "delay_blocks": srv.delay_blocks, "mic": MIC_DEVICE,
                              "mic_open": bool(srv.mic_open), "mic_ready": bool(srv.mic_ready),
                              "audio_stats": srv.audio_stats, "asr_pending": srv.utterance.pending,
@@ -1088,14 +1239,17 @@ class Handler(BaseHTTPRequestHandler):
             q = parse_qs(urlparse(self.path).query)
             cursor = int(q.get("cursor", ["-1"])[0])
             timeout = float(q.get("timeout", ["1.0"])[0])
-            srv.last_client_poll = time.time()
+            # Output-only clients still need TTS lifecycle events, without holding a mic.
+            if q.get("mic_enabled", ["true"])[0].lower() not in ("0", "false", "off"):
+                srv.last_client_poll = time.time()
             if cursor < 0:
                 # Atomic live cursor: do not discard finals that arrive during a slow bootstrap response.
                 with srv.lock:
                     evs, next_cursor = [], srv.event_seq
             else:
                 evs, next_cursor = srv.events_since(cursor, timeout)
-            self._json(200, {"events": evs, "cursor": next_cursor, "mic_ready": bool(srv.mic_ready)})
+            self._json(200, {"events": evs, "cursor": next_cursor, "mic_ready": bool(srv.mic_ready),
+                             "service_id": srv.service_id, "playback_protocol": 2})
             return
         self._json(404, {"ok": False, "error": "not found"})
 
@@ -1108,32 +1262,33 @@ class Handler(BaseHTTPRequestHandler):
                 if not text:
                     self._json(400, {"ok": False, "error": "text 为空"})
                     return
-                srv.barge_enabled = bool(body.get("barge_enabled", True))
-                dur = srv.enqueue_sentence(
+                result = srv.enqueue_sentence(
                     text, body.get("voice_id"), body.get("emotion", ""),
                     body.get("demeanor", ""), float(body.get("intensity", 0.6)),
                     sentence_id=int(body.get("sentence_id", 0)),
                     is_last=bool(body.get("is_last", False)),
-                    turn_id=int(body.get("turn_id", 0)))
-                self._json(200, {"ok": True, "duration": round(dur, 2)})
+                    turn_id=int(body.get("turn_id", 0)),
+                    barge_enabled=bool(body.get("barge_enabled", True)))
+                self._json(200, result)
                 return
             if self.path.startswith("/say_finish"):
-                srv.finish_queue()
-                self._json(200, {"ok": True})
+                turn_id = int(body["turn_id"]) if body.get("turn_id") is not None else None
+                self._json(200, srv.finish_queue(turn_id, body.get("last_sentence_id")))
                 return
             if self.path.startswith("/say"):
                 text = (body.get("text") or "").strip()
                 if not text:
                     self._json(400, {"ok": False, "error": "text 为空"})
                     return
-                srv.barge_enabled = bool(body.get("barge_enabled", True))
-                dur = srv.say(text, body.get("voice_id"), body.get("emotion", ""),
-                              body.get("demeanor", ""), float(body.get("intensity", 0.6)))
-                self._json(200, {"ok": True, "duration": round(dur, 2)})
+                result = srv.say(text, body.get("voice_id"), body.get("emotion", ""),
+                                 body.get("demeanor", ""), float(body.get("intensity", 0.6)),
+                                 turn_id=int(body.get("turn_id", 0)),
+                                 barge_enabled=bool(body.get("barge_enabled", True)))
+                self._json(200, result)
                 return
             if self.path.startswith("/cancel"):
-                srv.cancel()
-                self._json(200, {"ok": True})
+                turn_id = int(body["turn_id"]) if body.get("turn_id") is not None else None
+                self._json(200, srv.cancel(turn_id))
                 return
             if self.path.startswith("/calibrate"):
                 self._json(200, {"ok": True, **srv.calibrate()})

@@ -22,6 +22,7 @@ namespace Yixuan.AI.Tasks {
   }
   static void Walk(object node,TaskLintReport r,TaskContract c,HashSet<object> seen,int depth){
    if(node==null||depth>128||!seen.Add(node))return;var type=node.GetType();
+   if(type.IsGenericType&&type.GetGenericTypeDefinition()==typeof(KeyValuePair<,>)){Walk(type.GetProperty("Key").GetValue(node,null),r,c,seen,depth+1);Walk(type.GetProperty("Value").GetValue(node,null),r,c,seen,depth+1);return;}
    if(type.Name=="FunctionCallExpression"){
     var fun=Get(node,"m_Function");string method=Get(fun,"m_Name") as string;var bas=Get(fun,"m_BaseExp");string baseName=Get(bas,"m_VarName") as string;
     if(baseName=="game"&&method!=null){

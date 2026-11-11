@@ -10,7 +10,7 @@ namespace Yixuan.AI.Tasks
     /// <summary>Explicitly launched runtime acceptance; never starts automatically.</summary>
     public class TaskAcceptanceSuite : MonoBehaviour
     {
-        public string Root = "Captures/Evidence/task_orchestration_2026-10-24";
+        public string Root = "D:/AI/GameScaling/docs/evidence/task_orchestration_2026-10-24";
         public bool Running { get; private set; }
         public string CurrentCase { get; private set; }
         public SuiteReport Summary = new SuiteReport();

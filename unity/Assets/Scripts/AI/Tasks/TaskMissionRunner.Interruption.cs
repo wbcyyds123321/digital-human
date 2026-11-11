@@ -19,7 +19,7 @@ namespace Yixuan.AI.Tasks {
   float TaskNow {get{return (IsSuspended?_pausedAt:Time.realtimeSinceStartup)-_pausedSeconds;}}
   public static bool LooksLikeInsertion(string text) {
    if(string.IsNullOrWhiteSpace(text))return false;
-   return Regex.IsMatch(text,@"继续|接着|恢复") && Regex.IsMatch(text,@"没.{0,4}(完|走)|未完成|剩余|原来|原先|之前|刚才|往返|原任务|原来的任务") && Regex.IsMatch(text,@"先|暂停|停下|插入|中途|临时");
+   return Regex.IsMatch(text,@"继续|接着|恢复") && Regex.IsMatch(text,@"没.{0,4}(完|走)|未完成|剩余|原来|原先|之前|刚才|往返|原任务|原来的任务|走完|目的地") && Regex.IsMatch(text,@"先|暂停|停下|插入|中途|临时");
   }
   public bool InsertTask(string request){return EnqueueInsertion(new InsertionRequest{text=request});}
   public bool InsertContractForTest(string request,string program,TaskContract contract){return EnqueueInsertion(new InsertionRequest{text=request,program=program,contract=contract});}
@@ -84,7 +84,7 @@ namespace Yixuan.AI.Tasks {
   string ValidateInsertionContract(){
    if(!IsInsertion||Contract==null)return null;
    foreach(var o in Contract.obligations??new TaskObligation[0])
-    if(o.kind!="gesture"&&o.kind!="express"&&o.kind!="speak"&&o.kind!="wait")return "insertion_requires_stationary_action: "+o.kind;
+    if(o.kind!="gesture"&&o.kind!="express"&&o.kind!="speak"&&o.kind!="wait"&&o.kind!="look_at"&&o.kind!="look_direction")return "insertion_requires_stationary_action: "+o.kind;
    // Continuation belongs to the suspended VM; no child may move, turn, or rerun the parent's loop.
    Contract.forbid_move=true;Contract.forbid_body_turn=true;
    if(_parentMission.Contract!=null&&_parentMission.Contract.forbid_speech){Contract.forbid_speech=true;foreach(var o in Contract.obligations)if(o.kind=="speak")return "insertion_parent_silence_forbids_speech";}

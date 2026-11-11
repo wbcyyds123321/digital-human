@@ -36,6 +36,8 @@ namespace Yixuan.AI
 
         void OnDisable()
         {
+            Yixuan.Pick.FirstPersonTargetingService.CancelRun("chat_disabled");
+            CancelNarratorWork();
             if (_state != State.Idle || _turn != null || (Missions != null && Missions.IsRunning)) CancelCurrentTurn();
         }
 

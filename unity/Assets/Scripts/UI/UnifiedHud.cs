@@ -8,6 +8,7 @@ using Yixuan.Motion;
 using Yixuan.Presentation;
 using Yixuan.Vision;
 using Yixuan.World;
+using Yixuan.WorldMap;
 
 namespace Yixuan.UI
 {
@@ -42,6 +43,48 @@ namespace Yixuan.UI
         bool _open;
         Tab _tab;
         string _status = "";
+
+        /// <summary>Single live HUD instance (let the big map hide/restore the console).</summary>
+        public static UnifiedHud Instance { get; private set; }
+        public static bool IsConsoleVisible { get { return Instance != null && Instance._open; } }
+
+        // ---- read-only test hooks (node-2 HUD/minimap regression probe) ----
+        public static Texture2D MinimapTextureForTest
+        {
+            get { return Instance != null ? Instance._mapTex : null; }
+        }
+
+        public static int TabForTest
+        {
+            get { return Instance != null ? (int)Instance._tab : -1; }
+        }
+
+        public static int MinimapSizeForTest
+        {
+            get { return Instance != null ? Instance._mapW * 100000 + Instance._mapH : -1; }
+        }
+
+        public static void SetConsoleVisible(bool visible)
+        {
+            if (Instance == null) return;
+            Instance._open = visible;
+            Instance.SyncPanels();
+        }
+
+        public static void OpenBigMap()
+        {
+            if (Yixuan.SelectionLab.SelectionLabContext.IsActive)
+            {
+                if (Instance != null)
+                {
+                    Instance._open = true;
+                    Instance._tab = Tab.Map;
+                    Instance.SyncPanels();
+                }
+                return;
+            }
+            Yixuan.UI.BigMapPanel.Open();
+        }
 
         // 引用
         ChatUI _chat;
@@ -78,6 +121,7 @@ namespace Yixuan.UI
 
         void Awake()
         {
+            Instance = this;
             _open = OpenOnStart;
             _tab = StartTab;
             Resolve();
@@ -94,6 +138,8 @@ namespace Yixuan.UI
 
         void OnDestroy()
         {
+            if (Instance == this) Instance = null;
+            WorldMapPanel.Shutdown();
             if (_mapTex != null) Destroy(_mapTex);
             if (_arrowTex != null) Destroy(_arrowTex);
             if (_texPanel != null) Destroy(_texPanel);
@@ -123,6 +169,8 @@ namespace Yixuan.UI
         {
             Resolve();
             HandleHotkeys();
+            WorldMapPanel.Tick();
+            WorldMapPanel.UpdatePointerBlock(HudRect(), _open && _tab == Tab.Map);
             if (_eyePreview == null && Time.frameCount % 60 == 0) { }
             SyncPanels();
             if (_camera != null && !_camInited)
@@ -136,6 +184,13 @@ namespace Yixuan.UI
 
         void HandleHotkeys()
         {
+            // M = big map. It must never steal text input from the chat/search box.
+            if (Input.GetKeyDown(KeyCode.M) && !TextInputFocused())
+            {
+                if (Yixuan.SelectionLab.SelectionLabContext.IsActive) OpenBigMap();
+                else Yixuan.UI.BigMapPanel.Toggle();
+                return;
+            }
             if (Input.GetKeyDown(KeyCode.F5)) { _open = true; _tab = Tab.Map; SyncPanels(); }
             else if (Input.GetKeyDown(KeyCode.F6)) { _open = true; _tab = Tab.Task; SyncPanels(); }
             else if (Input.GetKeyDown(KeyCode.F7)) { _open = true; _tab = Tab.Vision; SyncPanels(); }
@@ -143,6 +198,21 @@ namespace Yixuan.UI
             else if (Input.GetKeyDown(KeyCode.F9)) { _open = true; _tab = Tab.Character; SyncPanels(); }
             else if (Input.GetKeyDown(KeyCode.F10)) { _open = true; _tab = Tab.Settings; SyncPanels(); }
             else if (Input.GetKeyDown(KeyCode.F4)) { _open = !_open; SyncPanels(); }
+        }
+
+        /// <summary>True while any IMGUI or UI Toolkit text field owns the keyboard.</summary>
+        public static bool TextInputFocused()
+        {
+            if (GUIUtility.keyboardControl != 0) return true;
+            var bigMap = Yixuan.UI.BigMapPanel.Instance;
+            if (bigMap != null && Yixuan.UI.BigMapPanel.IsOpen && Yixuan.UI.BigMapPanel.SearchFocused) return true;
+            var chat = GameObject.Find("UI_Chat");
+            if (chat == null) return false;
+            var doc = chat.GetComponent<UnityEngine.UIElements.UIDocument>();
+            if (doc == null || doc.rootVisualElement == null || doc.rootVisualElement.panel == null) return false;
+            var focused = doc.rootVisualElement.panel.focusController != null
+                ? doc.rootVisualElement.panel.focusController.focusedElement : null;
+            return focused != null;
         }
 
         float InputTop()
@@ -153,8 +223,12 @@ namespace Yixuan.UI
         Rect HudRect()
         {
             float h = Mathf.Max(220f, InputTop() - 64f - 10f);
-            return new Rect(16f, 64f, PanelWidth, h);
+            float width = _tab == Tab.Map && WorldMapPanel.Expanded ? Mathf.Min(Screen.width - 32f, 1100f) : PanelWidth;
+            return new Rect(16f, 64f, Mathf.Min(width, Screen.width - 32f), h);
         }
+
+        void OnApplicationFocus(bool focused) { if (!focused) WorldMapPanel.CancelPointerCapture(); }
+        void OnDisable() { WorldMapPanel.CancelPointerCapture(); }
 
         Rect ContentRect()
         {
@@ -213,6 +287,7 @@ namespace Yixuan.UI
 
         void BuildMinimap()
         {
+            if (Yixuan.SelectionLab.SelectionLabContext.IsActive) return;
             if (_map == null) _map = FindObjectOfType<MapWorldProfile>();
             if (_map != null) _map.EnsureData();
 
@@ -414,7 +489,7 @@ namespace Yixuan.UI
             Resolve();
             EnsureStyles();
             DrawQuickBar();
-            if (!_open) return;
+            if (!_open) { WorldMapPanel.CancelPointerCapture(); return; }
 
             var hud = HudRect();
             bool nativeTab = _tab == Tab.Map || _tab == Tab.Vision || _tab == Tab.Camera;
@@ -444,6 +519,10 @@ namespace Yixuan.UI
                     SyncPanels();
                 }
             }
+            if (GUI.Button(new Rect(hud.xMax - 80f, hud.y + 5f, 38f, 24f), "大图", _tabOff))
+            {
+                OpenBigMap();
+            }
             if (GUI.Button(new Rect(hud.xMax - 38f, hud.y + 5f, 30f, 24f), "×", _tabOff))
             {
                 _open = false;
@@ -452,6 +531,7 @@ namespace Yixuan.UI
 
 
             var content = ContentRect();
+            if (_tab != Tab.Map) WorldMapPanel.CancelPointerCapture();
             switch (_tab)
             {
                 case Tab.Map: DrawMapTab(content); break;
@@ -508,6 +588,17 @@ namespace Yixuan.UI
 
         void DrawMapTab(Rect content)
         {
+            if (Yixuan.SelectionLab.SelectionLabContext.IsActive)
+            {
+                var labHud = FindObjectOfType<Yixuan.SelectionLab.SelectionLabHud>();
+                if (labHud != null) labHud.DrawConsole(content);
+                else GUI.Label(content, "实验室界面未就绪", _label);
+                return;
+            }
+            // The fine world-map panel owns the map tab when its generated data
+            // package is available. The old procedural minimap remains a fallback
+            // for an incomplete checkout.
+            if (WorldMapPanel.Draw(content, _loco, _character, _map)) return;
             if (_mapTex == null) BuildMinimap();
             if (_mapTex == null) { GUI.Label(content, "小地图：地图数据未就绪", _label); return; }
             if (_map == null) _map = FindObjectOfType<MapWorldProfile>();
@@ -643,7 +734,7 @@ namespace Yixuan.UI
         {
             if (_vision == null) return "无 VisionObserver";
             if (_client == null) return "无视觉客户端";
-            if (!_client.HasKey) return "未找到视觉 API key（检查 _vision_poc/qwen_apikey.txt）";
+            if (!_client.HasKey) return "未找到视觉 API key（检查环境变量或 persistentDataPath 配置）";
             if (!_vision.GameViewEnabled && !_vision.WebcamEnabled) return "两路都关 · 不消耗额度";
             if (_client.ServiceBlocked) return "服务暂停：" + _client.ServiceStatus;
             if (_vision.Asking) return "正在看图回答…";

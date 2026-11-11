@@ -47,6 +47,7 @@ namespace Yixuan.Vision
         public string BuildVideoJson(VisualClip clip, string prompt, int tokens, IList<VisualFrame> history = null)
         {
             if (clip == null || !clip.Usable) throw new ArgumentException("视频需要至少4个连续采样帧");
+            if (Provider == VisionProvider.DeepSeek) return BuildFrameSequenceJson(clip, prompt, tokens, history);
             var builder = new StringBuilder();
             builder.Append("{\"model\":\"").Append(JsonEscape(Model)).Append("\",\"messages\":[{\"role\":\"user\",\"content\":[{\"type\":\"video\",\"video\":[");
             for (int index = 0; index < clip.Frames.Count; index++)
@@ -73,6 +74,45 @@ namespace Yixuan.Vision
             builder.Append(JsonEscape(timing + "\n视频后先附的" + historyCount + "张图是片段开始前的历史关键帧，只用于识别以前的物品，不能据此认定现在仍在。最后附的单图才是视频末帧：current只描述最后这张图，events分析视频过程。\n" + prompt));
             builder.Append("\"}]}],\"max_tokens\":").Append(Math.Max(64, tokens)).Append(",\"enable_thinking\":false}");
             return builder.ToString();
+        }
+
+        // DeepSeek 接收带顺序和时间标记的截图，不发送 Qwen 专有的 video/fps 内容块。
+        string BuildFrameSequenceJson(VisualClip clip, string prompt, int tokens, IList<VisualFrame> history)
+        {
+            var builder = new StringBuilder();
+            builder.Append("{\"model\":\"").Append(JsonEscape(Model))
+                .Append("\",\"messages\":[{\"role\":\"user\",\"content\":[");
+            bool first = true;
+            int historyCount = 0;
+            if (history != null)
+                foreach (var frame in history)
+                {
+                    if (frame == null || historyCount >= 2 || frame.Source != clip.Source || frame.CapturedAt >= clip.Start) continue;
+                    AppendFrameLabel(builder, "历史关键帧，仅作过去记录，不属于当前片段。", ref first);
+                    AppendImage(builder, frame.Jpeg, ref first);
+                    historyCount++;
+                }
+            for (int index = 0; index < clip.Frames.Count; index++)
+            {
+                var frame = clip.Frames[index];
+                string label = "片段帧 " + index + "，相对时间 " +
+                    (frame.CapturedAt - clip.Start).ToString("0.00", CultureInfo.InvariantCulture) + " 秒。";
+                if (index == clip.Frames.Count - 1) label += "这是末帧，current只能描述这张图。";
+                AppendFrameLabel(builder, label, ref first);
+                AppendImage(builder, frame.Jpeg, ref first);
+            }
+            string source = clip.Source == 1 ? "游戏视角" : "电脑摄像头";
+            AppendFrameLabel(builder, "以下按时间采样的截图来自" + source + "。仅能推断采样帧支持的变化；"
+                + "未采样时段的动作和次数未知。facts.frame使用片段帧编号，不含历史关键帧。\n" + prompt, ref first);
+            builder.Append("]}],\"max_tokens\":").Append(Math.Max(64, tokens)).Append(',').Append(ThinkingJson).Append('}');
+            return builder.ToString();
+        }
+
+        static void AppendFrameLabel(StringBuilder builder, string label, ref bool first)
+        {
+            if (!first) builder.Append(',');
+            first = false;
+            builder.Append("{\"type\":\"text\",\"text\":\"").Append(JsonEscape(label)).Append("\"}");
         }
     }
 }

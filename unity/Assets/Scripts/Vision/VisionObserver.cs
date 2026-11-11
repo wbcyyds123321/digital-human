@@ -25,8 +25,8 @@ namespace Yixuan.Vision
     {
         public QwenVisionClient Client;
         public Camera EyeCamera;
-        [Tooltip("眼睛相机 FOV（度）：越大看得越广（广角 70~80）；55 是标准，75 能看到更多店内/街道")]
-        public float EyeFov = 75f;
+        [Tooltip("眼睛相机 FOV（度）：越大看得越广（广角 85~100）；55 是标准，90 能看到更多店内/街道")]
+        public float EyeFov = 90f;
         public float IntervalSeconds = 0.05f;
         [Tooltip("后台观察抓帧分辨率。384×288 比 256×192 多约 60 tokens，但细节明显更好")]
         public int GameImageWidth = 384;
@@ -350,7 +350,7 @@ namespace Yixuan.Vision
             var cam = go.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.03f, 0.045f, 0.07f);
-            cam.fieldOfView = 75f;      // 广角：默认能多看一些店内/街道
+            cam.fieldOfView = 90f;      // 广角：默认能多看一些店内/街道
             cam.nearClipPlane = 0.05f;
             cam.farClipPlane = 60f;
             cam.depth = -50f;

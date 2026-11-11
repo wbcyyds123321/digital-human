@@ -56,6 +56,8 @@ namespace Yixuan.AI
         bool _inputEnabled = true;
         bool _warnedNoSession;
         bool _inputFocused;
+        /// <summary>True while the chat input field has keyboard focus (keyboard-guard consumers).</summary>
+        public bool InputFocused { get { return _inputFocused; } }
         Label _placeholder;
 
         // ---- 表现层（2026-10-18 交互优化）----

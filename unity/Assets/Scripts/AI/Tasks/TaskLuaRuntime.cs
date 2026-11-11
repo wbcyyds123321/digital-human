@@ -17,7 +17,7 @@ namespace Yixuan.AI.Tasks
         public TaskLuaRuntime(string source, Func<Script, Table> state, Func<string, string> resolve)
         {
             if (string.IsNullOrWhiteSpace(source) || source.Length > 24000) throw new Exception("source_size_limit");
-            VM = new Script(CoreModules.Basic | CoreModules.TableIterators | CoreModules.Math | CoreModules.String | CoreModules.Table);
+            VM = new Script(CoreModules.Basic | CoreModules.ErrorHandling | CoreModules.TableIterators | CoreModules.Math | CoreModules.String | CoreModules.Table);
             VM.Globals["print"] = DynValue.Nil;
             VM.Globals["collectgarbage"] = DynValue.Nil;
             var game = new Table(VM);

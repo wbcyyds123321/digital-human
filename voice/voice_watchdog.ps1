@@ -4,7 +4,8 @@ param(
 
 $ErrorActionPreference = 'Continue'
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$python = Join-Path $root '.venv\Scripts\python.exe'
+$python = @((Join-Path $root '.venv314\Scripts\python.exe'), (Join-Path $root '.venv\Scripts\python.exe')) | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+if (-not $python) { $python = Join-Path $root '.venv\Scripts\python.exe' }
 $watchdogLog = Join-Path $root '_voice_watchdog.log'
 $ttsOut = Join-Path $root '_tts_watchdog.out.log'
 $ttsErr = Join-Path $root '_tts_watchdog.err.log'

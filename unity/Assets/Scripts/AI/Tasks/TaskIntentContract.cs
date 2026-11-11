@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
+using Newtonsoft.Json.Linq;
 namespace Yixuan.AI.Tasks {
  [Serializable] public sealed class TaskContract {
   public string version="task-contract/1",error;public bool forbid_move,forbid_body_turn,forbid_speech,forbid_interact;
@@ -12,12 +13,28 @@ namespace Yixuan.AI.Tasks {
   public string repeat_group;
   public string during_target; public float at_progress,every_meters;
   public string id,source,kind,target_id,action_id,direction,text,emotion,reference,condition_id,branch;public float min_duration,pitch,yaw,distance;public bool angles_exact;public string[] after,overlap;
-  public int count=1;public bool final;public float max_age;public bool camera_only;
+  public int count=1;public bool final;public float max_age;public bool camera_only,body_facing;
+  public bool lit,lit_specified;
  }
  [Serializable] public sealed class TaskCompletion {
   public bool program_succeeded,task_succeeded;public string reason;public List<string> satisfied=new List<string>(),missing=new List<string>(),unknown=new List<string>();
  }
  public static class TaskContractRules {
+  // Preserve presence/type before JsonUtility turns a missing bool into false.
+  // The model supplies `lit`; lit_specified is canonical runtime metadata.
+  public static TaskContract ReadJson(string json){
+   var data=JObject.Parse(json);var c=JsonUtility.FromJson<TaskContract>(json);
+   var obligations=data["obligations"] as JArray;
+   if(c==null||c.obligations==null)return c;
+   for(int i=0;i<c.obligations.Length;i++){
+    var o=c.obligations[i];if(o==null)continue;
+    var token=obligations!=null&&i<obligations.Count?obligations[i] as JObject:null;
+    var lit=token!=null?token["lit"]:null;
+    o.lit_specified=o.kind=="set_flame"&&lit!=null&&lit.Type==JTokenType.Boolean;
+    if(o.lit_specified)o.lit=lit.Value<bool>();
+   }
+   return c;
+  }
   public static void ApplyExplicitPermissions(TaskContract c,string request){
    if(c==null)return;
    // A later stage's "stand still" must not ban an earlier navigation stage.
@@ -27,8 +44,8 @@ namespace Yixuan.AI.Tasks {
    string scope=parts.Length>0?parts[0]:text;
    var firstMove=System.Text.RegularExpressions.Regex.Match(scope,@"走到|前往|走向|去往|回到|走回|移动到");if(firstMove.Success)scope=scope.Substring(0,firstMove.Index);
    foreach(System.Text.RegularExpressions.Match m in System.Text.RegularExpressions.Regex.Matches(text,@"(?:全程|始终|整个任务)[^，。；;]{0,28}"))scope+="，"+m.Value;
-   c.forbid_move|=System.Text.RegularExpressions.Regex.IsMatch(scope,@"不要(移动|走动|走路)|不许(移动|走动)|站在原地|原地不动|只(转|动)(镜头|相机)");
-   c.forbid_body_turn|=System.Text.RegularExpressions.Regex.IsMatch(scope,@"(不要|禁止|不许).{0,3}(身体|身子).{0,3}(转|动)|只(转|动)(镜头|相机)");
+   c.forbid_move|=System.Text.RegularExpressions.Regex.IsMatch(scope,@"不要(移动|走动|走路|过去)|不许(移动|走动)|别(过去|走过去|靠近)|不用(过去|走过去)|站在原地|原地不动|远程|隔空|只(转|动)(镜头|摄像头|相机|视角|云台)");
+   c.forbid_body_turn|=!Yixuan.Vision.GazeVoiceIntent.AllowsBodyAssist(scope);
    c.forbid_speech|=System.Text.RegularExpressions.Regex.IsMatch(scope,@"不要(说话|出声|讲话)|别(说话|出声)|保持安静|禁止发声");
    c.forbid_interact|=System.Text.RegularExpressions.Regex.IsMatch(scope,@"不要(交互|触发)|禁止(交互|触发)");
   }
@@ -36,27 +53,33 @@ namespace Yixuan.AI.Tasks {
    if(c==null)return "contract_missing";if(!string.IsNullOrEmpty(c.error))return c.error;
    if(c.obligations==null||c.obligations.Length==0||c.obligations.Length>48)return "contract_requires_obligations";
    bool routeLanguage=System.Text.RegularExpressions.Regex.IsMatch(request,@"走到一半|走到.*?一半|半路|中途.{0,10}(停|挥|说|背)|在这中间|每走.{0,8}(挥|招|停|做)");
-   bool schedule=false;foreach(var candidate in c.obligations)if(!string.IsNullOrEmpty(candidate.during_target))schedule=true;
+   bool schedule=false;foreach(var candidate in c.obligations){if(candidate==null)return "invalid_null_obligation";if(!string.IsNullOrEmpty(candidate.during_target))schedule=true;}
    if(routeLanguage&&!schedule)return "route_progress_requirement_missing: preserve intermediate/periodic effect with during_target and at_progress/every_meters";
    var ids=new HashSet<string>();var conditions=new HashSet<string>();
-   foreach(var q in c.conditions??new TaskCondition[0]){if(string.IsNullOrEmpty(q.id)||!conditions.Add(q.id)||string.IsNullOrEmpty(q.question)||string.IsNullOrEmpty(q.source)||!request.Contains(q.source)||q.max_age<=0||q.max_age>120)return "invalid_condition";}
+   foreach(var q in c.conditions??new TaskCondition[0]){if(q==null||string.IsNullOrEmpty(q.id)||!conditions.Add(q.id)||string.IsNullOrEmpty(q.question)||string.IsNullOrEmpty(q.source)||!request.Contains(q.source)||q.max_age<=0||q.max_age>120)return "invalid_condition";}
    foreach(var o in c.obligations){
+    if(o==null)return "invalid_null_obligation";
     if(string.IsNullOrEmpty(o.id)||!ids.Add(o.id)||string.IsNullOrEmpty(o.source)||!request.Contains(o.source))return "ungrounded_obligation";
     if(o.count<1||o.count>32||TaskToolRegistry.Find(o.kind)==null||o.kind=="parallel"||o.kind=="report")return "invalid_obligation_kind_or_count";
     if(o.kind=="route_progress")return "route_progress_is_runtime_evidence_use_during_target";
     if((o.kind=="navigate"||o.kind=="interact")&&(o.target_id=="origin"||o.target_id=="mission_origin"))return "use_return_for_home_translation";
     if(o.kind=="return"&&System.Text.RegularExpressions.Regex.IsMatch(o.source,@"看向|看一下|看下|注视|望向|面向|面对")&&!System.Text.RegularExpressions.Regex.IsMatch(o.source,@"走|回到|返回|前往"))return "gaze_is_not_return_navigation";
-    if(o.kind=="navigate"||o.kind=="look_at"||o.kind=="interact")if(string.IsNullOrEmpty(o.target_id)||!target(o.target_id))return "unknown_contract_target";
+    if(o.kind=="navigate"||o.kind=="look_at"||o.kind=="interact"||o.kind=="board_vehicle"||o.kind=="drive_vehicle"||o.kind=="set_flame"||o.kind=="query_dynamic"||o.kind=="sit"||o.kind=="stand")if(string.IsNullOrEmpty(o.target_id)||!target(o.target_id))return "unknown_contract_target";
     if(o.kind=="return"&&o.target_id!="origin"&&o.target_id!="mission_origin")return "invalid_home";
     if(o.kind!="gesture"&&!string.IsNullOrEmpty(o.action_id))return "action_id_only_for_gesture";
+    if(o.kind=="set_flame"&&!o.lit_specified)return "set_flame_requires_explicit_boolean_lit";
+    if(o.kind!="set_flame"&&o.lit_specified)return "lit_only_for_set_flame";
+    if((o.kind=="exit_vehicle"||o.kind=="stop_vehicle")&&!string.IsNullOrEmpty(o.target_id))return "current_vehicle_tool_takes_no_target";
     if(c.forbid_speech&&o.kind=="speak")return "negative_speech_must_not_be_positive_obligation";
-    if(c.forbid_move&&(o.kind=="navigate"||o.kind=="return"||o.kind=="move_relative"))return "movement_contradicts_global_constraint";
+    if(c.forbid_move&&(o.kind=="navigate"||o.kind=="return"||o.kind=="move_relative"||o.kind=="board_vehicle"||o.kind=="drive_vehicle"||o.kind=="exit_vehicle"||o.kind=="sit"||o.kind=="stand"))return "movement_contradicts_global_constraint";
+    if(c.forbid_interact&&(o.kind=="board_vehicle"||o.kind=="drive_vehicle"||o.kind=="exit_vehicle"||o.kind=="stop_vehicle"||o.kind=="set_flame"||o.kind=="sit"||o.kind=="stand"))return "interaction_contradicts_global_constraint";
     if(o.kind=="express"&&o.emotion!="happy"&&o.emotion!="neutral")return "invalid_expression_emotion";
     if(o.min_duration<0||o.min_duration>15||float.IsNaN(o.min_duration))return "invalid_required_duration";
     if(o.kind=="gesture"&&!action(o.action_id))return "unknown_contract_action";
     if(o.kind=="move_relative"&&(!ValidMoveDirection(o.direction)||!ValidMoveDistance(o.distance)))return "invalid_relative_movement";
     if(o.kind=="turn_body"&&(!ValidBodyTurn(o.yaw)||c.forbid_body_turn))return "invalid_or_forbidden_body_turn";
-    if(o.kind=="look_direction"&&!ValidDirection(o.direction))return "invalid_direction";
+    if(o.body_facing&&(o.kind!="look_at"||o.camera_only||c.forbid_body_turn))return "invalid_or_forbidden_target_body_facing";
+     if(o.kind=="look_direction"&&!ValidDirection(o.direction))return "invalid_direction";
     if(!string.IsNullOrEmpty(o.condition_id)&&(!conditions.Contains(o.condition_id)||(o.branch!="true"&&o.branch!="false"&&o.branch!="unknown")))return "invalid_condition_branch";
    }
    foreach(var o in c.obligations){
@@ -92,20 +115,22 @@ namespace Yixuan.AI.Tasks {
    if(c==null)return "contract_missing";
    if(s.kind=="route_progress")return Policy(c,RouteAuthorization(s),true);
    if(!fromRoute&&(s.kind=="navigate"||s.kind=="return"))foreach(var o in c.obligations)if(o.during_target==s.target_id)return "scheduled_route_requires_follow_route";
-   if(s.kind=="turn_body"&&!ValidBodyTurn(s.yaw))return "invalid_body_turn";
+   if(s.body_facing&&(s.kind!="look_at"||s.camera_only))return "invalid_target_body_facing";
+    if(s.kind=="turn_body"&&!ValidBodyTurn(s.yaw))return "invalid_body_turn";
    if(c.forbid_move&&(s.kind=="navigate"||s.kind=="return"||s.kind=="move_relative"))return "policy_translation_forbidden";
    if(s.kind=="move_relative"&&(!ValidMoveDirection(s.direction)||!ValidMoveDistance(s.distance)))return "policy_invalid_relative_movement";
-   if(c.forbid_body_turn&&(s.kind=="turn_body"||s.kind=="navigate"||s.kind=="return"||s.kind=="observe"||s.kind=="look_at"&&!s.camera_only))return "policy_body_turn_forbidden";
+   if(c.forbid_body_turn&&(s.kind=="turn_body"||s.kind=="navigate"||s.kind=="return"||s.kind=="observe"||(s.kind=="look_at"||s.kind=="look_direction")&&!s.camera_only))return "policy_body_turn_forbidden";
    if(c.forbid_speech&&s.kind=="speak")return "policy_speech_forbidden";
-   if(c.forbid_interact&&s.kind=="interact")return "policy_interaction_forbidden";
+   if(c.forbid_interact&&(s.kind=="interact"||s.kind=="board_vehicle"||s.kind=="drive_vehicle"||s.kind=="exit_vehicle"||s.kind=="stop_vehicle"||s.kind=="set_flame"||s.kind=="sit"||s.kind=="stand"))return "policy_interaction_forbidden";
+   if(c.forbid_move&&(s.kind=="board_vehicle"||s.kind=="drive_vehicle"||s.kind=="exit_vehicle"||s.kind=="sit"||s.kind=="stand"))return "policy_translation_forbidden";
    if(s.kind=="wait"||s.kind=="report")return null;
    if(s.kind=="check"){foreach(var q in c.conditions??new TaskCondition[0])if(q.question==s.text)return null;}
    foreach(var o in c.obligations)if(Matches(o,s))return null;
    return "policy_unrequested_tool_or_target: "+s.kind+" "+s.target_id;
   }
   static MissionStep RouteAuthorization(MissionStep s){return new MissionStep{kind=s.target_id=="origin"||s.target_id=="mission_origin"?"return":"navigate",target_id=s.target_id};}
-  public static bool Matches(TaskObligation o,MissionStep s){return o.kind==s.kind&&(o.kind!="turn_body"||Math.Abs(o.yaw-s.yaw)<0.05f)&&(o.kind!="move_relative"||ValidMoveDistance(o.distance)&&ValidMoveDistance(s.distance)&&Math.Abs(o.distance-s.distance)<=0.005f)&&(string.IsNullOrEmpty(o.target_id)||o.target_id==s.target_id)&&(string.IsNullOrEmpty(o.action_id)||o.action_id==s.action_id)&&(string.IsNullOrEmpty(o.direction)||o.direction==s.direction)&&(string.IsNullOrEmpty(o.text)||o.text==s.text)&&(string.IsNullOrEmpty(o.emotion)||o.emotion==s.emotion)&&(o.min_duration<=0||s.duration+0.05f>=o.min_duration)&&(!o.angles_exact||(Math.Abs(o.pitch-s.pitch)<0.05&&Math.Abs(o.yaw-s.yaw)<0.05&&(string.IsNullOrEmpty(o.reference)||o.reference==s.reference)))&&(!o.camera_only||s.camera_only);}
-  static MissionStep Step(MissionStepResult r){return new MissionStep{kind=r.kind,distance=r.requested_distance,target_id=r.target_id,action_id=r.action_id,direction=r.direction,text=r.text,emotion=r.emotion,duration=r.duration,pitch=r.requested_pitch,yaw=r.requested_yaw,reference=r.reference,camera_only=r.camera_only};}
+  public static bool Matches(TaskObligation o,MissionStep s){return o.kind==s.kind&&(o.kind!="set_flame"||o.lit_specified&&s.lit_specified&&o.lit==s.lit)&&(o.kind!="turn_body"||Math.Abs(o.yaw-s.yaw)<0.05f)&&(o.kind!="move_relative"||ValidMoveDistance(o.distance)&&ValidMoveDistance(s.distance)&&Math.Abs(o.distance-s.distance)<=0.005f)&&(string.IsNullOrEmpty(o.target_id)||o.target_id==s.target_id)&&(string.IsNullOrEmpty(o.action_id)||o.action_id==s.action_id)&&(string.IsNullOrEmpty(o.direction)||o.direction==s.direction)&&(string.IsNullOrEmpty(o.text)||o.text==s.text)&&(string.IsNullOrEmpty(o.emotion)||o.emotion==s.emotion)&&(o.min_duration<=0||s.duration+0.05f>=o.min_duration)&&(!o.angles_exact||(Math.Abs(o.pitch-s.pitch)<0.05&&Math.Abs(o.yaw-s.yaw)<0.05&&(string.IsNullOrEmpty(o.reference)||o.reference==s.reference)))&&(!o.camera_only||s.camera_only)&&(o.body_facing==s.body_facing);}
+  static MissionStep Step(MissionStepResult r){return new MissionStep{kind=r.kind,distance=r.requested_distance,target_id=r.target_id,action_id=r.action_id,direction=r.direction,text=r.text,emotion=r.emotion,duration=r.duration,pitch=r.requested_pitch,yaw=r.requested_yaw,reference=r.reference,camera_only=r.camera_only,body_facing=r.body_facing,lit=r.lit,lit_specified=r.lit_specified};}
   static MissionStepResult ConditionResult(TaskCondition q,List<MissionStepResult> receipts,float at,bool fresh=true){MissionStepResult found=null;foreach(var r in receipts)if(r.kind=="check"&&r.text==q.question&&r.ended<=at&&(!fresh||at-r.ended<=q.max_age))if(found==null||r.ended>found.ended)found=r;return found;}
   public static string Branch(TaskContract c,TaskObligation o,List<MissionStepResult> receipts,float at,bool fresh=true){if(string.IsNullOrEmpty(o.condition_id))return "unconditional";foreach(var q in c.conditions)if(q.id==o.condition_id){var r=ConditionResult(q,receipts,at,fresh);return r==null?"unresolved":!r.condition_known?"unknown":r.condition_value?"true":"false";}return "unresolved";}
   public static string Dispatch(TaskContract c,MissionStep s,List<MissionStepResult> receipts,float at,bool fromRoute=false){if(s.kind=="route_progress")return Dispatch(c,RouteAuthorization(s),receipts,at,true);string p=Policy(c,s,fromRoute);if(p!=null)return p;if(s.kind=="wait"||s.kind=="report"||s.kind=="check")return null;
@@ -180,6 +205,7 @@ namespace Yixuan.AI.Tasks {
      if(generation>=0&&r.generation!=generation)continue;
      bool unknownHandled=false;if(o.kind=="check"&&r.condition_evaluated&&!r.condition_known)foreach(var cond in c.conditions??new TaskCondition[0])if(cond.question==r.text)foreach(var branchObligation in c.obligations)if(branchObligation.condition_id==cond.id&&branchObligation.branch=="unknown")unknownHandled=true;
      if(r.status!="succeeded"&&!unknownHandled||used.Contains(r.id)||!Matches(o,Step(r))||!ScheduleHit(o,r,receipts))continue;
+     if(o.kind=="set_flame"&&(!r.actual_lit_known||r.actual_lit!=o.lit))continue;
      if(!string.IsNullOrEmpty(o.condition_id)&&Branch(c,o,receipts,r.started)!=o.branch)continue;
      bool ordered=true;foreach(var dep in o.after??new string[0]){List<MissionStepResult> previous;if(!matches.TryGetValue(dep,out previous)||previous.Count==0||previous[previous.Count-1].ended>r.started)ordered=false;}
      if(!ordered)continue;

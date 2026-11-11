@@ -52,7 +52,7 @@ namespace Yixuan.AI.Tasks {
   }
  }
  public sealed class TaskRuntimeAcceptance:MonoBehaviour {
-  public TaskMissionRunner Runner;public string Output="Captures/Evidence/task_runtime_v2_2026-10-25";public RuntimeTestReport Report;public bool Running;
+  public TaskMissionRunner Runner;public string Output="D:/AI/GameScaling/docs/evidence/task_runtime_v2_2026-10-25";public RuntimeTestReport Report;public bool Running;
   public void Begin(){if(Running)return;Runner=FindObjectOfType<TaskMissionRunner>();Running=true;Report=new RuntimeTestReport{suite="injected Lua + independent explicit test contracts; actual Unity tools"};StartCoroutine(Run());}
   TaskContract C(params TaskObligation[] o){return new TaskContract{obligations=o};}
   TaskObligation O(string id,string kind,string target="",string direction=""){return new TaskObligation{id=id,source="验收",kind=kind,target_id=target,direction=direction,count=1};}

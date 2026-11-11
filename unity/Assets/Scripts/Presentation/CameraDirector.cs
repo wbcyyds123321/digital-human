@@ -321,11 +321,13 @@ namespace Yixuan.Presentation
         void HandleThirdPersonInput()
         {
             if (!TP_MouseOrbit) return;
+            if (Yixuan.WorldMap.WorldMapPanel.CameraInputBlocked) return;
             if (Input.GetMouseButton(1))
             {
                 _tpOrbitYaw += Input.GetAxis("Mouse X") * TP_OrbitSensitivity;
                 _tpOrbitPitch -= Input.GetAxis("Mouse Y") * TP_OrbitSensitivity;
-                _tpOrbitYaw = Mathf.Clamp(_tpOrbitYaw, -160f, 160f);
+                // 水平环绕允许 360°；只把数值规整到 [-180,180]，避免长时间旋转后浮点值无限增大。
+                _tpOrbitYaw = Mathf.Repeat(_tpOrbitYaw + 180f, 360f) - 180f;
                 _tpOrbitPitch = Mathf.Clamp(_tpOrbitPitch, -25f, 40f);
             }
             float scroll = Input.GetAxis("Mouse ScrollWheel");

@@ -22,7 +22,7 @@ namespace Yixuan.ModelSwap
     public static class SwapModel
     {
         public const string BuildName = "Zhuangfy_BUILD";
-        public const string SrcPmx = "Assets/Models/YOUR_MODEL.pmx"; // 换成你自己的 PMX 模型路径
+        public const string SrcPmx = @"D:\unity modle\【明日方舟：终末地】庄方宜_by_茶叶味香皂_90e90f319a38964a8599a96eded6a5d9\庄方宜.pmx";
 
         public const string ProjFolder = "Assets/Models/Zhuangfy";
         public const string TexFolder = ProjFolder + "/Textures";

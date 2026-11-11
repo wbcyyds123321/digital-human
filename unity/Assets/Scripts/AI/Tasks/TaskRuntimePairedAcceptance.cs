@@ -7,7 +7,7 @@ namespace Yixuan.AI.Tasks {
  [Serializable] public sealed class TaskLaneMetric{public int pair;public bool parallel,task_succeeded,audio_started;public float input_at,first_reply_seconds,first_audio_seconds,task_seconds;public string directory;}
  [Serializable] public sealed class TaskLaneMetrics{public string scope="3 matched pairs: text input during fixed 6-second real Unity wait+gaze task; real DeepSeek dialogue and TTS; no microphone/ASR latency; fixed order, small sample, cache/network confounded";public bool done;public List<TaskLaneMetric> trials=new List<TaskLaneMetric>();}
  public sealed class TaskRuntimePairedAcceptance:MonoBehaviour {
-  public bool Running;public TaskLaneMetrics Report;public string Output="Captures/Evidence/task_runtime_v2_2026-10-25";
+  public bool Running;public TaskLaneMetrics Report;public string Output="D:/AI/GameScaling/docs/evidence/task_runtime_v2_2026-10-25";
   public void Begin(){if(Running)return;Running=true;Report=new TaskLaneMetrics();StartCoroutine(Run());}
   IEnumerator Run(){var r=FindObjectOfType<TaskMissionRunner>();var s=r.Session;bool oldP=s.ParallelTaskDialogue,oldTts=s.Tts.Enabled,oldV=s.Config.VoiceEnabled,oldAck=s.TaskAcknowledgmentEnabled;var oldMode=s.InputMode;
    s.Config.VoiceEnabled=true;s.Tts.Enabled=true;s.TaskAcknowledgmentEnabled=false;s.InputMode=TaskInputMode.Dialogue;s.Submit("可以说话了");r.EvidenceRoot=Path.Combine(Output,"paired");

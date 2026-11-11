@@ -14,7 +14,7 @@ import json
 import math
 import os
 
-ROOT = os.environ.get("PROJECT_ROOT", os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+ROOT = os.environ.get("SBH_PROJECT_ROOT", ".")
 MAP = os.path.join(ROOT, "Maps", "SovietBlueHour", "map")
 OUT = os.path.join(ROOT, "Maps", "SovietBlueHour", "integration")
 os.makedirs(OUT, exist_ok=True)

@@ -207,6 +207,23 @@ namespace Yixuan.EditorTools
             // 4) 角色 / 验收标记
             PlaceCharacter(cfg);
             PlaceMarkers(cfg);
+            // node-1 regression: UnifiedHud (tabs + quick bar + minimap) must survive every
+            // scene rebuild. The Rainy base scene does not contain it, so ensure it explicitly.
+            if (UnityEngine.Object.FindObjectOfType<Yixuan.UI.UnifiedHud>() == null)
+            {
+                var hudGo = new GameObject("UnifiedHud");
+                var hud = hudGo.AddComponent<Yixuan.UI.UnifiedHud>();
+                hud.OpenOnStart = true;
+                hud.StartTab = Yixuan.UI.UnifiedHud.Tab.Map;
+                hud.PanelWidth = 478f;
+            }
+            if (GameObject.Find("DynamicInteractionSystem") == null)
+            {
+                var dynamicSystem = new GameObject("DynamicInteractionSystem");
+                dynamicSystem.AddComponent<Yixuan.Dynamic.DynamicInteractionBootstrap>();
+                dynamicSystem.AddComponent<Yixuan.Dynamic.DynamicActorSystem>();
+                dynamicSystem.AddComponent<Yixuan.Dynamic.DynamicVisionFlow>();
+            }
 
             // 5) 天空 / 光照 / 相机 / 画质
             ApplySky(cfg);
@@ -313,9 +330,17 @@ namespace Yixuan.EditorTools
         }
 
         /// <summary>地图网格：静态批处理 + 只接收阴影不投射（1.4M tris 阴影 pass 太贵）。</summary>
+        static bool IsDynamicNode(Transform transform)
+        {
+            for (var t = transform; t != null; t = t.parent)
+                if (t.name.StartsWith("DYN_")) return true;
+            return false;
+        }
+
         static void PrepareMapRenderers(GameObject mapInstance)
         {
             Renderer[] renderers = mapInstance.GetComponentsInChildren<Renderer>(true);
+            int staticCount = 0, dynamicCount = 0;
             for (int i = 0; i < renderers.Length; i++)
             {
                 var r = renderers[i];
@@ -323,9 +348,16 @@ namespace Yixuan.EditorTools
                 r.receiveShadows = true;
                 r.lightProbeUsage = LightProbeUsage.Off;
                 r.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                if (IsDynamicNode(r.transform))
+                {
+                    dynamicCount++;
+                    continue;
+                }
                 GameObjectUtility.SetStaticEditorFlags(r.gameObject, StaticEditorFlags.BatchingStatic);
+                staticCount++;
             }
-            Debug.Log("[SovietBlueHour] 地图渲染器=" + renderers.Length + "（静态批处理、关闭投影）");
+            Debug.Log("[SovietBlueHour] 地图渲染器=" + renderers.Length +
+                      "（静态批处理 " + staticCount + "，动态实体 " + dynamicCount + "，关闭投影）");
         }
 
         // ============================================================

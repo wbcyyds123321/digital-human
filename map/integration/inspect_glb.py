@@ -1,6 +1,6 @@
 import json, struct, sys, os, collections
 
-GLB = os.environ.get("GLB_PATH", "SovietBlueHour_game.glb")
+GLB = os.environ.get("SBH_GLB", os.path.join(os.path.dirname(__file__), "..", "map", "SovietBlueHour_game.glb"))
 
 with open(GLB, 'rb') as f:
     magic, version, length = struct.unpack('<4sII', f.read(12))

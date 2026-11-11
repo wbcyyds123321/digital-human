@@ -458,7 +458,9 @@ public static class ImportSovietBlueHour
 
     static bool rootChildCountOk(ImportStats stats)
     {
-        return stats.rootChildCount == 51;
+        // node-1 merged map had 51 static roots; node-2 adds 50 DYN_* dynamic roots
+        // (48 vehicles incl. tram + eternal-flame fire) => 101 total.
+        return stats.rootChildCount == 51 || stats.rootChildCount == 101;
     }
 
     static void WriteStats(ImportStats stats)

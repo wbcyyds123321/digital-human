@@ -208,7 +208,7 @@ namespace Yixuan.Vision
             if (_status != null)
             {
                 string msg;
-                if (!Observer.Client.HasKey) msg = "未找到 Qwen key";
+                if (!Observer.Client.HasKey) msg = "未找到视觉服务密钥";
                 else if (!Observer.GameViewEnabled && !Observer.WebcamEnabled) msg = "两路都关 · 不消耗额度";
                 else if (Observer.Client.ServiceBlocked) msg = Observer.Client.ServiceStatus;
                 else if (Observer.Asking) msg = "正在看…";

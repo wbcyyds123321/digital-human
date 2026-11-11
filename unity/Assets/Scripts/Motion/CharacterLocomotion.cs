@@ -33,6 +33,15 @@ namespace Yixuan.Motion
         public bool IsMoving { get { return _hasTarget && WalkingEnabled; } }
         public bool HasTarget { get { return _hasTarget; } }
         public Vector3 Target { get { return _target; } }
+        /// <summary>Identity of the accepted route; observers must not adopt another caller's movement.</summary>
+        public ulong NavigationGeneration { get; private set; }
+        /// <summary>Copies only unconsumed waypoints. The caller owns the destination list.</summary>
+        public void CopyRemainingPath(System.Collections.Generic.List<Vector3> destination)
+        {
+            destination.Clear();
+            if (!_hasTarget) return;
+            for (int i = _pathIndex; i < _path.Count; i++) destination.Add(_path[i]);
+        }
         public string TargetAnchor { get; private set; }
         public string LastError { get; private set; }
         /// <summary>最近一次移动结果：started / arrived / blocked / stalled / cancelled / invalid_target / walking_disabled / unreachable / turned</summary>
@@ -161,9 +170,13 @@ namespace Yixuan.Motion
 
         public bool MoveTo(Vector3 worldPosition)
         {
+            if (Yixuan.Stage4.Stage4SeatController.BlocksNormalWalking)
+            {
+                LastStatus = "seated";
+                LastError = "正在坐着：先起身再走路";
+                return false;
+            }
             if(!Yixuan.AI.Tasks.TaskAuthority.Allows(3))return false;
-            _motionOwner=Yixuan.AI.Tasks.TaskAuthority.Caller;
-            _relativeStraight=false;
             if (!WalkingEnabled)
             {
                 LastStatus = "walking_disabled";
@@ -194,7 +207,8 @@ namespace Yixuan.Motion
                 if (VerboseLog) Debug.LogWarning("[Locomotion] " + LastError);
                 return false;
             }
-            if (_hasTarget && (target - _target).sqrMagnitude < 0.0001f) return true;
+            if (_hasTarget && (target - _target).sqrMagnitude < 0.0001f)
+            { _motionOwner=Yixuan.AI.Tasks.TaskAuthority.Caller; _relativeStraight=false; NavigationGeneration++; return true; }
             StopTurning();
             // 直线可走就直接走；被挡住则网格 A* 绕路（绕 Rail/货架等）。
             var path = WorldData.FindPath(transform.position, target);
@@ -205,12 +219,15 @@ namespace Yixuan.Motion
                 if (VerboseLog) Debug.LogWarning("[Locomotion] " + LastError);
                 return false;
             }
+            _motionOwner=Yixuan.AI.Tasks.TaskAuthority.Caller;
+            _relativeStraight=false;
             _path.Clear();
             _path.AddRange(path);
             _pathIndex = 0;
             _stallTimer = 0f;
             _target = target;
             _hasTarget = true;
+            NavigationGeneration++;
             AnyWalking = true;
             LastError = null;
             LastStatus = "started";
@@ -224,6 +241,12 @@ namespace Yixuan.Motion
         // Execute an already planned path segment. Never replan a midpoint as a new destination.
         public bool MoveAlongPath(System.Collections.Generic.List<Vector3> path)
         {
+            if (Yixuan.Stage4.Stage4SeatController.BlocksNormalWalking)
+            {
+                LastStatus = "seated";
+                LastError = "正在坐着：先起身再走路";
+                return false;
+            }
             if(!Yixuan.AI.Tasks.TaskAuthority.Allows(3)) return false;
             if(!WalkingEnabled){LastStatus="walking_disabled";LastError="走路已被关闭";return false;}
             if(path==null || path.Count<2){LastStatus="invalid_target";LastError="empty_route_segment";return false;}
@@ -235,7 +258,7 @@ namespace Yixuan.Motion
             }
             StopTurning(); _motionOwner=Yixuan.AI.Tasks.TaskAuthority.Caller; _relativeStraight=false;
             _path.Clear();_path.AddRange(path);_pathIndex=0;_stallTimer=0;_target=path[path.Count-1];
-            _hasTarget=true;AnyWalking=true;LastStatus="started";LastError=null;PlayWalk();return true;
+            _hasTarget=true;NavigationGeneration++;AnyWalking=true;LastStatus="started";LastError=null;PlayWalk();return true;
         }
 
         public void Stop(string reason = null, string status = "cancelled")
@@ -284,9 +307,27 @@ namespace Yixuan.Motion
             _target=state.target; _turnTargetYaw=state.turnYaw; TargetAnchor=state.anchor; TurnOwner=state.turnOwner;
             LastStatus=state.status; LastError=state.error; _path.Clear(); _path.AddRange(state.path);
             _pathIndex=state.index; _stallTimer=0; AnyWalking=_hasTarget&&WalkingEnabled;
+            NavigationGeneration++;
             if (_hasTarget) PlayWalk(); else PlayIdle(); return true;
         }
         string _motionOwner;
+        public string MotionOwner { get { return _motionOwner; } }
+        public bool HandOffMotionOwner(string owner)
+        {
+            if (string.IsNullOrEmpty(owner)) return false;
+            if (!Yixuan.AI.Tasks.TaskAuthority.Allows(1)) return false;
+            if (!Yixuan.AI.Tasks.TaskAuthority.CanContinue(owner, 1)) return false;
+            _motionOwner = owner;
+            return true;
+        }
+        public bool ReleaseMotionOwner(string owner)
+        {
+            if (!Yixuan.AI.Tasks.TaskAuthority.Allows(1)) return false;
+            if (_hasTarget) return false;
+            if (string.IsNullOrEmpty(owner) || _motionOwner != owner) return false;
+            _motionOwner = null;
+            return true;
+        }
         void Update(){using(Yixuan.AI.Tasks.TaskAuthority.Enter(_motionOwner))UpdateOwned();}
         void UpdateOwned()
         {

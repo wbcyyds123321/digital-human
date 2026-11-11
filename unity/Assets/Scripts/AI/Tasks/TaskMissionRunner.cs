@@ -48,6 +48,7 @@ namespace Yixuan.AI.Tasks
         QwenVisionClient _vision;
         int _generation, _held;
         bool _brainWasProactive, _leased;
+        bool _seatAuthorityDeferred, _cameraLeased;
         Vector3 _lastPosition;
         float _sampleAt, _oldArrivalRadius;
         readonly List<Stack<IEnumerator>> _guards = new List<Stack<IEnumerator>>();
@@ -66,11 +67,48 @@ namespace Yixuan.AI.Tasks
                 if (EyeCamera == null) { var c = GameObject.Find("EyeCamera"); if (c != null) EyeCamera = c.GetComponent<Camera>(); }
             }
         }
+        // B: structured confirmed-selection handoff. The user's original text is
+        // preserved; the confirmed entity id/token/action are structured context,
+        // not a rewritten request and not a free re-selection.
+        // Immutable per-run confirmed-selection context. It is captured when a run
+        // starts and never mutated by a later Submit; an ordinary Submit clears it.
+        public string ForcedSelectionEntityId { get { return _runForcedEntityId; } }
+        public int ForcedSelectionToken { get { return _runForcedToken; } }
+        public string ForcedSelectionAction { get { return _runForcedAction; } }
+        string _runForcedEntityId = "", _runForcedAction = "";
+        int _runForcedToken = -1;
+        string _pendingSelectionEntityId = "", _pendingSelectionAction = "";
+        int _pendingSelectionToken = -1;
+
+        public bool SubmitSelectionAction(string request, string confirmedEntityId, int sharedToken, string action)
+        {
+            if (!Application.isPlaying || string.IsNullOrWhiteSpace(request) || string.IsNullOrEmpty(confirmedEntityId) ||
+                sharedToken != Yixuan.Pick.SelectionBroker.Generation || !Yixuan.Pick.SelectionBroker.IsCurrent(confirmedEntityId)) return false;
+            // Cancel the previous run BEFORE binding the new immutable context.
+            if (IsRunning) Cancel("被新视觉动作替换");
+            _pendingSelectionEntityId = confirmedEntityId;
+            _pendingSelectionToken = sharedToken;
+            _pendingSelectionAction = action ?? "";
+            bool started = Submit(request);
+            if (!started)
+            {
+                _pendingSelectionEntityId = ""; _pendingSelectionToken = -1; _pendingSelectionAction = "";
+            }
+            return started;
+        }
+
         public bool Submit(string request)
         {
             if (!Application.isPlaying || string.IsNullOrWhiteSpace(request)) return false;
             if (IsRunning && !IsInsertion && LooksLikeInsertion(request)) return InsertTask(request);
             if (IsRunning) Cancel("被新任务替换");
+            // Capture the confirmed-selection context exactly once for this run.
+            _runForcedEntityId = _pendingSelectionEntityId;
+            _runForcedToken = _pendingSelectionToken;
+            _runForcedAction = _pendingSelectionAction;
+            _pendingSelectionEntityId = ""; _pendingSelectionToken = -1; _pendingSelectionAction = "";
+            IsAdoptedNavigation = false; AdoptedAnchor = null;
+            _automaticNavigationAllowance = 0;
             _pausedSeconds=0; LastInsertionReport="";
             ResolveRefs(); CaptureHome();
             if (Session != null) Session.CancelDialogueTurn();
@@ -97,29 +135,47 @@ namespace Yixuan.AI.Tasks
             if (Evidence.intent != null) Write("intent.json", JsonUtility.ToJson(Evidence.intent, true));
             else Write("request.txt", request);
             if (!UseCodeExecution && (!UseSemanticInterpretation || PlannerOverride != null) && !string.IsNullOrEmpty(Evidence.intent.error)) { Finish("rejected", Evidence.intent.error); return false; }
-            if(!TaskAuthority.Acquire(Context.MissionId,1|2|8)){Finish("rejected","resources_owned_by_another_run");return false;}
+            // A settled seat retains its own motion/pose owner until safe standing finishes.
+            // Planning and read-only queries can run without taking that owner's resources.
+            _seatAuthorityDeferred = Yixuan.Stage4.Stage4SeatController.BlocksNormalWalking;
+            if(!TaskAuthority.Acquire(Context.MissionId, _seatAuthorityDeferred ? 8 : (1|2|8))){Finish("rejected","resources_owned_by_another_run");return false;}
             using(TaskAuthority.Enter(Context.MissionId))Acquire();
             _main = StartCoroutine(UseCodeExecution ? RunCode(_generation) : Run(_generation));
             return true;
         }
         void Acquire()
         {
-            ClearAttention();
+            _cameraLeased = false;
             _leased = true; _oldArrivalRadius = Motor.ArriveRadius;
             if (Session != null && Session.Director != null)
             {
-                _brainWasProactive = Session.Brain != null && Session.Brain.EnableProactive;
+                _brainWasProactive = IsInsertion
+                    ? (Session.Brain != null && Session.Brain.EnableProactive)
+                    : (Session.BrainProactiveKnown ? Session.BrainProactivePreference
+                        : (Session.Brain != null && Session.Brain.EnableProactive));
                 Session.Director.SuspendBrain(true);
             }
+            if (!_seatAuthorityDeferred) AcquireMissionCamera();
+        }
+        void AcquireMissionCamera()
+        {
+            if (_cameraLeased) return;
+            ClearAttention();
+            _cameraLeased = true;
             if (Gimbal != null) { _oldAutoRecenter = Gimbal.AutoRecenter; Gimbal.AutoRecenter = false; Gimbal.Center(); }
         }
         void Release()
         {
             if (!_leased) return; _leased = false;
             if (Motor != null) Motor.ArriveRadius = _oldArrivalRadius;
-            if (Evidence.status != "succeeded" || !(_holdAttention||_holdDirection)) { ClearAttention(); if (Gimbal != null) Gimbal.Center(); }
-            if (Gimbal != null) Gimbal.AutoRecenter = (_holdAttention||_holdDirection) ? false : _oldAutoRecenter;
-            if (Session != null && Session.Brain != null) Session.Brain.EnableProactive = _brainWasProactive;
+            if (_cameraLeased)
+            {
+                if (Evidence.status != "succeeded" || !(_holdAttention||_holdDirection)) { ClearAttention(); if (Gimbal != null) Gimbal.Center(); }
+                if (Gimbal != null) Gimbal.AutoRecenter = (_holdAttention||_holdDirection) ? false : _oldAutoRecenter;
+                _cameraLeased = false;
+            }
+            if (IsAdoptedNavigation && Motor != null && Context != null) Motor.ReleaseMotionOwner(Context.MissionId);
+            if (Session != null && Session.Brain != null && !IsAdoptedNavigation) Session.Brain.EnableProactive = _brainWasProactive;
         }
         public void Cancel(string reason = "用户停止任务")
         {
@@ -132,10 +188,12 @@ namespace Yixuan.AI.Tasks
         }
         void StopWorkers()
         {
+            CancelOwnedSeatTransition();
             foreach (var worker in _workers) if (worker != null) StopCoroutine(worker);
             _workers.Clear(); _held = 0;
             foreach (var stack in _guards.ToArray()) DisposeStack(stack);
             _guards.Clear();
+            ReleaseDynamicControl();
             using(TaskAuthority.Enter(Context!=null?Context.MissionId:null)){if (Motor != null) Motor.Stop("任务结束", "cancelled");}
             if (_vision != null) _vision.AbortAskRequest();
             if(Session!=null)Session.CancelMissionSpeech(Context!=null?Context.MissionId:null);
@@ -144,10 +202,12 @@ namespace Yixuan.AI.Tasks
         void Finish(string status, string reason)
         {
             if (Evidence == null) return;
+            ReleaseDynamicControl();
             if (status != "succeeded") LastReport = "";
             Evidence.status = status; Evidence.reason = reason;
             foreach (var r in Evidence.results) if (r.status == "running" || r.status == "pending")
             { r.status = status == "cancelled" ? "cancelled" : "skipped"; r.reason = reason; r.ended = TaskNow; }
+            RememberVisitedTargets();
             Evidence.ended = TaskNow; Evidence.elapsed = Evidence.ended - Evidence.started;
             Evidence.wall_ended=Time.realtimeSinceStartup;Evidence.wall_elapsed=Evidence.wall_ended-Evidence.wall_started;
             if (Motor != null) { Evidence.final_position = Motor.transform.position; Evidence.final_yaw = Motor.transform.eulerAngles.y; }
@@ -157,11 +217,15 @@ namespace Yixuan.AI.Tasks
             EmitRuntime(status=="cancelled"?"MissionCancelled":status=="succeeded"?"MissionSucceeded":"MissionFailed","",status,reason);
             using(TaskAuthority.Enter(Context!=null?Context.MissionId:null))Release();
             if(Context!=null){Context.Active=false;TaskAuthority.Release(Context.MissionId);} Save();
-            if (Session != null && !IsInsertion) Session.MissionFinished(LastReport, true);
+            bool adopted = IsAdoptedNavigation;
+            if (Session != null && !IsInsertion) { if (adopted) Session.NavigationAdoptedFinished(this, _brainWasProactive); else Session.MissionFinished(LastReport, true); }
+            if (adopted) { IsAdoptedNavigation = false; AdoptedAnchor = null; }
             Raise();
         }
         void Update()
         {
+            if (IsRunning && !string.IsNullOrEmpty(_runForcedEntityId) && !SelectionTokenStillValid())
+            { Cancel("选中目标已变化，停止上一目标的任务"); return; }
             if (IsSuspended) return;
             UpdateAttention();
             if (!IsRunning || Motor == null) return;
@@ -223,6 +287,11 @@ namespace Yixuan.AI.Tasks
                 prompt = PlannerPrompt() + "\nYour previous JSON was rejected: " + validation + "\nPrevious reply: " + raw + "\nRepair it. Preserve the user destination contract exactly.";
             }
             if (plan == null) { Finish("rejected", "任务计划未通过校验：" + error); yield break; }
+            if (!string.IsNullOrEmpty(_runForcedEntityId))
+            {
+                string mismatch = ValidateForcedSelectionPlan(plan);
+                if (mismatch != null) { Finish("rejected", "确认绑定计划冲突：" + mismatch); yield break; }
+            }
             Evidence.plan = plan; Write("plan.json", JsonUtility.ToJson(plan, true));
             foreach (var step in plan.steps) Evidence.results.Add(new MissionStepResult { id = step.id, kind = step.kind, target_id = step.target_id });
             Phase = "executing"; Save(); Raise();
@@ -243,7 +312,7 @@ namespace Yixuan.AI.Tasks
                     _workers.Add(StartCoroutine(Worker(step, r, resources)));
                 }
                 if (allDone) break;
-                if (TaskNow - Evidence.started > 600f) { StopWorkers(); Finish("failed", "任务总超时"); yield break; }
+                if (TaskNow - Evidence.started > EffectiveCodeTimeout) { StopWorkers(); Finish("failed", "任务总超时"); yield break; }
                 yield return null;
             }
             if (generation == _generation) { StopWorkers(); Finish("succeeded", "所有请求步骤均已完成"); }
@@ -256,7 +325,18 @@ namespace Yixuan.AI.Tasks
         }
         IEnumerator Worker(MissionStep s, MissionStepResult r, int resources)
         {
+            string selectionError = ValidateConfirmedStep(s);
+            if (selectionError != null) { Fail(r, selectionError); _held &= ~resources; yield break; }
             r.start_position = Motor.transform.position;
+            // Boarding explicitly waits for the seat controller to surrender its own owner.
+            // Other tools acquire their real resources without cancelling the seated pose.
+            if (s.kind != "board_vehicle" && s.kind != "sit" && s.kind != "stand" && Context != null && !TaskAuthority.Acquire(Context.MissionId, resources))
+            { Fail(r, "resources_owned_by_another_run"); _held &= ~resources; yield break; }
+            if (s.kind != "board_vehicle" && s.kind != "sit" && s.kind != "stand" && _seatAuthorityDeferred && (resources & 3) != 0)
+            {
+                _seatAuthorityDeferred = false;
+                using (TaskAuthority.Enter(Context != null ? Context.MissionId : null)) AcquireMissionCamera();
+            }
             IEnumerator routine;
             switch (s.kind)
             {
@@ -272,9 +352,19 @@ namespace Yixuan.AI.Tasks
                 case "gesture": routine = Gesture(s, r); break;
                 case "speak": routine = Speak(s, r); break;
                 case "express": routine = Express(s, r); break;
+                case "board_vehicle": routine = BoardVehicle(s, r); break;
+                case "drive_vehicle": routine = DriveVehicle(s, r); break;
+                case "exit_vehicle": routine = ExitVehicle(s, r); break;
+                case "stop_vehicle": routine = StopVehicle(s, r); break;
+                case "set_flame": routine = SetFlame(s, r); break;
+                case "query_dynamic": routine = QueryDynamic(s, r); break;
+                case "sit": routine = SitSelected(s, r); break;
+                case "stand": routine = StandSelected(s, r); break;
                 default: routine = Report(s, r); break;
             }
-            yield return Guard(routine, r, s.timeout > 0 ? s.timeout : s.kind == "navigate" || s.kind == "return" ? NavigationTimeout : 120f);
+            r.timeout_seconds = s.timeout > 0 ? s.timeout : s.kind == "board_vehicle" ? Mathf.Max(240f, NavigationTimeout) :
+                s.kind == "drive_vehicle" ? 600f : IsNavigationStep(s.kind) ? NavigationTimeout : 120f;
+            yield return Guard(routine, r, r.timeout_seconds);
             r.ended = TaskNow; r.end_position = Motor.transform.position;
             if (r.status == "running") r.status = "succeeded";
             _held &= ~resources; Save(); Raise();
@@ -290,12 +380,13 @@ namespace Yixuan.AI.Tasks
         IEnumerator Guard(IEnumerator routine, MissionStepResult r, float seconds)
         {
             var stack = new Stack<IEnumerator>(); stack.Push(routine); _guards.Add(stack);
-            float until = TaskNow + seconds;
+            float began = TaskNow, until = began + seconds;
             try
             {
                 while (stack.Count > 0)
                 {
                     if(IsSuspended){yield return null;continue;}
+                    until = Mathf.Max(until, began + r.timeout_seconds);
                     if (TaskNow > until) { Fail(r, "step_timeout"); break; }
                     object current = null; bool more = false; string error = null;
                     try { using(TaskAuthority.Enter(Context!=null?Context.MissionId:null))more = stack.Peek().MoveNext(); if (more) current = stack.Peek().Current; }
@@ -321,6 +412,7 @@ namespace Yixuan.AI.Tasks
             else { route = WorldData.FindPath(Motor.transform.position, destination); r.target_path = s.target_id == "mission_origin" ? "mission/task_origin" : "scene/origin"; r.target_position = destination; }
             if (route == null) { Fail(r, "unreachable"); yield break; }
             r.approach_position = destination; r.route.AddRange(route);
+            if (!ConfigureNavigationBudget(s, r)) yield break;
             ClearAttention();
             if (Gimbal != null) Gimbal.Center();
             float oldRadius = Motor.ArriveRadius; Motor.ArriveRadius = Mathf.Min(oldRadius, ArrivalRadius * 0.5f);
@@ -334,7 +426,7 @@ namespace Yixuan.AI.Tasks
                     if (!Motor.MoveTo(destination)) { Fail(r, Motor.LastStatus + ": " + Motor.LastError); yield break; }
                     while (Motor.HasTarget)
                     {
-                        if (target != null && (target.Object == null && !target.IsAnchor || TaskTargetCatalog.FlatDistance(target.Position, r.target_position) > 0.25f))
+                        if (target != null && (!target.IsAvailable || TaskTargetCatalog.FlatDistance(target.Position, r.target_position) > 0.25f))
                         { Motor.Stop("目标移动或丢失", "cancelled"); Fail(r, "target_moved_or_destroyed"); yield break; }
                         Vector3 p = Motor.transform.position; r.path_length += TaskTargetCatalog.FlatDistance(previous, p); previous = p;
                         yield return null;

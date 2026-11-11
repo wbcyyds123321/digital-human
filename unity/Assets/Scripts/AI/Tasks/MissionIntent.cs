@@ -14,7 +14,7 @@ namespace Yixuan.AI.Tasks
         public bool observe, interact, speak, express, return_to_origin;
         public MissionParallelRequirement[] parallel_requirements = new MissionParallelRequirement[0];
         static readonly Regex Split = new Regex(@"[，,。;；!！?？\r\n→]|然后|接着|随后|最后|之后|再(?=去|到|回|走|前往)", RegexOptions.IgnoreCase);
-        static readonly Regex Attention = new Regex(@"(?:把|将)?(?:视角|视线|镜头|目光)(?:转向|对准|朝向|移向)|看向|看一下|看下|望向|注视|凝视|面向|朝向|\blook\s+at\b|\bface\s+(?:toward\s+)?", RegexOptions.IgnoreCase);
+        static readonly Regex Attention = new Regex(@"(?:把|将)?(?:视角|视线|镜头|目光)(?:转向|对准|朝向|移向)|看向|看一下|看下|望向|注视|凝视|面向|面对|朝向|(?:将|把)?身体(?:对准|转向)|\blook\s+at\b|\bface\s+(?:toward\s+)?", RegexOptions.IgnoreCase);
         static readonly Regex Movement = new Regex(@"站到|站在|停在|前往|走到|走向|去往|走近|靠近|移动到|到达|返回|回到|走回|去|回|到|\bgo\s+to\b|\bwalk\s+to\b|\bhead\s+to\b|\bnavigate\s+to\b|\breturn(?:\s+to)?\b", RegexOptions.IgnoreCase);
         static readonly Regex Observe = new Regex(@"观察|环视|环顾|四周|周围|看看|扫视|\bscan\b|\bobserve\b|\blook\s+around\b", RegexOptions.IgnoreCase);
         static readonly Regex Interact = new Regex(@"交互|触发|解锁|按一下|按\s*[QE]|按下|\binteract\b|\btrigger\b|\bpress\s+[qe]\b", RegexOptions.IgnoreCase);
@@ -22,11 +22,26 @@ namespace Yixuan.AI.Tasks
         public static bool LooksLikeMission(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return false;
-            if (LooksLikeTargetLook(text)) return true;
+            if (LooksLikeTargetLook(text) || LooksLikeOpenMovement(text)) return true;
             if (Regex.IsMatch(text, @"^(任务|执行任务|task)\s*[:：]", RegexOptions.IgnoreCase)) return true;
             if (Regex.IsMatch(text, @"哪些物体|哪些地方|哪些目标|你觉得|是否.*到|到.*了吗|走到.*了[吗么]|你现在(?:在|到)哪|为什么|怎么才能", RegexOptions.IgnoreCase)) return false;
             if (Regex.IsMatch(text, @"(?:如果|若|当|循环|重复|每隔|直到|否则).*(?:前往|走到|看向|看下|观察|挥手|挥舞|返回|回到|交互)", RegexOptions.IgnoreCase)) return true;
             return Regex.IsMatch(text, @"前往|走到|走向|去往|导航到|移动到|(?:返回|回到|走回|回)(?:去)?(?:(?:本次|这次)?任务|场景|本次|这次)?(?:原点|起点|起始位置|起始点|出发点|出发位置)|(?:^|让你|请你|先|请|你|帮我|麻烦你)(?:去|到|走近|靠近)\s*[^\s，。]+|做.*(?:动作|手势)|挥舞双手|双手挥舞|挥手|点头|摇头|^(?:请|现在)?(?:观察|环视|环顾)|\b(?:go|walk|head|navigate)\s+to\b|\breturn(?:\s+to)?\s+(?:origin|start|the start|starting position)\b", RegexOptions.IgnoreCase);
+        }
+        public static bool RequiresTaskRuntime(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            if (Regex.IsMatch(text, @"为什么|怎么才能|我昨天|我刚才", RegexOptions.IgnoreCase)) return false;
+            if (LooksLikeTargetLook(text) || LooksLikeOpenMovement(text)) return true;
+            return LooksLikeMission(text) && Regex.IsMatch(text, @"然后|接着|随后|最后|之后|先.+再|再(?:往|去|到|走|前往)|循环|重复|往返|每隔|直到|如果|否则", RegexOptions.IgnoreCase);
+        }
+        public static bool LooksLikeOpenMovement(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text)) return false;
+            string s = Regex.Replace(text, "[“\"][^”\"]*[”\"]", "");
+            if (Regex.IsMatch(s, @"为什么|怎么才能|刚才|昨天|假如|假设|如果|不要(?:四处|到处|随便|随意|自由)(?:走|逛)|别(?:四处|到处|随便|随意|自由)(?:走|逛)", RegexOptions.IgnoreCase)) return false;
+            return Regex.IsMatch(s, @"四处|到处|随便|随意|自由|附近|周边|周围|自行|你(?:自己)?(?:来)?(?:决定|挑|选)|自己(?:决定|挑|选)|按你(?:的)?(?:喜好|兴趣)|喜欢|合眼缘|感兴趣|\b(?:wander|stroll|explore)\b", RegexOptions.IgnoreCase)
+                && Regex.IsMatch(s, @"走走|走动|散步|逛|转转|溜达|游览|探索|走一圈|走几|走到|前往|去|\b(?:walk|wander|stroll|explore)\b", RegexOptions.IgnoreCase);
         }
         public static bool LooksLikeTargetLook(string text)
         {

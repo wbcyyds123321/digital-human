@@ -1614,22 +1614,32 @@ def bench_variant(grp, name, x, y, facing, rng, variant=0):
     T = XF(x, y, facing)
     wood = mat("wood") if variant != 3 else mat("wood_dark")
     legs = mat("metal_dark") if variant in (0, 3) else mat("conc")
+    # Every part is placed through T (which yaws its CENTER around the bench
+    # origin), so each part's own orientation must also carry the bench yaw.
+    # PB.box() applies its `rot` Euler in world axes (Euler XYZ = Rz*Ry*Rx), so
+    # the local -10 deg backrest lean is composed as (lean, 0, facing) exactly
+    # like kit.bench().  Passing only the world-X lean here was the bench_variant
+    # defect behind the 75 "rotated part geometry" benches: planks were yawed in
+    # position but not in orientation.
     for k, ly in enumerate((-0.16, 0.0, 0.16)):
         if variant == 3 and k == 1:
             continue
-        P.box(T(0, ly, 0.45), (1.82, 0.13, 0.045), wood)
+        P.box(T(0, ly, 0.45), (1.82, 0.13, 0.045), wood, rot=(0.0, 0.0, facing))
     if variant != 2:
         for k, zz in enumerate((0.66, 0.80, 0.94)):
             if variant == 3 and k == 2:
                 continue
             P.box(T(0, 0.25 + k * 0.014, zz), (1.82, 0.045, 0.10), wood,
-                  rot=(math.radians(-10), 0.0, 0.0))
+                  rot=(math.radians(-10), 0.0, facing))
         for side in (-1, 1):
-            P.box(T(side * 0.80, 0.28, 0.72), (0.05, 0.08, 0.60), legs)
+            P.box(T(side * 0.80, 0.28, 0.72), (0.05, 0.08, 0.60), legs,
+                  rot=(0.0, 0.0, facing))
     for side in (-1, 1):
-        P.box(T(side * 0.74, 0.0, 0.22), (0.09, 0.50, 0.45), legs)
+        P.box(T(side * 0.74, 0.0, 0.22), (0.09, 0.50, 0.45), legs,
+              rot=(0.0, 0.0, facing))
         if variant == 1:
-            P.box(T(side * 0.74, 0.0, 0.10), (0.16, 0.62, 0.20), mat("conc_dark"))
+            P.box(T(side * 0.74, 0.0, 0.10), (0.16, 0.62, 0.20), mat("conc_dark"),
+                  rot=(0.0, 0.0, facing))
     P.build(grp, name)
 
 

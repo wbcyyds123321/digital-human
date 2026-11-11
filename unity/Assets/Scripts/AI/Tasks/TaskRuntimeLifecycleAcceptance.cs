@@ -5,7 +5,7 @@ using System.Reflection;
 using UnityEngine;
 namespace Yixuan.AI.Tasks {
  public sealed class TaskRuntimeLifecycleAcceptance:MonoBehaviour {
-  public string Output="Captures/Evidence/task_runtime_v2_2026-10-25",DelayedEndpoint;
+  public string Output="D:/AI/GameScaling/docs/evidence/task_runtime_v2_2026-10-25",DelayedEndpoint;
   public RuntimeTestReport Report;public bool Running;
   ChatSession session;TaskSpeechQueue speech;string oldEndpoint;bool oldVoice,oldInput,oldTts;
   public void Begin(){if(Running)return;session=FindObjectOfType<ChatSession>();speech=session.GetComponent<TaskSpeechQueue>();if(speech==null)speech=session.gameObject.AddComponent<TaskSpeechQueue>();speech.Session=session;Running=true;Report=new RuntimeTestReport{suite="explicit lifecycle disposal, delayed local HTTP synthesis + actual TTS playback; not microphone ASR"};StartCoroutine(Run());}

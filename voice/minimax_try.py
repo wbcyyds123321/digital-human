@@ -9,8 +9,7 @@ MiniMax 语音试跑脚本（只用 Python 标准库，不需要 pip install）
   3) 调用 /v1/t2a_v2 按 7 种情绪各合成一句 → 保存 mp3 到 Tools/_verify/minimax/
 
 用法（PowerShell）：
-  $py = 'python'
-  & $py 'Tools\\Voice\\minimax_try.py' --ref 'Tools\\TTS\\voices\\zhuangfy\\ref.mp3'
+  python 'Tools\\Voice\\minimax_try.py' --ref 'Tools\\TTS\\voices\\zhuangfy\\ref.mp3'
 
 API Key 读取优先级：
   1) --key-file 指定文件

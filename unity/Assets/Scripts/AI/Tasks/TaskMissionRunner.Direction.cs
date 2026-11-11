@@ -10,17 +10,17 @@ namespace Yixuan.AI.Tasks {
    if(Gimbal==null||EyeCamera==null){Fail(r,"eye_camera_or_gimbal_missing");yield break;}
    ClearAttention();Vector3 start=Motor.transform.position;float bodyYaw=Motor.transform.eulerAngles.y;
    float yaw=s.reference=="world"?Mathf.DeltaAngle(bodyYaw+Gimbal.BaseYaw+Gimbal.HomeYaw,s.yaw):s.yaw;
-   r.direction=s.direction;r.camera_only=true;r.requested_yaw=s.yaw;r.requested_pitch=s.pitch;
-   if(Gimbal.LimitRelativeRange&&(Mathf.Abs(yaw)>Gimbal.MaxRelativeYaw||Mathf.Abs(s.pitch)>Gimbal.MaxRelativePitch)||!Gimbal.UnlimitedPitch&&(s.pitch<Gimbal.MinPitch||s.pitch>Gimbal.MaxPitch)){
+   r.direction=s.direction;r.camera_only=s.camera_only;r.requested_yaw=s.yaw;r.requested_pitch=s.pitch;
+   if(Gimbal.LimitRelativeRange&&((s.camera_only||!Gimbal.BodyAssist)&&Mathf.Abs(yaw)>Gimbal.MaxRelativeYaw+0.01f||Mathf.Abs(s.pitch)>Gimbal.MaxRelativePitch)||!Gimbal.UnlimitedPitch&&(s.pitch<Gimbal.MinPitch||s.pitch>Gimbal.MaxPitch)){
     Fail(r,"direction_out_of_range: requested="+yaw+","+s.pitch+" allowedYaw="+Gimbal.MaxRelativeYaw+" allowedPitch="+Gimbal.MaxRelativePitch);yield break;
    }
-   Gimbal.TurnRelative(yaw,s.pitch,-1,false);Gimbal.AutoRecenter=false;
+   Gimbal.TurnRelative(yaw,s.pitch,-1,!s.camera_only);Gimbal.AutoRecenter=false;
    Vector3 desired=Quaternion.Euler(-s.pitch,bodyYaw+Gimbal.BaseYaw+Gimbal.HomeYaw+yaw,0)*Vector3.forward;
    float end=TaskNow+6,stable=0;
    while(TaskNow<end){
     r.gaze_error=Vector3.Angle(EyeCamera.transform.forward,desired);r.position_drift=Vector3.Distance(start,Motor.transform.position);r.body_rotation=Mathf.Abs(Mathf.DeltaAngle(bodyYaw,Motor.transform.eulerAngles.y));
-    if(r.position_drift>0.03f||r.body_rotation>0.5f){Fail(r,"direction_unexpected_body_motion");yield break;}
-    if(r.gaze_error<=GazeTolerance&&!Gimbal.IsMoving){stable+=Time.unscaledDeltaTime;if(stable>=0.25f)break;}else stable=0;yield return null;
+    if(r.position_drift>0.03f||s.camera_only&&r.body_rotation>0.5f){Fail(r,"direction_unexpected_body_motion");yield break;}
+    if(r.gaze_error<=GazeTolerance&&!Gimbal.IsObservationSettling){stable+=Time.unscaledDeltaTime;if(stable>=0.25f)break;}else stable=0;yield return null;
    }
    if(stable<0.25f){Fail(r,"direction_not_stable");yield break;}
    r.actual_yaw=Gimbal.CurrentYaw;r.actual_pitch=Gimbal.CurrentPitch;

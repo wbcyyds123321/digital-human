@@ -12,7 +12,7 @@ namespace Yixuan.AI.Tasks
     /// <summary>Explicit fault injection; production never starts these cases.</summary>
     public class TaskFailureAcceptanceSuite : MonoBehaviour
     {
-        public string Root = "Captures/Evidence/task_orchestration_2026-10-24";
+        public string Root = "D:/AI/GameScaling/docs/evidence/task_orchestration_2026-10-24";
         public bool Running { get; private set; }
         public TaskAcceptanceSuite.SuiteReport Summary = new TaskAcceptanceSuite.SuiteReport();
         TaskMissionRunner _runner; bool _voiceInput; Vector3 _start;

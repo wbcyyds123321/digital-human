@@ -51,6 +51,47 @@ namespace Yixuan.World
         /// <summary>障碍盒（已按角色半径膨胀；不含地面/可穿过的拱门顶）。</summary>
         public readonly List<Bounds> ObstacleBounds = new List<Bounds>();
 
+        /// <summary>
+        /// Stage-4 hook: extra raw walk obstacles supplied before BuildWalkability.
+        /// These are added to ObstacleBounds only, never to _rawBoxes, so they do
+        /// not create camera colliders. The provider must return bench footprints
+        /// in Unity world coordinates.
+        /// </summary>
+        public static Func<List<Bounds>> ExternalObstacleProvider;
+        /// <summary>
+        /// Additional named obstacle providers (e.g. world-map sidecar) merged with
+        /// the legacy Stage-4 slot. A provider must not overwrite another module's
+        /// obstacles; all are collected before BuildWalkability.
+        /// </summary>
+        static readonly Dictionary<string, Func<List<Bounds>>> ExternalObstacleProviders =
+            new Dictionary<string, Func<List<Bounds>>>(StringComparer.Ordinal);
+        /// <summary>
+        /// Same avoidance口径 as the collision.json obstacles: Bounds.Expand
+        /// adds this amount to the full size, so 2*(AgentRadius+Margin) gives
+        /// AgentRadius+Margin of clearance on EACH side. Stage-4 overrides it
+        /// with the same value before BuildWalkability.
+        /// </summary>
+        public static float ExternalObstacleInflation = 1.0f;
+
+        public static void RegisterExternalObstacleProvider(string id, Func<List<Bounds>> provider)
+        {
+            if (string.IsNullOrEmpty(id) || provider == null) return;
+            ExternalObstacleProviders[id] = provider;
+        }
+
+        public static void UnregisterExternalObstacleProvider(string id)
+        {
+            if (!string.IsNullOrEmpty(id)) ExternalObstacleProviders.Remove(id);
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetExternalObstacles()
+        {
+            ExternalObstacleProvider = null;
+            ExternalObstacleProviders.Clear();
+            ExternalObstacleInflation = 1.0f;
+        }
+
         /// <summary>原始障碍盒（未膨胀，给相机碰撞体用）。</summary>
         readonly List<Bounds> _rawBoxes = new List<Bounds>();
 
@@ -164,6 +205,17 @@ namespace Yixuan.World
                     }
                 }
 
+                // Scene-aware synchronous preparation: both external provider sets
+                // must be registered before this first obstacle collection, including
+                // after a lab->main transition where one-shot runtime boot hooks
+                // have already run. The lab context is excluded explicitly.
+                if (!Yixuan.SelectionLab.SelectionLabContext.IsActive)
+                {
+                    Yixuan.WorldMap.WorldMapNavProvider.EnsurePreparedForScene(gameObject.scene);
+                    Yixuan.Stage4.Stage4SeatData.PrepareForMapBuild();
+                }
+                AddExternalObstacles();
+
                 if (NavJson != null)
                 {
                     var nav = JsonUtility.FromJson<NavDoc>(NavJson.text);
@@ -171,7 +223,6 @@ namespace Yixuan.World
                     Edges = nav != null ? nav.edges : null;
                     BuildEdges();
                 }
-
                 if (AnchorsJson != null)
                 {
                     var doc = JsonUtility.FromJson<AnchorDoc>(AnchorsJson.text);
@@ -283,6 +334,44 @@ namespace Yixuan.World
             }
             _edgeStart = start; _edgeTarget = target; _edgeCost = cost;
             BuildWalkability();
+        }
+
+        /// <summary>
+        /// Add Stage-4 bench obstacles before BuildWalkability so A* node validity
+        /// and edge validity see the same obstacles as WorldData movement checks.
+        /// </summary>
+        void AddExternalObstacles()
+        {
+            int total = 0;
+            total += AddExternalObstacleSet("stage4", ExternalObstacleProvider);
+            foreach (var pair in ExternalObstacleProviders)
+                total += AddExternalObstacleSet(pair.Key, pair.Value);
+            if (total > 0)
+                Debug.Log("[MapWorldProfile] 外部导航障碍=" + total +
+                          "，来源额外膨胀=" + ExternalObstacleInflation.ToString("F2") + "m（不生成相机 Collider）");
+        }
+
+        int AddExternalObstacleSet(string id, Func<List<Bounds>> provider)
+        {
+            if (provider == null) return 0;
+            List<Bounds> extras;
+            try { extras = provider(); }
+            catch (Exception e)
+            {
+                LastError = "外部障碍提供器失败(" + id + ")：" + e.Message;
+                Debug.LogError("[MapWorldProfile] " + LastError);
+                return 0;
+            }
+            if (extras == null || extras.Count == 0) return 0;
+            for (int i = 0; i < extras.Count; i++)
+            {
+                Bounds raw = extras[i];
+                var inflated = raw;
+                inflated.Expand(new Vector3(ExternalObstacleInflation, 0f, ExternalObstacleInflation));
+                ObstacleBounds.Add(inflated);
+            }
+            Debug.Log("[MapWorldProfile] 外部障碍 " + id + "=" + extras.Count);
+            return extras.Count;
         }
 
         /// <summary>2D 线段与障碍盒（XZ 投影）相交；与 WorldData 的判定保持一致。</summary>
