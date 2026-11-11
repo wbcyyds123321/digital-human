@@ -1,11 +1,11 @@
-# 仪玄数字人 | Unity AI Character Interaction System
+# AI 驱动的数字人 | Unity AI Character Interaction System
 
 [![Unity](https://img.shields.io/badge/Unity-2022.3%20LTS-black?logo=unity)](https://unity.com/)
 [![Vision](https://img.shields.io/badge/Vision-DeepSeek%20Flash-6f42c1)](https://github.com/wbcyyds123321/digital-human)
 [![License](https://img.shields.io/badge/License-MIT-2ea44f)](LICENSE)
 
 <p align="center">
-  <img src="docs/images/showcase-soviet-map.png" alt="苏式蓝调小区中的仪玄数字人" width="100%">
+  <img src="docs/images/showcase-soviet-map.png" alt="苏式蓝调小区中的数字人" width="100%">
 </p>
 
 <p align="center">
@@ -32,7 +32,7 @@
 
 ## 项目定位
 
-仪玄是运行在 Unity 3D 世界中的 AI 角色：
+数字人是运行在 Unity 3D 世界中的 AI 角色：
 
 - 用户用文字或语音提出目标；
 - 系统把自然语言整理成可验证的任务意图和执行约束；
@@ -190,7 +190,7 @@ Blender / Python 规划
   -> Unity 中的真实移动回执
 ~~~
 
-角色没有 Rigidbody 或 CharacterController，移动由 CharacterLocomotion 驱动，接地由地面高度数据处理。仪玄使用 MMD 血统骨架；MmdDeformBridge 把控制骨同步到真正受蒙皮权重影响的变形骨，避免“骨骼在动但网格不动”。
+角色没有 Rigidbody 或 CharacterController，移动由 CharacterLocomotion 驱动，接地由地面高度数据处理。该数字人使用 MMD 血统骨架；MmdDeformBridge 把控制骨同步到真正受蒙皮权重影响的变形骨，避免“骨骼在动但网格不动”。
 
 相关项目与源码：
 
