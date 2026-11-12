@@ -14,6 +14,7 @@
 
 <p align="center">
   <a href="https://github.com/wbcyyds123321/digital-human">源码</a> ·
+  <a href="README.planning.md">策划案 / 功能设计</a> ·
   <a href="docs/architecture.md">架构总览</a> ·
   <a href="docs/progress-2026-11-12.md">最新进展</a> ·
   <a href="docs/roadmap.md">路线图</a> ·
@@ -21,6 +22,8 @@
 </p>
 
 > 这是一个 Unity 数字人交互系统的源码展示快照，不是下载后即可运行的完整 Unity 工程。仓库不包含角色模型、地图二进制、动画、音频、第三方包或 API Key。
+
+**从游戏策划角度了解项目：** [立项、体验目标与功能设计](README.planning.md)。文档按照“玩家需要什么 → 需要哪些功能 → 怎样实现 → 如何验证”梳理低延迟语音、地图与实体 ID、第一人称选物、交互衔接和 Lua 动作编排，并区分已实现、局部验证和后续规划。
 
 ## 最新进展 · 2026-11-12
 
@@ -299,6 +302,7 @@ docs/                         架构、路线图和展示图片
 
 ## 文档
 
+- [策划案：立项、体验目标与功能设计](README.planning.md)
 - [架构总览](docs/architecture.md)
 - [2026-11-12 最新进展与验证边界](docs/progress-2026-11-12.md)
 - [统一语义决策方案（待实现）](docs/semantic-decision-plan.md)
