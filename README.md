@@ -1,5 +1,7 @@
 # AI 驱动的数字人 | Unity AI Character Interaction System
 
+> **策划方向入口 → [项目策划案 / README Planning](README.planning.md)**：立项目标、体验设计、功能拆解与技术方案取舍。
+
 [![Unity](https://img.shields.io/badge/Unity-2022.3%20LTS-black?logo=unity)](https://unity.com/)
 [![Vision](https://img.shields.io/badge/Vision-DeepSeek%20Flash-6f42c1)](https://github.com/wbcyyds123321/digital-human)
 [![License](https://img.shields.io/badge/License-MIT-2ea44f)](LICENSE)
