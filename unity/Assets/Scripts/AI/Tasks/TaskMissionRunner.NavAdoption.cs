@@ -76,6 +76,13 @@ namespace Yixuan.AI.Tasks
             Evidence.mission_id = Context.MissionId;
             Evidence.generation = _generation;
             Evidence.scene_version = Context.SceneVersion;
+            // F1/R2: this is a real new run (new Context/generation). Reset the
+            // forced-selection context FIRST (a completed/cancelled forced-selection
+            // handoff must never seed this navigation), then the task-scoped ledger,
+            // observation groups and phase summary. Otherwise the old forced baseline
+            // makes SelectionIntegrationValid cancel the adopted navigation next frame.
+            ClearForcedSelectionRunContext();
+            InitTaskSelection();
             Evidence.results.Add(new MissionStepResult
             {
                 id = "s1", kind = "navigate", target_id = anchorId, target_path = anchorId,

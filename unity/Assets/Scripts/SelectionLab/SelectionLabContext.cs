@@ -13,6 +13,7 @@ namespace Yixuan.SelectionLab
         {
             Scene = scene;
             if (scene == null) return;
+            WorldData.ResetForExplicitScene();
             // A lab scene must not inherit the Soviet map, seat or navigation caches
             // from a previous scene. Clear them before installing the explicit source.
             Yixuan.Pick.SelectionBroker.Clear();
@@ -32,6 +33,7 @@ namespace Yixuan.SelectionLab
         {
             if (Scene != scene) return;
             Scene = null;
+            WorldData.ResetForExplicitScene();
             WorldEntityCatalog.ResetExplicit();
             EntityPickRegistry.ResetForExplicitSource();
             Yixuan.WorldMap.WorldMapPanel.Shutdown();

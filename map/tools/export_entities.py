@@ -3,7 +3,7 @@
 Run (does NOT modify the .blend):
   blender --background "Maps/SovietBlueHour/map/SovietBlueHour_beauty.blend" \
           --python "Maps/SovietBlueHour/tools/export_entities.py" -- \
-          --workspace "D:/unity programe/Become human"
+          --workspace "<unity-project-root>"
 
 Outputs (default <workspace>/Maps/SovietBlueHour/entities/):
   world_entities.v0.json      logical entity inventory

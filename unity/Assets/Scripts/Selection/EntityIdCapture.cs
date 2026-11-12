@@ -234,6 +234,11 @@ namespace Yixuan.Pick
                 command.SetRenderTarget(
                     new RenderTargetIdentifier[] { _rtId, _rtDepth },
                     new RenderTargetIdentifier(_rtId));
+                // The raw pass keeps the GPU projection unflipped to align its
+                // pixel rows with the frozen snapshot. In a render target this
+                // reverses winding relative to the camera render. Restore the
+                // front faces explicitly; otherwise depth samples the back shell.
+                command.SetInvertCulling(SystemInfo.graphicsUVStartsAtTop);
                 command.ClearRenderTarget(true, true, DebugClearWhite ? Color.white : new Color(0f, 0f, 0f, 1f));
                 SetMaterialCamera(_occluderMaterial, snapshot);
                 SetMaterialCamera(_staticPickMaterial, snapshot);
@@ -292,6 +297,7 @@ namespace Yixuan.Pick
                     }
                 }
 
+                command.SetInvertCulling(GL.invertCulling);
                 Graphics.SetRenderTarget(null);
                 Graphics.ExecuteCommandBuffer(command);
                 command.Release();

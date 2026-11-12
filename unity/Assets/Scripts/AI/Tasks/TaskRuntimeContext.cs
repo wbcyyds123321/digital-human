@@ -13,6 +13,7 @@ namespace Yixuan.AI.Tasks {
  public static class TaskAuthority {
   static readonly string[] Owners=new string[4];public static string Caller{get;private set;}
   public static bool Allows(int mask){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]!=null&&Owners[i]!=Caller)return false;return true;}
+  public static string DescribeOwners(){var b=new System.Text.StringBuilder();b.Append("caller=").Append(Caller??"null");for(int i=0;i<4;i++)b.Append(";r").Append(i).Append('=').Append(Owners[i]??"null");return b.ToString();}
   public static bool Acquire(string owner,int mask){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]!=null&&Owners[i]!=owner)return false;for(int i=0;i<4;i++)if((mask&(1<<i))!=0)Owners[i]=owner;return true;}
   public static bool CanContinue(string owner,int mask){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]!=null&&Owners[i]!=owner)return false;return true;}
   public static void Release(string owner,int mask=15){for(int i=0;i<4;i++)if((mask&(1<<i))!=0&&Owners[i]==owner)Owners[i]=null;}

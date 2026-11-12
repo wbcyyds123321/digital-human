@@ -104,6 +104,10 @@ namespace Yixuan.Vision
     /// </summary>
     public partial class QwenVisionClient : MonoBehaviour
     {
+        /// <summary>B outbound-call ledger hook (observation only; never alters requests).</summary>
+        public static Action<string> RequestObserver;
+        internal static void NotifyOutbound(string detail){var h=RequestObserver;if(h!=null)try{h(detail);}catch{}}
+
         public const string DefaultModel = "deepseek-flash";
         public const string DefaultEndpoint = "https://api.deepseek.com/chat/completions";
         [Tooltip("默认使用官方 DeepSeek 图片接口；Qwen 需要明确选择，不自动跨服务回退")]
@@ -181,10 +185,6 @@ namespace Yixuan.Vision
             }
             var candidates = new List<string>();
 
-#if UNITY_EDITOR
-            // 编辑器测试：之前用户已经放好的本地 key
-            // Editor fallback: configure the key in the Inspector or environment; never read a private local path.
-#endif
             // 打包后：放到 persistentDataPath，或手动填到 Inspector
             candidates.Add(Path.Combine(Application.persistentDataPath, "qwen_apikey.txt"));
 
@@ -397,6 +397,7 @@ namespace Yixuan.Vision
                     if (ct.IsCancellationRequested) throw new OperationCanceledException(ct);
                     try
                     {
+                        NotifyOutbound("request|kind=vision|model=" + model + "|attempt=" + (attempt + 1) + "|endpoint=" + Endpoint);
                         using (var req = new HttpRequestMessage(HttpMethod.Post, Endpoint))
                         {
                             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
@@ -406,6 +407,7 @@ namespace Yixuan.Vision
                             {
                                 string raw = await resp.Content.ReadAsStringAsync().ConfigureAwait(false);
                                 int code = (int)resp.StatusCode;
+                                NotifyOutbound("result|kind=vision|model=" + model + "|attempt=" + (attempt + 1) + "|status=" + code);
                                 if (observe != null) observe(model, code);
                                 if (resp.IsSuccessStatusCode) return raw;
                                 IEnumerable<string> requestIds;
@@ -449,6 +451,7 @@ namespace Yixuan.Vision
                     catch (Exception e)
                     {
                         lastError = VisionServiceDiagnostic.Redact(e.Message, _apiKey, 400);
+                        NotifyOutbound("result|kind=vision|model=" + model + "|attempt=" + (attempt + 1) + "|error=" + lastError);
                         if (attempt + 1 < attemptsPerModel) { await Task.Delay(800 * (attempt + 1), ct).ConfigureAwait(false); continue; }
                         break;
                     }

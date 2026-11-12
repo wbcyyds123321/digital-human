@@ -8,6 +8,11 @@ namespace Yixuan.AI.Tasks
     [Serializable] public class MissionStep
     {
         public string id, kind, target_id, text, emotion, action_id, direction, reference;
+        // select_visible carries the declared slot; later target calls carry the
+        // verified task-scoped handle (target_ref) and the slot it resolved to.
+        public string target_ref, target_slot;
+        /// <summary>An explicit numeric eye angle (not a qualitative look).</summary>
+        public bool precise_angles;
         public float yaw, pitch, distance; public bool hold=true;
         public string route_id; public float route_fraction;
         public string[] after;
@@ -22,6 +27,17 @@ namespace Yixuan.AI.Tasks
         public string id, kind, target_id, target_path, action_id, clip_name, status = "pending", reason, observation, frame_path, frame_sha256;
         public string direction, text, emotion, reference;public float duration; public int generation; public long event_sequence;
         public float requested_yaw,requested_pitch,actual_yaw,actual_pitch,requested_distance;
+        // Task-scoped verified visual handle + the declared slot it resolved to.
+        // target_ref is only meaningful together with this mission's selection ledger.
+        public string target_ref, target_slot, selection_description, selection_source;
+        public int selection_generation;
+        public long locate_frame_id, confirm_frame_id;
+        public float observation_age_s;
+        /// <summary>Observation group id this select was bound against (immutable view group) and its declared mode.</summary>
+        public string observation_group_id, observation_mode;
+        public float eye_yaw_before, eye_yaw_after, eye_pitch_before, eye_pitch_after;
+        public float eye_world_yaw_before, eye_world_yaw_after;
+        public float body_yaw_before, body_yaw_after;
         public string route_id; public float route_fraction,route_total,route_travelled; public bool route_done;
         public float started, ended, path_length, distance_error, facing_error;
         public float timeout_seconds, planned_path_length;
@@ -46,6 +62,10 @@ namespace Yixuan.AI.Tasks
         public string parent_mission_id; public float paused_seconds; public List<TaskInsertionEvidence> insertions=new List<TaskInsertionEvidence>();
         public string request_id,mission_id,scene_version,contract_source;public int generation;
         public TaskContract contract;public TaskCompletion completion;
+        // Phase facts are assembled from real obligations + tool receipts, never
+        // from the generated Lua source.
+        public TaskPhaseSummary phase_summary;
+        public int target_bindings;
         public int code_slices, code_calls;
         public int llm_calls, navigation_retries;
         public float started, ended, elapsed, movement_seconds, actual_path_length;

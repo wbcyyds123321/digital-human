@@ -227,6 +227,24 @@ namespace Yixuan.Vision
         }
 
         /// <summary>
+        /// Freeze the CURRENT eye pose (relative to the body) without recentering and
+        /// without touching the body. Used on task step handoff / attention release so
+        /// losing a tracked focus point cannot silently recenter the user's view.
+        /// </summary>
+        public void FreezeCurrent()
+        {
+            if(!Yixuan.AI.Tasks.TaskAuthority.Allows(2))return;
+            _cameraOwner=Yixuan.AI.Tasks.TaskAuthority.Caller;
+            CancelOwnedBodyAssistTurn();
+            ResetObservationStatus();
+            _trackTarget = null;
+            TargetYaw = CurrentYaw;
+            TargetPitch = CurrentPitch;
+            LastCommand = "冻结当前视角";
+            State = GazeState.Commanded;
+        }
+
+        /// <summary>
         /// 持续看一个世界目标；目标丢失则自动回正。
         /// 超出云台范围且允许身体配合时站立可请求身体转向；allowBodyAssist=false 时只限幅。
         /// </summary>

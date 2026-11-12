@@ -1134,6 +1134,8 @@ namespace Yixuan.AI
                 _panelToggleBtn.style.display = on ? DisplayStyle.None : DisplayStyle.Flex;
             if (_settingsCloseBtn != null)
                 _settingsCloseBtn.style.display = on ? DisplayStyle.None : DisplayStyle.Flex;
+            if (_characterSkillsShortcut != null)
+                _characterSkillsShortcut.style.display = on ? DisplayStyle.None : DisplayStyle.Flex;
             if (_hint != null && on)
                 _hint.style.display = DisplayStyle.None;
         }

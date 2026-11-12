@@ -24,6 +24,20 @@ namespace Yixuan.AI.Tasks
 
         string ValidateConfirmedStep(MissionStep step)
         {
+            // A verified task-scoped handle is authorized by its declared contract
+            // slot (checked by TaskContractRules.Policy/Matches before any effect).
+            // It never widens authorization: it is only accepted when it resolves in
+            // this mission's ledger and the slot matches.
+            if (step != null && !string.IsNullOrEmpty(step.target_ref))
+            {
+                if (SelectionLedger == null) return "selection_ledger_missing";
+                TaskTargetBinding binding;
+                string handleError;
+                if (!SelectionLedger.TryResolveHandle(step.target_ref, out binding, out handleError)) return "verified_target_handle_invalid: " + handleError;
+                if (step.target_slot != binding.slot) return "verified_target_handle_slot_mismatch";
+                if ((step.kind == "sit" || step.kind == "stand") && string.IsNullOrEmpty(binding.slot)) return "confirmed_selection_required";
+                return null;
+            }
             if (string.IsNullOrEmpty(_runForcedEntityId))
                 return step != null && (step.kind == "sit" || step.kind == "stand") ? "confirmed_selection_required" : null;
             if (!SelectionTokenStillValid()) return "confirmed_selection_token_expired";
@@ -142,10 +156,11 @@ namespace Yixuan.AI.Tasks
 
         bool SelectionTokenStillValid()
         {
-            var current = SelectionBroker.Current;
-            return !string.IsNullOrEmpty(_runForcedEntityId) && _runForcedToken == SelectionBroker.Generation &&
-                current != null && current.confirmed && current.entity_id == _runForcedEntityId &&
-                current.generation == _runForcedToken;
+            if (string.IsNullOrEmpty(_runForcedEntityId)) return true;
+            if (SelectionLedger == null) return false;
+            TaskTargetBinding binding;
+            return SelectionLedger.TryGetForcedBaseline(out binding) &&
+                   binding.entity_id == _runForcedEntityId && binding.valid;
         }
     }
 }

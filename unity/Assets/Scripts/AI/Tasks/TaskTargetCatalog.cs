@@ -40,16 +40,54 @@ namespace Yixuan.AI.Tasks
         {
             var selection = Yixuan.Pick.SelectionBroker.Current;
             if (selection == null || !selection.confirmed) return;
-            var entry = Yixuan.Pick.EntityPickRegistry.Get(selection.entity_id);
+            AddEntityTarget(selection.entity_id, selection.display_name);
+        }
+
+        readonly System.Collections.Generic.List<string> _taskBoundIds = new System.Collections.Generic.List<string>();
+        readonly System.Collections.Generic.Dictionary<string, string> _taskBoundLabels = new System.Collections.Generic.Dictionary<string, string>();
+
+        /// <summary>
+        /// Register an in-task confirmed visual target so Catalog.Refresh (called by
+        /// other UI paths) re-adds it instead of losing the task's target A when the
+        /// global single selection moved to B.
+        /// </summary>
+        public void RegisterTaskBoundTarget(string entityId, string label)
+        {
+            if (string.IsNullOrEmpty(entityId)) return;
+            if (!_taskBoundIds.Contains(entityId)) _taskBoundIds.Add(entityId);
+            _taskBoundLabels[entityId] = label ?? "";
+            AddEntityTarget(entityId, label);
+        }
+
+        public void ClearTaskBoundTargets()
+        {
+            _taskBoundIds.Clear();
+            _taskBoundLabels.Clear();
+        }
+
+        void ReAddTaskBoundTargets()
+        {
+            foreach (var entityId in _taskBoundIds.ToArray())
+            {
+                string label;
+                if (!_taskBoundLabels.TryGetValue(entityId, out label)) label = "";
+                AddEntityTarget(entityId, label);
+            }
+        }
+
+        void AddEntityTarget(string entityId, string label)
+        {
+            if (string.IsNullOrEmpty(entityId)) return;
+            var entry = Yixuan.Pick.EntityPickRegistry.Get(entityId);
             if (entry == null) return;
             var destination = new TaskDestination
             {
-                Id = selection.entity_id,
-                Name = selection.display_name,
-                Path = "selection/" + selection.entity_id,
-                Description = "当前视觉确认并选中的实体",
+                Id = entry.Id,
+                Name = string.IsNullOrEmpty(label) ? entry.DisplayName : label,
+                Path = "selection/" + entry.Id,
+                Description = "当前任务已验证确认的实体",
                 SemanticObject = true,
-                Aliases = new[] { selection.entity_id, selection.display_name },
+                Aliases = new[] { entry.Id, string.IsNullOrEmpty(label) ? entry.DisplayName : label },
                 LivePosition = entry.LivePosition,
                 LiveAvailable = () => SelectionEntryAvailable(entry),
                 LiveApproach = (Vector3 from, out Vector3 point, out string error) => TrySelectionApproach(entry, from, out point, out error),
@@ -145,6 +183,7 @@ namespace Yixuan.AI.Tasks
             }
             AddDynamicTargets(actor);
             AddSelectionTarget(actor);
+            ReAddTaskBoundTargets();
         }
 
         static readonly System.Collections.Generic.Dictionary<string, string> DynamicClassAliases =

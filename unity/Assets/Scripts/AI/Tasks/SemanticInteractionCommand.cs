@@ -26,6 +26,8 @@ namespace Yixuan.AI.Tasks
         public string constraints = "";
         public string source = "";
         public string original = "";
+        /// <summary>model_interaction or deterministic_selection_guard (evidence only).</summary>
+        public string provenance = "";
     }
 
     public static class SemanticInteractionRules
@@ -131,6 +133,46 @@ namespace Yixuan.AI.Tasks
                 source = command.source ?? "",
                 original = input ?? "",
             };
+        }
+
+        /// <summary>
+        /// Deterministic route-guard for explicit selection synonyms. The model
+        /// classifier remains the primary router; this only turns an unequivocal
+        /// single selection instruction into the SAME visual_target tool contract
+        /// (never a sentence-keyword grab of colour/shape requests).
+        /// </summary>
+        public static SelectionIntentResult ClassifyExplicitSelection(string input)
+        {
+            return SelectionIntentRouter.Classify(input);
+        }
+
+        /// <summary>Build and validate the visual_target command for a single explicit selection.</summary>
+        public static SemanticInteractionCommand BuildSelectionGuardCommand(SelectionIntentResult selection, string input, out string error)
+        {
+            error = "";
+            if (selection == null || selection.Command == null)
+            {
+                error = selection != null ? selection.Reason : "no_selection_intent";
+                return null;
+            }
+            var guard = selection.Command;
+            var command = new SemanticInteractionCommand
+            {
+                operation = "visual_target",
+                direction = "",
+                anchor_id = "",
+                source = string.IsNullOrEmpty(input) ? guard.source : input,
+                target = guard.target ?? "",
+                actions = guard.actions ?? "",
+                constraints = guard.constraints ?? "",
+            };
+            string invalid = Validate(command, input, id => false);
+            if (invalid != null)
+            {
+                error = "guard_command_invalid:" + invalid;
+                return null;
+            }
+            return command;
         }
 
         public static Stage5Intent ToIntent(SemanticInteractionCommand command, string input)

@@ -48,10 +48,23 @@ namespace Yixuan.AI.Tasks
         }
         void ClearAttention()
         {
+            // R3: releasing attention must NOT implicitly recenter the eye. If the gimbal
+            // was tracking OUR focus point (or holding our direction), freeze the current
+            // real eye pose before the target object disappears; otherwise destroying the
+            // focus would make EyeGimbalController begin a command-less recenter.
+            bool ownedTracking=_holdAttention && _attentionPoint!=null && Gimbal!=null && Gimbal.TrackingTarget==_attentionPoint.transform;
+            bool wasHolding=_holdDirection||ownedTracking;
+            // UpdateAttention runs from Update() (Caller=null), so the camera command must
+            // be issued inside this mission's TaskAuthority scope or the gimbal would
+            // refuse it and then recenter when the tracking target disappears.
+            if(wasHolding && Gimbal!=null)using(TaskAuthority.Enter(Context!=null?Context.MissionId:null))Gimbal.FreezeCurrent();
             _holdDirection=false;_directionName=null;
             if(_attentionPoint!=null) Destroy(_attentionPoint);
             _attentionPoint=null; _attentionTarget=null;
-            if(_holdAttention && Gimbal!=null) Gimbal.AutoRecenter=_oldAutoRecenter;
+            // F4: while the task owns the camera, keep AutoRecenter suppressed. Restoring
+            // the user preference here (before Release) would let the gimbal begin a
+            // command-less recenter once the old hold deadline expires. Release() is the
+            // correct restore point.
             _holdAttention=false;
         }
         void UpdateAttention()
@@ -61,7 +74,7 @@ namespace Yixuan.AI.Tasks
             { ClearAttention(); return; }
             Vector3 point; string source;
             if(!TaskAttentionFocus.Resolve(_attentionTarget,out point,out source))
-            { ClearAttention(); Gimbal.Center(); return; }
+            { ClearAttention(); return; }
             if(_attentionPoint!=null) _attentionPoint.transform.position=point;
         }
         IEnumerator LookAt(MissionStep s, MissionStepResult r)
@@ -70,6 +83,7 @@ namespace Yixuan.AI.Tasks
             var target=Catalog.Get(s.target_id); Vector3 point; string source;
             if(!TaskAttentionFocus.Resolve(target,out point,out source)) {Fail(r,"attention_target_missing");yield break;}
             ClearAttention();
+            r.eye_yaw_before=Gimbal.CurrentYaw;r.body_yaw_before=Motor.transform.eulerAngles.y;
             r.target_path=target.Path;r.target_position=target.Position;r.focus_position=point;r.focus_source=source;r.camera_only=s.camera_only;r.body_facing=s.body_facing;
             Vector3 start=Motor.transform.position;float startYaw=Motor.transform.eulerAngles.y;
             Vector3 delta=point-(Gimbal.YawPivot!=null?Gimbal.YawPivot.position:EyeCamera.transform.position);

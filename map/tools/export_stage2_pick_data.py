@@ -8,7 +8,7 @@ and a report under Maps/SovietBlueHour/entities/.
 Run:
   blender --background "Maps/SovietBlueHour/map/SovietBlueHour_beauty.blend" \
     --python-exit-code 1 --python "Maps/SovietBlueHour/tools/export_stage2_pick_data.py" -- \
-    --workspace "D:/unity programe/Become human"
+    --workspace "<unity-project-root>"
 """
 import bpy
 import hashlib

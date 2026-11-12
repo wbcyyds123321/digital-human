@@ -92,6 +92,14 @@ namespace Yixuan.Pick
         public string raw_constraints = "";
         public string effective_constraints = "";
         public string constraint_guard_reason = "";
+        /// <summary>
+        /// True by default. A task-scoped selection under a contract that forbids
+        /// body rotation passes false so the gimbal can never secretly turn the
+        /// body to fake a successful aim.
+        /// </summary>
+        public bool allow_body_assist = true;
+        /// <summary>"model_interaction" or "deterministic_selection_guard" (evidence only).</summary>
+        public string provenance = "";
     }
 
     /// <summary>Generic natural-language parsing of visual target commands.</summary>
@@ -159,39 +167,39 @@ namespace Yixuan.Pick
     /// requires the new frame centre to hit the SAME entity before publishing the
     /// shared selection record.
     /// </summary>
+    /// <summary>Result of one production visual locate/bind/aim/confirm attempt.</summary>
+    public sealed class FpVisualConfirmOutcome
+    {
+        public bool Ok;
+        public string Error = "";
+        public string Outcome = "failed";
+        public string Stage = "";
+        public SelectionRecord Record;
+        public string EntityId = "";
+        public int BrokerToken = -1;
+        public long LocateFrameId = -1, ConfirmFrameId = -1;
+        public int LocateCalls, AimIterations;
+        public float[] PointUv, BboxUv;
+        public Vector3 SurfacePoint;
+        public string Instruction = "";
+        public bool FromSharedObservationFrame;
+    }
+
     public sealed class FirstPersonTargetingService : MonoBehaviour
     {
         static string TargetClassFor(string description)
         {
-            string d = description ?? "";
-            string lower = d.ToLowerInvariant();
-            var classes = new HashSet<string>(StringComparer.Ordinal);
-            // Collect every category mentioned, including a relation's reference
-            // object. The model still sees the complete description; a class is
-            // attached only when the description names one unambiguous category.
-            if (d.IndexOf("圆柱", StringComparison.Ordinal) >= 0 || lower.Contains("cylinder")) classes.Add("cylinder");
-            if (d.IndexOf("胶囊", StringComparison.Ordinal) >= 0 || lower.Contains("capsule")) classes.Add("capsule");
-            if (d.IndexOf("方块", StringComparison.Ordinal) >= 0 || d.IndexOf("立方体", StringComparison.Ordinal) >= 0 ||
-                d.IndexOf("正方体", StringComparison.Ordinal) >= 0 || lower.Contains("cube") || lower.Contains("block"))
-                classes.Add("cube");
-            if (d.IndexOf("球", StringComparison.Ordinal) >= 0 || lower.Contains("sphere") || lower.Contains("ball"))
-                classes.Add("sphere");
-            if (d.IndexOf("椅", StringComparison.Ordinal) >= 0 || d.IndexOf("凳", StringComparison.Ordinal) >= 0)
-                classes.Add("bench");
-            if (d.IndexOf("公交", StringComparison.Ordinal) >= 0 || d.IndexOf("大巴", StringComparison.Ordinal) >= 0 ||
-                d.IndexOf("车", StringComparison.Ordinal) >= 0) classes.Add("vehicle");
-            if (d.IndexOf("楼", StringComparison.Ordinal) >= 0 || d.IndexOf("建筑", StringComparison.Ordinal) >= 0 ||
-                d.IndexOf("房", StringComparison.Ordinal) >= 0) classes.Add("building");
-            if (d.IndexOf("树", StringComparison.Ordinal) >= 0) classes.Add("tree");
-            if (d.IndexOf("海报", StringComparison.Ordinal) >= 0) classes.Add("poster");
-            if (classes.Count != 1) return "";
-            foreach (string only in classes) return only;
-            return "";
+            // B rev1: use the target phrase after the last relation marker, so a
+            // reference object's class (e.g. a blue sphere on the LEFT of the target)
+            // is never mistaken for the target's class. Unknown/generic descriptions
+            // return empty and are handled by the runtime semantic gate instead.
+            return TaskObjectSemantics.TargetCategoryFor(description);
         }
-
 
         public static FirstPersonTargetingService Instance { get; private set; }
         public static Func<FpVisualRequest, int, FpVisualLocateResult> TestLocateHook;
+        /// <summary>Frame-aware deterministic hook (local tests only): receives the exact frozen observation frame the production pipeline will bind against.</summary>
+        public static Func<FpVisualRequest, PickFrame, int, FpVisualLocateResult> TestLocateHookWithFrame;
         public static float TestLocateDelaySeconds;
         public static bool SaveEvidence = true;
         public static string EvidenceRoot = "";
@@ -201,6 +209,11 @@ namespace Yixuan.Pick
         public static string LastReply { get; private set; } = "";
         public static string LastError { get; private set; } = "";
         public static string LastPublishedEntity { get; private set; } = "";
+        /// <summary>Outcome of the LATEST request only: success / not_found / failed / stale.</summary>
+        public static string LastAttemptOutcome { get; private set; } = "none";
+        public static string LastAttemptTarget { get; private set; } = "";
+        public static string LastAttemptReason { get; private set; } = "";
+        public static int LastAttemptGeneration { get; private set; } = -1;
         public static bool MovementStarted { get; private set; }
         public static int LocateCalls { get; private set; }
         public static Vector3 InitialCharacterPosition { get; private set; }
@@ -210,14 +223,23 @@ namespace Yixuan.Pick
         {
             public int generation;
             public int brokerToken;
+            public bool publishedSelection;
             public FpVisualRequest request;
             public ChatSession session;
             public Coroutine coroutine;
+            public int semanticGeneration;
+            public string evidenceDir;
+            /// <summary>Task-scoped invocation: there is no ChatSession owner, so the
+            /// session-active part of the stale check does not apply.</summary>
+            public bool taskScoped;
         }
 
         static RunState _run;
+        /// <summary>Concise last-aim diagnostics (why a centre confirmation failed).</summary>
+        static string _lastAimDiagnostic = "";
         static int _generation;
         static int _attempt;
+        static string _evidenceDir = "";
 
         static void AutoBootstrap()
         {
@@ -262,15 +284,18 @@ namespace Yixuan.Pick
             return request;
         }
 
-        public static bool BeginFromSemantic(ChatSession session, string input, SemanticVisualTarget semantic, int semanticGeneration)
+        public static bool BeginFromSemantic(ChatSession session, string input, SemanticVisualTarget semantic, int semanticGeneration,
+                                             string provenance = "model_interaction")
         {
             if (session == null || semantic == null || string.IsNullOrEmpty(semantic.target)) return false;
             var request = BuildSemanticRequestForReplay(input, semantic);
             if (request == null) return false;
+            request.provenance = string.IsNullOrEmpty(provenance) ? "model_interaction" : provenance;
             Debug.Log("[FirstPersonTargeting] semantic constraints raw=" + request.raw_constraints +
                       " effective=" + request.effective_constraints +
-                      " guard=" + request.constraint_guard_reason);
-            return StartRun(session, request);
+                      " guard=" + request.constraint_guard_reason +
+                      " provenance=" + request.provenance);
+            return StartRun(session, request, semanticGeneration);
         }
 
         static bool HasCsvToken(string csv, string token)
@@ -351,7 +376,7 @@ namespace Yixuan.Pick
 
         static bool Stale(RunState run)
         {
-            return run == null || run.session == null || !run.session.isActiveAndEnabled ||
+            return run == null || (!run.taskScoped && (run.session == null || !run.session.isActiveAndEnabled)) ||
                 _generation != run.generation || SelectionBroker.Generation != run.brokerToken;
         }
 
@@ -361,6 +386,10 @@ namespace Yixuan.Pick
             if (_run != null && _run.generation == run.generation) _run = null;
             LastStatus = "stale";
             LastError = "shared_generation_changed";
+            LastAttemptOutcome = "stale";
+            LastAttemptReason = "shared_generation_changed";
+            LastAttemptGeneration = run.generation;
+            SaveResultJson(run, "stale", "shared_generation_changed");
         }
 
         static void AddCsvActions(FpVisualRequest request, string csv)
@@ -404,7 +433,7 @@ namespace Yixuan.Pick
             if (request.current_view || request.any_match) request.pronoun = false;
         }
 
-        static bool StartRun(ChatSession session, FpVisualRequest request)
+        static bool StartRun(ChatSession session, FpVisualRequest request, int semanticGeneration = -1)
         {
             if (request.pronoun && request.query && !request.select && !request.approach && !request.sit && !request.stand && !request.board)
             {
@@ -422,10 +451,86 @@ namespace Yixuan.Pick
                 brokerToken = request.pronoun ? SelectionBroker.Generation : SelectionBroker.BeginIntent(),
                 request = request,
                 session = session,
+                semanticGeneration = semanticGeneration,
             };
+            // Each request gets its own directory: a fixed runtime folder let the
+            // next locate overwrite the previous frames and made stale-evidence
+            // diagnosis ambiguous (run_20261110 runtime overwritten 2026-11-11).
+            state.evidenceDir = CreateRequestEvidenceDir(state);
+            _evidenceDir = state.evidenceDir;
+            SaveRequestJson(state);
+            LastAttemptOutcome = "pending";
+            LastAttemptTarget = request.target_description ?? "";
+            LastAttemptReason = "";
+            LastAttemptGeneration = state.generation;
             _run = state;
             state.coroutine = Instance.StartCoroutine(Run(state));
             return true;
+        }
+
+        static string CreateRequestEvidenceDir(RunState state)
+        {
+            try
+            {
+                string root = !string.IsNullOrEmpty(EvidenceRoot)
+                    ? EvidenceRoot
+                    : Path.Combine(Application.dataPath, "..", "Captures", "FirstPersonSelection", "runtime");
+                string name = "gen_" + state.generation.ToString("000") +
+                              "_" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") +
+                              "_" + Guid.NewGuid().ToString("N").Substring(0, 6);
+                return Path.Combine(root, name);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[FirstPersonTargeting] evidence dir failed: " + exception.Message);
+                return "";
+            }
+        }
+
+        static void SaveRequestJson(RunState state)
+        {
+            if (!SaveEvidence || state == null || string.IsNullOrEmpty(state.evidenceDir)) return;
+            try
+            {
+                Directory.CreateDirectory(state.evidenceDir);
+                var req = state.request;
+                File.WriteAllText(Path.Combine(state.evidenceDir, "00_request.json"), SelectionJson.Serialize(new
+                {
+                    schema = "firstperson-selection.request.v1",
+                    service_generation = state.generation,
+                    semantic_generation = state.semanticGeneration,
+                    broker_token = state.brokerToken,
+                    provenance = req.provenance,
+                    original_text = req.original_text,
+                    target_description = req.target_description,
+                    actions = new
+                    {
+                        select = req.select, query = req.query, approach = req.approach,
+                        sit = req.sit, stand = req.stand, board = req.board,
+                    },
+                    constraints = new
+                    {
+                        pronoun = req.pronoun, current_view = req.current_view, any_match = req.any_match,
+                        no_move = req.forbid_move, no_board = req.forbid_board, no_sit = req.forbid_sit,
+                        leftmost = req.leftmost, near_crosshair = req.near_crosshair,
+                    },
+                    raw_constraints = req.raw_constraints,
+                    effective_constraints = req.effective_constraints,
+                    constraint_guard_reason = req.constraint_guard_reason,
+                    coordinate_contract = new
+                    {
+                        model_uv_origin = "top-left of the 640x480 RGB image",
+                        id_depth_row_order = "top-origin rows (row 0 = top), no 1-v",
+                        depth = "linear view-axis eye depth encoded by PickId.shader, near..far",
+                        ray = "frozen snapshot view+GPU projection inverse; world point = eye + dir * (eyeDepth / dot(dir,forward))",
+                        vector3 = "explicit x/y/z",
+                    },
+                }));
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[FirstPersonTargeting] request evidence failed: " + exception.Message);
+            }
         }
 
         /// <summary>Production chat entry hook (offline fallback when semantic routing is disabled).</summary>
@@ -442,12 +547,17 @@ namespace Yixuan.Pick
         {
             if (_run == null) return;
             bool ownsSharedToken = SelectionBroker.Generation == _run.brokerToken;
+            var cancelled = _run;
             _generation++;
             if (Instance != null && _run.coroutine != null) Instance.StopCoroutine(_run.coroutine);
             LastStatus = "cancelled";
             LastError = reason;
             LastReply = "已取消上一轮视觉目标任务。";
+            LastAttemptOutcome = "cancelled";
+            LastAttemptReason = reason ?? "cancelled";
+            LastAttemptGeneration = cancelled.generation;
             _run = null;
+            SaveResultJson(cancelled, "cancelled", LastReply);
             // Only clean the shared selection state this run owns; never cancel a
             // newer manual/map/AI selection made while this run was pending.
             if (ownsSharedToken)
@@ -461,7 +571,24 @@ namespace Yixuan.Pick
         {
             return "status=" + LastStatus + " gen=" + _generation + " running=" + IsRunning +
                    " published=" + LastPublishedEntity + " locate_calls=" + LocateCalls +
-                   " error=" + LastError + " reply=" + LastReply;
+                   " error=" + LastError + " reply=" + LastReply +
+                   " last_attempt=" + LastAttemptOutcome + "/" + LastAttemptGeneration +
+                   " last_attempt_target=" + LastAttemptTarget;
+        }
+
+        /// <summary>
+        /// Data for the LLM/status lane: the LATEST request outcome separately from
+        /// any kept last-confirmed selection (so a not_found can never be reported
+        /// as the old target's success).
+        /// </summary>
+        public static string DescribeLastAttemptFacts()
+        {
+            string facts = "last_visual_attempt_outcome=" + LastAttemptOutcome +
+                           "; last_visual_attempt_generation=" + LastAttemptGeneration +
+                           "; last_visual_attempt_target=" + (LastAttemptTarget ?? "");
+            if (!string.IsNullOrEmpty(LastAttemptReason) && LastAttemptOutcome != "success")
+                facts += "; last_visual_attempt_reason=" + LastAttemptReason;
+            return facts;
         }
 
         public static string DescribeProgress()
@@ -482,65 +609,47 @@ namespace Yixuan.Pick
         void OnDisable() { if (Instance == this) CancelRun("targeting_service_disabled"); }
         void OnDestroy() { if (Instance == this) { CancelRun("targeting_service_destroyed"); Instance = null; } }
 
-        static IEnumerator Run(RunState run)
+        // ---- shared locate -> bind -> real aim -> NEW-FRAME centre confirmation ----
+        // Extracted from the chat lane so the task-scoped select tool reuses exactly
+        // the same production safety checks (model point/bbox -> same-frame ID/depth
+        // binding, constraints, surface validation, real gimbal aim, new-frame centre
+        // confirmation, publish under the caller's broker token). Failure still calls
+        // Finish() for diagnostics/evidence and reports a failed outcome; an old
+        // confirmed selection is never returned as this request's success.
+        static IEnumerator RunLocateConfirm(RunState run, FpVisualRequest request, PickFrame observationFrame, Func<bool> cancelled, Action<FpVisualConfirmOutcome> done)
         {
+            var result = new FpVisualConfirmOutcome();
             var session = run.session;
-            var req = run.request;
+            var req = request;
             MovementStarted = false;
             LastStatus = "starting";
             LastError = "";
             LastReply = "";
             LastPublishedEntity = "";
             LocateCalls = 0;
-            var character = session.Character != null ? session.Character.transform : PickService.FindCharacterTransform();
-            var locomotion = session.Locomotion != null ? session.Locomotion : FindObjectOfType<Yixuan.Motion.CharacterLocomotion>();
-            var gaze = session.Gaze != null ? session.Gaze : FindObjectOfType<Yixuan.Vision.EyeGimbalController>();
-            InitialCharacterPosition = character != null ? character.position : Vector3.zero;
-
+            AimIterations = 0;
+            var character = session != null && session.Character != null
+                ? session.Character.transform
+                : PickService.FindCharacterTransform();
+            var locomotion = session != null && session.Locomotion != null
+                ? session.Locomotion
+                : FindObjectOfType<Yixuan.Motion.CharacterLocomotion>();
+            var gaze = session != null && session.Gaze != null
+                ? session.Gaze
+                : FindObjectOfType<Yixuan.Vision.EyeGimbalController>();
+            if (character != null) InitialCharacterPosition = character.position;
             if (PickService.EnsureRegistry() == false)
             {
-                yield return Finish(run, false, "registry unavailable: " + EntityPickRegistry.Error);
+                yield return FailFinish(run, result, done, "registry unavailable: " + EntityPickRegistry.Error);
                 yield break;
             }
-
-            // Pronoun: use the shared confirmed record, never invent coordinates.
-            if (req.pronoun)
-            {
-                var current = SelectionBroker.Current;
-                if (current == null || !current.confirmed)
-                {
-                    yield return Finish(run, false, "还没有共同确认的对象；请先让我选中一个目标。");
-                    yield break;
-                }
-                if (!req.approach && !req.sit && !req.board && !req.stand && !req.select)
-                {
-                    yield return ReplyWithFacts(run, current);
-                    yield break;
-                }
-                if (req.forbid_move) { req.approach = false; req.sit = false; req.board = false; req.stand = false; }
-                if (req.forbid_sit) req.sit = false;
-                if (req.forbid_board) req.board = false;
-                if (req.approach || req.sit || req.stand || req.board)
-                {
-                    yield return HandoffToRunner(run, current);
-                    yield break;
-                }
-                yield return ReplyWithFacts(run, current);
-                yield break;
-            }
-
-            if (!LooksLikeVisualCommand(req))
-            {
-                yield return ReplyWithFacts(run, SelectionBroker.Current);
-                yield break;
-            }
-
-            // 1. Capture the CURRENT view first. No center, no old target.
+            // 1. Use the caller's shared task observation frame (same starting
+            // RGB-ID-depth and eye parameters) or capture the CURRENT view. No center.
             LastStatus = "capturing";
-            var locateFrame = PickService.CaptureEyeFrame();
+            var locateFrame = observationFrame != null ? observationFrame : PickService.CaptureEyeFrame();
             if (locateFrame == null || !locateFrame.Ok)
             {
-                yield return Finish(run, false, "第一人称截图失败：" + (locateFrame != null ? locateFrame.error : "null"));
+                yield return FailFinish(run, result, done, "第一人称截图失败：" + (locateFrame != null ? locateFrame.error : "null"));
                 yield break;
             }
             SaveFrameEvidence(locateFrame, "00_locate_frame");
@@ -548,7 +657,7 @@ namespace Yixuan.Pick
             byte[] jpeg = ToJpeg(locateFrame, out jpegError);
             if (jpeg == null)
             {
-                yield return Finish(run, false, "截图转 JPEG 失败：" + jpegError);
+                yield return FailFinish(run, result, done, "截图转 JPEG 失败：" + jpegError);
                 yield break;
             }
             SaveVisionInput(locateFrame, jpeg);
@@ -563,9 +672,9 @@ namespace Yixuan.Pick
                 // Deterministic pending-response fixture (injected test mode only):
                 // a new input during this wait bumps the generation and cancels the run.
                 yield return new WaitForSeconds(TestLocateDelaySeconds);
-                if (Stale(run)) { AbortStale(run); yield break; }
+                if (cancelled()) { yield break; }
             }
-            if (TestLocateHook != null)
+            if (TestLocateHookWithFrame != null) { locate = TestLocateHookWithFrame(req, locateFrame, _attempt); if (locate == null) locate = new FpVisualLocateResult { Error = "injected frame hook returned null" }; } else if (TestLocateHook != null)
             {
                 locate = TestLocateHook(req, _attempt);
                 if (locate == null) locate = new FpVisualLocateResult { Error = "injected hook returned null" };
@@ -575,46 +684,46 @@ namespace Yixuan.Pick
                 var vision = UnityEngine.Object.FindObjectOfType<Yixuan.Vision.QwenVisionClient>();
                 if (vision == null)
                 {
-                    yield return Finish(run, false, "没有可用的视觉服务配置。");
+                    yield return FailFinish(run, result, done, "没有可用的视觉服务配置。");
                     yield break;
                 }
                 // The model localizes on the original image. Entity IDs, engine
                 // boxes and coordinates are used only AFTER the visual response.
                 yield return FpVisualClient.Locate(vision, instruction, jpeg, null,
-                    () => Stale(run), r => locate = r);
+                    () => cancelled(), r => locate = r);
             }
-            if (Stale(run)) { AbortStale(run); yield break; }
+            if (cancelled()) { yield break; }
             if (locate == null || !locate.Ok)
             {
                 SaveLocateResult(locate, instruction, "locate_failed", req);
-                yield return Finish(run, false, "视觉定位请求失败：" + (locate != null ? locate.Error : "null"));
+                yield return FailFinish(run, result, done, "视觉定位请求失败：" + (locate != null ? locate.Error : "null"));
                 yield break;
             }
             SaveLocateResult(locate, instruction, "locate", req);
             var reply = locate.Reply;
             if (reply == null || string.IsNullOrEmpty(reply.status))
             {
-                yield return Finish(run, false, "视觉返回没有有效状态。");
+                yield return FailFinish(run, result, done, "视觉返回没有有效状态。");
                 yield break;
             }
             if (reply.status == "not_found")
             {
-                yield return Finish(run, false, "当前画面没有找到你说的目标，我不会换旧目标或移动。");
+                yield return FailFinish(run, result, done, "当前画面没有找到你说的目标，我不会换旧目标或移动。", "not_found");
                 yield break;
             }
             if (reply.status == "ambiguous")
             {
-                yield return Finish(run, false, "画面里有多个相近目标，请再说明是哪一个（例如最左/准星旁）。");
+                yield return FailFinish(run, result, done, "画面里有多个相近目标，请再说明是哪一个（例如最左/准星旁）。", "ambiguous");
                 yield break;
             }
             if (reply.status != "located")
             {
-                yield return Finish(run, false, "视觉返回了未知状态：" + reply.status);
+                yield return FailFinish(run, result, done, "视觉返回了未知状态：" + reply.status);
                 yield break;
             }
             if (!ValidateReply(reply))
             {
-                yield return Finish(run, false, "视觉坐标结构/边界无效：" + (reply.error ?? ""));
+                yield return FailFinish(run, result, done, "视觉坐标结构/边界无效：" + (reply.error ?? ""));
                 yield break;
             }
 
@@ -668,7 +777,7 @@ namespace Yixuan.Pick
                         else if (matches > 1)
                         {
                             SaveBindJson(reply, "bbox_same_class_ambiguous", "class=" + expectedClass + ";matches=" + matches);
-                            yield return Finish(run, false, "模型框内有多个同类的可见目标，请说明是哪一个。");
+                            yield return FailFinish(run, result, done, "模型框内有多个同类的可见目标，请说明是哪一个。");
                             yield break;
                         }
                     }
@@ -677,21 +786,21 @@ namespace Yixuan.Pick
                         var ids = new List<string>();
                         if (boxResult != null) foreach (var c in boxResult.candidates) ids.Add(c.entity_id);
                         SaveBindJson(reply, "box_no_class_match", "class=" + (expectedClass ?? "") + ";box_ids=" + string.Join(",", ids.ToArray()));
-                        yield return Finish(run, false, "模型点没有落在可确认实体上，框内也没有唯一的同类目标：" + string.Join(",", ids.ToArray()));
+                        yield return FailFinish(run, result, done, "模型点没有落在可确认实体上，框内也没有唯一的同类目标：" + string.Join(",", ids.ToArray()));
                         yield break;
                     }
                 }
                 else
                 {
                     SaveBindJson(reply, "no_single_entity", bindNote);
-                    yield return Finish(run, false, "模型点/框没有绑定到单一的已验证实体：" + bindNote);
+                    yield return FailFinish(run, result, done, "模型点/框没有绑定到单一的已验证实体：" + bindNote);
                     yield break;
                 }
             }
             var entry = EntityPickRegistry.GetByCode(code);
             if (entry == null || !entry.Selectable)
             {
-                yield return Finish(run, false, "命中的 code 没有可选实体：" + code);
+                yield return FailFinish(run, result, done, "命中的 code 没有可选实体：" + code);
                 yield break;
             }
             // A non-zero hit on a wrong class (e.g. a building behind the target)
@@ -728,9 +837,31 @@ namespace Yixuan.Pick
                 if (!recovered)
                 {
                     SaveBindJson(reply, "wrong_class_rejected", "point_id=" + entry.Id + ";expected_class=" + guardExpectedClass);
-                    yield return Finish(run, false, "模型点落在与描述不一致的其它物体上（" + entry.Id + "），已拒绝，未把背景当目标。");
+                    yield return FailFinish(run, result, done, "模型点落在与描述不一致的其它物体上（" + entry.Id + "），已拒绝，未把背景当目标。");
                     yield break;
                 }
+            }
+            // B rev1: pixel/ID consistency proves the same entity was hit, NOT that the
+            // entity is the object the user described. Before aiming/publishing, require
+            // an explainable semantic match against existing entity metadata. Unknown or
+            // unsupported specific targets are conservatively rejected here; a generic
+            // any-object target remains allowed. This is a rejection boundary, not a
+            // claim of general visual accuracy.
+            var semanticEntryDef = Yixuan.SelectionLab.SelectionLabContext.Find(entry.Id);
+            string entityClassMetadata = semanticEntryDef != null && !string.IsNullOrEmpty(semanticEntryDef.cls)
+                ? semanticEntryDef.cls : entry.Cls;
+            string entityColorMetadata = semanticEntryDef != null ? semanticEntryDef.color : "";
+            if (string.IsNullOrEmpty(entityColorMetadata)) entityColorMetadata = TaskObjectSemantics.ColorNameFromText(entry.DisplayName);
+            string semanticDetail = "";
+            string semanticReject = TaskObjectSemantics.CheckBoundVisualTarget(req.target_description, entry.Id,
+                entityClassMetadata, entityColorMetadata, entry.DisplayName, out semanticDetail);
+            SaveSemanticGateJson(req, entry, entityClassMetadata, entityColorMetadata, semanticReject, semanticDetail);
+            if (!string.IsNullOrEmpty(semanticReject))
+            {
+                SaveBindJson(reply, "semantic_unverified", semanticDetail);
+                yield return FailFinish(run, result, done,
+                    "语义一致性校验未通过，未发布选择：" + semanticReject, "semantic_unverified");
+                yield break;
             }
             SaveBindJson(reply, "bound", entry.Id + ";uv=" + reply.point_uv[0].ToString("F4") + "," + reply.point_uv[1].ToString("F4"));
 
@@ -754,7 +885,7 @@ namespace Yixuan.Pick
                 if (!inside)
                 {
                     SaveBindJson(reply, "point_bbox_contradiction", "point_in_bbox=" + inside + ";box_ids=" + string.Join(",", boxIds.ToArray()) + ";point_id=" + entry.Id);
-                    yield return Finish(run, false, "模型给出的点不在自己的框内，点和框互相矛盾，已拒绝确认。");
+                    yield return FailFinish(run, result, done, "模型给出的点不在自己的框内，点和框互相矛盾，已拒绝确认。");
                     yield break;
                 }
                 bool sameClassConflict = false;
@@ -773,7 +904,7 @@ namespace Yixuan.Pick
                 if (sameClassConflict && !req.any_match)
                 {
                     SaveBindJson(reply, "same_class_ambiguous", "ids=" + string.Join(",", boxIds.ToArray()) + ";conflict=" + conflictId + ";point_id=" + entry.Id);
-                    yield return Finish(run, false, "模型框内有两个同类的可见目标（" + entry.Id + " 与 " + conflictId + "），请说明是哪一个。");
+                    yield return FailFinish(run, result, done, "模型框内有两个同类的可见目标（" + entry.Id + " 与 " + conflictId + "），请说明是哪一个。");
                     yield break;
                 }
                 SaveBindJson(reply, "bbox_ok_background_tolerated", "box_ids=" + string.Join(",", boxIds.ToArray()) + ";point_id=" + entry.Id);
@@ -783,7 +914,18 @@ namespace Yixuan.Pick
             string constraintError;
             if (!CheckPositionConstraint(locateFrame, entry, req, modelBox, out constraintError))
             {
-                yield return Finish(run, false, constraintError);
+                yield return FailFinish(run, result, done, constraintError);
+                yield break;
+            }
+            var boundHit = hit as PickHit;
+            string boundSurfaceError;
+            if (!PickService.ValidateSurfacePoint(
+                PickService.BuildRecord(boundHit, "visual_binding", run.brokerToken), boundHit, out boundSurfaceError))
+            {
+                SaveResolvedHitJson("02_bound_hit", "rejected_surface_before_aim", reply, locateFrame,
+                    boundHit, false, surfacePoint);
+                LastError = "surface_point_invalid_before_aim: " + boundSurfaceError;
+                yield return FailFinish(run, result, done, "目标表面坐标未通过几何校验，已停止对准：" + boundSurfaceError);
                 yield break;
             }
             SaveResolvedHitJson("02_bound_hit", "accepted_binding_before_aim", reply, locateFrame,
@@ -795,15 +937,20 @@ namespace Yixuan.Pick
             bool aimOk = false;
             string aimError = "";
             AimIterations = 0;
+            // Diagnostics for the next failure: whether this coroutine actually owns
+            // the camera resource and what the gimbal accepted (an authority-denied
+            // TurnRelative silently no-ops, so a centre mismatch alone hides the cause).
+            string aimAuthority = "before:" + TaskAuthority.DescribeOwners() + ";camera_allowed=" + TaskAuthority.Allows(2);
             for (int attempt = 0; attempt < 3 && !aimOk; attempt++)
             {
                 AimIterations++;
-                yield return AimAt(run, gaze, character, surfacePoint);
-                if (Stale(run)) { AbortStale(run); yield break; }
+                yield return AimAt(run, gaze, character, surfacePoint, request.allow_body_assist);
+                if (cancelled()) { yield break; }
+                if (gaze != null) aimError = "last_cmd=" + (gaze.LastCommand ?? "") + ";eye=" + gaze.CurrentYaw.ToString("F1");
                 var confirmFrame = PickService.CaptureEyeFrame();
                 if (confirmFrame == null || !confirmFrame.Ok)
                 {
-                    aimError = "new frame capture failed";
+                    aimError = "new frame capture failed; aim=" + (_lastAimDiagnostic ?? "");
                     continue;
                 }
                 SaveFrameEvidence(confirmFrame, "0" + (attempt + 1) + "_confirm_frame");
@@ -811,7 +958,7 @@ namespace Yixuan.Pick
                 var centreEntry = EntityPickRegistry.GetByCode(centreCode);
                 string centreId = centreEntry != null ? centreEntry.Id : "";
                 SaveConfirmJson(attempt, centreCode, centreId, entry.Id, confirmFrame);
-                if (centreId != entry.Id) { aimError = "centre=" + centreId + " expected=" + entry.Id; continue; }
+                if (centreId != entry.Id) { aimError = "centre=" + centreId + " expected=" + entry.Id + ";" + aimAuthority + ";aim=" + (_lastAimDiagnostic ?? "") + ";after:" + TaskAuthority.DescribeOwners(); continue; }
                 // production publish path (re-captures and publishes the centre hit under the shared token)
                 if (SelectionBroker.Generation != run.brokerToken)
                 {
@@ -830,15 +977,111 @@ namespace Yixuan.Pick
                     aimError = "publish did not match centre entity";
                     continue;
                 }
+                run.publishedSelection = true;
                 LastPublishedEntity = publishedRecord.entity_id;
                 aimOk = true;
             }
             if (!aimOk)
             {
-                yield return Finish(run, false, "新帧中心没有确认为同一实体：" + aimError);
+                yield return FailFinish(run, result, done, "新帧中心没有确认为同一实体：" + aimError);
                 yield break;
             }
 
+            result.Ok = true; result.Outcome = "success"; result.Stage = "confirmed";
+            result.EntityId = entry.Id; result.Record = SelectionBroker.Current;
+            result.BrokerToken = run.brokerToken;
+            result.LocateFrameId = locateFrame.FrameId;
+            result.ConfirmFrameId = result.Record != null ? result.Record.frame_id : -1;
+            result.SurfacePoint = surfacePoint; result.PointUv = reply.point_uv; result.BboxUv = reply.bbox_uv;
+            result.Instruction = instruction; result.LocateCalls = LocateCalls; result.AimIterations = AimIterations;
+            result.FromSharedObservationFrame = observationFrame != null;
+            done(result);
+            yield break;
+        }
+
+        static IEnumerator FailFinish(RunState run, FpVisualConfirmOutcome result, Action<FpVisualConfirmOutcome> done, string text, string outcomeCode = null)
+        {
+            yield return Finish(run, false, text, string.IsNullOrEmpty(outcomeCode) ? "failed" : outcomeCode);
+            result.Ok = false; result.Error = text; result.Outcome = LastAttemptOutcome; result.Stage = LastStatus;
+            done(result);
+        }
+
+        /// <summary>
+        /// Task-scoped entry: same production pipeline with a caller-supplied evidence
+        /// directory, observation frame and cancellation predicate. It never submits a
+        /// new TaskMissionRunner run and never publishes a stale record.
+        /// </summary>
+        public static IEnumerator RunLocateConfirmForTask(FpVisualRequest request, int brokerToken, string evidenceDirectory, PickFrame observationFrame, Func<bool> cancelled, Action<FpVisualConfirmOutcome> done)
+        {
+            string previousEvidence = _evidenceDir;
+            _evidenceDir = evidenceDirectory;
+            var run = new RunState { generation = _generation, brokerToken = brokerToken, request = request, session = null, evidenceDir = evidenceDirectory, publishedSelection = false, taskScoped = true };
+            FpVisualConfirmOutcome result = null;
+            yield return RunLocateConfirm(run, request, observationFrame, cancelled, r => result = r);
+            _evidenceDir = previousEvidence;
+            if (result == null) result = new FpVisualConfirmOutcome { Ok = false, Error = cancelled() ? "cancelled" : "no_confirm_outcome", Outcome = cancelled() ? "cancelled" : "failed" };
+            done(result);
+        }
+
+        static IEnumerator Run(RunState run)
+        {
+            var session = run.session;
+            var req = run.request;
+            MovementStarted = false;
+            LastStatus = "starting";
+            LastError = "";
+            LastReply = "";
+            LastPublishedEntity = "";
+            LocateCalls = 0;
+            AimIterations = 0;
+            var character = session.Character != null ? session.Character.transform : PickService.FindCharacterTransform();
+            var locomotion = session.Locomotion != null ? session.Locomotion : FindObjectOfType<Yixuan.Motion.CharacterLocomotion>();
+            var gaze = session.Gaze != null ? session.Gaze : FindObjectOfType<Yixuan.Vision.EyeGimbalController>();
+            InitialCharacterPosition = character != null ? character.position : Vector3.zero;
+
+            if (PickService.EnsureRegistry() == false)
+            {
+                yield return Finish(run, false, "registry unavailable: " + EntityPickRegistry.Error);
+                yield break;
+            }
+
+            // Pronoun: use the shared confirmed record, never invent coordinates.
+            if (req.pronoun)
+            {
+                var current = SelectionBroker.Current;
+                if (current == null || !current.confirmed)
+                {
+                    yield return Finish(run, false, "还没有共同确认的对象；请先让我选中一个目标。");
+                    yield break;
+                }
+                if (!req.approach && !req.sit && !req.board && !req.stand && !req.select)
+                {
+                    yield return ReplyWithFacts(run, current);
+                    yield break;
+                }
+                if (req.forbid_move) { req.approach = false; req.sit = false; req.board = false; req.stand = false; }
+                if (req.forbid_sit) req.sit = false;
+                if (req.forbid_board) req.board = false;
+                if (req.approach || req.sit || req.stand || req.board)
+                {
+                    yield return HandoffToRunner(run, current);
+                    yield break;
+                }
+                yield return ReplyWithFacts(run, current);
+                yield break;
+            }
+
+            if (!LooksLikeVisualCommand(req))
+            {
+                yield return ReplyWithFacts(run, SelectionBroker.Current);
+                yield break;
+            }
+
+            FpVisualConfirmOutcome outcome = null;
+            yield return RunLocateConfirm(run, req, null, () => Stale(run), o => outcome = o);
+            if (Stale(run)) { AbortStale(run); yield break; }
+            if (outcome == null || !outcome.Ok) yield break;
+            LastStatus = "selected";
             // 5. Reply / follow-up actions.
             var confirmed = SelectionBroker.Current;
             if (confirmed == null)
@@ -959,9 +1202,9 @@ namespace Yixuan.Pick
             return result;
         }
 
-        static IEnumerator AimAt(RunState run, Yixuan.Vision.EyeGimbalController gaze, Transform character, Vector3 worldTarget)
+        static IEnumerator AimAt(RunState run, Yixuan.Vision.EyeGimbalController gaze, Transform character, Vector3 worldTarget, bool allowBodyAssist = true)
         {
-            if (gaze == null || character == null) yield break;
+            if (gaze == null || character == null) { _lastAimDiagnostic = "aim_missing: gaze=" + (gaze != null) + ";character=" + (character != null); yield break; }
             var eye = PickService.ResolveEye();
             for (int iteration = 0; iteration < 3; iteration++)
             {
@@ -971,7 +1214,10 @@ namespace Yixuan.Pick
                 float yaw = Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg - gaze.BaseYaw - gaze.HomeYaw;
                 float horizontal = Mathf.Sqrt(local.x * local.x + local.z * local.z);
                 float pitch = Mathf.Atan2(local.y, Mathf.Max(0.0001f, horizontal)) * Mathf.Rad2Deg;
-                gaze.TurnRelative(yaw, pitch, 2.5f, true);
+                bool aimAllowed = TaskAuthority.Allows(2);
+                _lastAimDiagnostic = "aim_calc yaw=" + yaw.ToString("F1") + " pitch=" + pitch.ToString("F1") + " allowed=" + aimAllowed + " caller=" + (TaskAuthority.Caller ?? "null") + " gaze=" + (gaze != null);
+                gaze.TurnRelative(yaw, pitch, 2.5f, allowBodyAssist);
+                _lastAimDiagnostic += " after_cmd=" + (gaze.LastCommand ?? "") + " target=" + gaze.TargetYaw.ToString("F1") + " state=" + gaze.State + " cur=" + gaze.CurrentYaw.ToString("F1");
                 float deadline = Time.realtimeSinceStartup + 8f;
                 while (Time.realtimeSinceStartup < deadline && gaze.IsObservationSettling)
                 {
@@ -1158,14 +1404,60 @@ namespace Yixuan.Pick
 
         static IEnumerator Finish(RunState run, bool success, string text)
         {
+            yield return Finish(run, success, text, success ? "success" : "failed");
+        }
+
+        static IEnumerator Finish(RunState run, bool success, string text, string outcome)
+        {
             if (Stale(run)) { AbortStale(run); yield break; }
             LastStatus = success ? "completed" : "failed";
             LastReply = text ?? "";
             LastError = success ? "" : (text ?? "");
+            LastAttemptOutcome = string.IsNullOrEmpty(outcome) ? (success ? "success" : "failed") : outcome;
+            LastAttemptReason = success ? "" : (text ?? "");
+            LastAttemptGeneration = run.generation;
+            SaveResultJson(run, LastAttemptOutcome, text);
             if (_run != null && _run.generation == run.generation) _run = null;
             var session = run.session;
             if (session != null) session.PublishFirstPersonReply(LastReply);
             yield return null;
+        }
+
+        static void SaveResultJson(RunState run, string outcome, string text)
+        {
+            if (!SaveEvidence || run == null || string.IsNullOrEmpty(run.evidenceDir)) return;
+            try
+            {
+                var current = SelectionBroker.Current;
+                bool currentFromThisAttempt = run.publishedSelection && current != null && current.confirmed &&
+                    run.brokerToken == current.generation && SelectionBroker.Generation == run.brokerToken;
+                Directory.CreateDirectory(run.evidenceDir);
+                File.WriteAllText(Path.Combine(run.evidenceDir, "06_result.json"), SelectionJson.Serialize(new
+                {
+                    schema = "firstperson-selection.result.v1",
+                    service_generation = run.generation,
+                    semantic_generation = run.semanticGeneration,
+                    broker_token = run.brokerToken,
+                    provenance = run.request != null ? run.request.provenance : "",
+                    target = run.request != null ? run.request.target_description : "",
+                    outcome,
+                    success = outcome == "success",
+                    reply = text ?? "",
+                    service_last_error = LastError,
+                    locate_calls = LocateCalls,
+                    aim_iterations = AimIterations,
+                    current_confirmed_from_this_attempt = currentFromThisAttempt,
+                    current_confirmed = SelectionBroker.Current,
+                    current_confirmed_label = "current_confirmed is the LAST CONFIRMED selection (kept for pronoun 'it'); it is NOT this request's outcome unless current_confirmed_from_this_attempt=true",
+                    note = currentFromThisAttempt
+                        ? "the shared confirmed selection was published by this request"
+                        : "this request did not publish; any shared selection predates it and must not be reported as this request's success",
+                }));
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[FirstPersonTargeting] result evidence failed: " + exception.Message);
+            }
         }
 
         static string BuildInstruction(FpVisualRequest req)
@@ -1183,6 +1475,21 @@ namespace Yixuan.Pick
                 sb.Append(" 若用户所指目标无法在多个匹配对象之间区分，返回ambiguous，不随意替换目标。");
             if (req.leftmost) sb.Append(" 用户明确要求画面最左边的那一个；请在画面中按水平位置选择最左目标。");
             if (req.near_crosshair) sb.Append(" 用户要求准星附近/正前方的目标；不要在画面其他位置找。");
+            if (!string.IsNullOrEmpty(req.raw_constraints))
+            {
+                var human = new System.Text.StringBuilder();
+                foreach (string rawToken in req.raw_constraints.Split(','))
+                {
+                    string token = (rawToken ?? "").Trim();
+                    if (token.Length == 0) continue;
+                    string lower = token.ToLowerInvariant();
+                    if (lower == "any_match" || lower == "leftmost" || lower == "near_crosshair" || lower == "current_view" ||
+                        lower == "pronoun" || lower == "no_move" || lower == "no_board" || lower == "no_sit") continue;
+                    if (human.Length > 0) human.Append("，");
+                    human.Append(token);
+                }
+                if (human.Length > 0) sb.Append(" 用户附加目标约束：").Append(human.ToString()).Append("；必须保留，不能自行忽略或替换。");
+            }
             sb.Append(" 不返回物体编号、实体ID、世界坐标或动作。严格只输出JSON：")
                 .Append("{\"status\":\"located|not_found|ambiguous\",\"point_uv\":[0.5,0.5],\"bbox_uv\":[0.3,0.3,0.7,0.7],\"description\":\"目标可见外观\"}。")
                 .Append("示例数字仅说明格式，必须按实际图像定位；not_found/ambiguous时point_uv和bbox_uv返回null。");
@@ -1284,6 +1591,30 @@ namespace Yixuan.Pick
                 }, Formatting.Indented));
             }
             catch (Exception e) { Debug.LogWarning("[FirstPersonTargeting] locate evidence failed: " + e.Message); }
+        }
+
+        static void SaveSemanticGateJson(FpVisualRequest request, EntityPickEntry entry, string entityClass,
+            string entityColor, string rejection, string detail)
+        {
+            if (!SaveEvidence) return;
+            try
+            {
+                Directory.CreateDirectory(EvidenceDir());
+                File.WriteAllText(Path.Combine(EvidenceDir(), "02_semantic_gate.json"), JsonConvert.SerializeObject(new
+                {
+                    schema = "firstperson-semantic-gate.v1",
+                    requested_description = request != null ? request.target_description : "",
+                    entity_id = entry != null ? entry.Id : "",
+                    entity_class = entityClass ?? "",
+                    entity_color = entityColor ?? "",
+                    entity_display_name = entry != null ? entry.DisplayName : "",
+                    supported = string.IsNullOrEmpty(rejection),
+                    rejection = rejection ?? "",
+                    detail = detail ?? "",
+                    note = "Conservative semantic consistency boundary using existing entity metadata; pixel/ID self-consistency is not proof of object identity.",
+                }, Formatting.Indented));
+            }
+            catch (Exception e) { Debug.LogWarning("[FirstPersonTargeting] semantic gate evidence failed: " + e.Message); }
         }
 
         static void SaveBindJson(FpVisualRawReply reply, string status, string detail)
@@ -1410,8 +1741,15 @@ namespace Yixuan.Pick
                     publish_error = PickService.LastError,
                     publish_rejected = PickService.LastPublishRejected,
                     publish_hit = ResolvedHitEvidence(publishFrame, publishHit),
+                    publish_live_bounds = PickService.LastLiveBounds,
+                    publish_surface_validation = PickService.LastSurfaceValidationNote,
+                    // Labelled so a stale/old record can never be read as this call's
+                    // result: current_is_from_this_attempt is the authoritative flag.
+                    current_is_from_this_attempt = recordMatches,
                     selection_record = record,
+                    selection_record_label = "selection_record is SelectionBroker.Current at this call; it is this attempt's result only when current_is_from_this_attempt=true",
                     snapshot_policy = "publish_hit uses only the actual ConfirmAtCenter returned hit snapshot; selection_record is SelectionBroker.Current at that call",
+                    surface_point_policy = "surface_point must be inside the entity's live renderer bounds + 0.05m epsilon; impossible points are rejected with an error, never clamped or pivot-edited",
                 }));
             }
             catch (Exception e) { Debug.LogWarning("[FirstPersonTargeting] publish evidence failed: " + e.Message); }
@@ -1419,8 +1757,11 @@ namespace Yixuan.Pick
 
         static string EvidenceDir()
         {
+            if (!string.IsNullOrEmpty(_evidenceDir)) return _evidenceDir;
             if (!string.IsNullOrEmpty(EvidenceRoot)) return EvidenceRoot;
-            string root = Path.Combine(Application.dataPath, "..", "Captures", "FirstPersonSelection", "run_20261110", "B", "evidence", "runtime");
+            // Fixed fallback only for diagnostics outside a run; per-request
+            // directories are created by CreateRequestEvidenceDir at StartRun.
+            string root = Path.Combine(Application.dataPath, "..", "Captures", "FirstPersonSelection", "runtime");
             return root;
         }
     }

@@ -7,17 +7,41 @@ namespace Yixuan.AI.Tasks {
  [Serializable] public sealed class TaskContract {
   public string version="task-contract/1",error;public bool forbid_move,forbid_body_turn,forbid_speech,forbid_interact;
   public TaskObligation[] obligations=new TaskObligation[0];public TaskCondition[] conditions=new TaskCondition[0];
+  // Symbolic target slots: a visual target is DECLARED here by description and
+  // bound only by a real select_visible confirmation. The contract never writes
+  // an entity id for a visual target.
+  public TaskTargetSlot[] target_slots=new TaskTargetSlot[0];
  }
  [Serializable] public sealed class TaskCondition {public string id,source,question;public float max_age=30;}
+ [Serializable] public sealed class TaskTargetSlot {
+  public string id,source,description,observe,constraints;public int order;
+ }
  [Serializable] public sealed class TaskObligation {
   public string repeat_group;
   public string during_target; public float at_progress,every_meters;
   public string id,source,kind,target_id,action_id,direction,text,emotion,reference,condition_id,branch;public float min_duration,pitch,yaw,distance;public bool angles_exact;public string[] after,overlap;
   public int count=1;public bool final;public float max_age;public bool camera_only,body_facing;
   public bool lit,lit_specified;
+  // select_visible binds a declared slot; later target obligations reference it
+  // instead of a model-written entity id.
+  public string target_slot;
  }
  [Serializable] public sealed class TaskCompletion {
   public bool program_succeeded,task_succeeded;public string reason;public List<string> satisfied=new List<string>(),missing=new List<string>(),unknown=new List<string>();
+ }
+ [Serializable] public sealed class TaskObligationMatch
+ {
+  public TaskObligation obligation;
+  public List<MissionStepResult> hits=new List<MissionStepResult>();
+  public string branch="unconditional";
+  public bool branchActive;
+ }
+ public sealed class TaskContractMatch
+ {
+  public TaskContract expanded;
+  public List<TaskObligationMatch> obligations=new List<TaskObligationMatch>();
+  public TaskCompletion completion;
+  public TaskObligationMatch Get(string id){foreach(var m in obligations)if(m!=null&&m.obligation!=null&&m.obligation.id==id)return m;return null;}
  }
  public static class TaskContractRules {
   // Preserve presence/type before JsonUtility turns a missing bool into false.
@@ -52,19 +76,42 @@ namespace Yixuan.AI.Tasks {
   public static string Validate(TaskContract c,string request,Func<string,bool> target,Func<string,bool> action) {
    if(c==null)return "contract_missing";if(!string.IsNullOrEmpty(c.error))return c.error;
    if(c.obligations==null||c.obligations.Length==0||c.obligations.Length>48)return "contract_requires_obligations";
+   var slotById=new Dictionary<string,TaskTargetSlot>();
+   foreach(var slot in c.target_slots??new TaskTargetSlot[0]){
+    if(slot==null||string.IsNullOrEmpty(slot.id)||!System.Text.RegularExpressions.Regex.IsMatch(slot.id,@"^[a-zA-Z0-9_-]{1,24}$"))return "invalid_target_slot_id";
+    if(slotById.ContainsKey(slot.id))return "duplicate_target_slot";
+    if(string.IsNullOrEmpty(slot.source)||!request.Contains(slot.source))return "ungrounded_target_slot";
+    string description=(slot.description??"").Trim();
+    if(description.Length<1||description.Length>200)return "invalid_target_slot_description";
+    string slotSemantic=TaskObjectSemantics.ValidateTargetSlotSemantics(slot);
+    if(slotSemantic!=null)return slotSemantic;
+    string observe=(slot.observe??"").Trim();
+    if(observe.Length>0&&observe!="task_start_view"&&observe!="after_motion"&&observe!="after_turn"&&observe!="current_view"&&observe!="new")return "invalid_target_slot_observe";
+    slotById[slot.id]=slot;
+   }
    bool routeLanguage=System.Text.RegularExpressions.Regex.IsMatch(request,@"走到一半|走到.*?一半|半路|中途.{0,10}(停|挥|说|背)|在这中间|每走.{0,8}(挥|招|停|做)");
    bool schedule=false;foreach(var candidate in c.obligations){if(candidate==null)return "invalid_null_obligation";if(!string.IsNullOrEmpty(candidate.during_target))schedule=true;}
    if(routeLanguage&&!schedule)return "route_progress_requirement_missing: preserve intermediate/periodic effect with during_target and at_progress/every_meters";
-   var ids=new HashSet<string>();var conditions=new HashSet<string>();
+   var ids=new HashSet<string>();var conditions=new HashSet<string>();var boundSlots=new HashSet<string>();
    foreach(var q in c.conditions??new TaskCondition[0]){if(q==null||string.IsNullOrEmpty(q.id)||!conditions.Add(q.id)||string.IsNullOrEmpty(q.question)||string.IsNullOrEmpty(q.source)||!request.Contains(q.source)||q.max_age<=0||q.max_age>120)return "invalid_condition";}
    foreach(var o in c.obligations){
     if(o==null)return "invalid_null_obligation";
     if(string.IsNullOrEmpty(o.id)||!ids.Add(o.id)||string.IsNullOrEmpty(o.source)||!request.Contains(o.source))return "ungrounded_obligation";
     if(o.count<1||o.count>32||TaskToolRegistry.Find(o.kind)==null||o.kind=="parallel"||o.kind=="report")return "invalid_obligation_kind_or_count";
     if(o.kind=="route_progress")return "route_progress_is_runtime_evidence_use_during_target";
+    if(o.kind=="select_visible"){
+     if(string.IsNullOrEmpty(o.target_slot)||!slotById.ContainsKey(o.target_slot))return "select_visible_requires_declared_target_slot";
+     if(!string.IsNullOrEmpty(o.target_id))return "select_visible_must_not_carry_model_written_id";
+     if(o.count!=1||!string.IsNullOrEmpty(o.repeat_group)||!string.IsNullOrEmpty(o.during_target)||!string.IsNullOrEmpty(o.condition_id))return "select_visible_must_be_single_unconditional_declaration";
+     if(!boundSlots.Add(o.target_slot))return "target_slot_assigned_twice";
+    }else if(IsTargetBindingKind(o.kind)){
+     bool hasId=!string.IsNullOrEmpty(o.target_id),hasSlot=!string.IsNullOrEmpty(o.target_slot);
+     if(hasId==hasSlot)return hasId?"target_slot_and_target_id_conflict":"unknown_contract_target";
+     if(hasId){if(!target(o.target_id))return "unknown_contract_target";}
+     else{if(!slotById.ContainsKey(o.target_slot))return "unknown_target_slot";if(!boundSlots.Contains(o.target_slot))return "target_slot_used_before_binding";}
+    }else if(!string.IsNullOrEmpty(o.target_slot))return "target_slot_only_for_target_obligation";
     if((o.kind=="navigate"||o.kind=="interact")&&(o.target_id=="origin"||o.target_id=="mission_origin"))return "use_return_for_home_translation";
     if(o.kind=="return"&&System.Text.RegularExpressions.Regex.IsMatch(o.source,@"看向|看一下|看下|注视|望向|面向|面对")&&!System.Text.RegularExpressions.Regex.IsMatch(o.source,@"走|回到|返回|前往"))return "gaze_is_not_return_navigation";
-    if(o.kind=="navigate"||o.kind=="look_at"||o.kind=="interact"||o.kind=="board_vehicle"||o.kind=="drive_vehicle"||o.kind=="set_flame"||o.kind=="query_dynamic"||o.kind=="sit"||o.kind=="stand")if(string.IsNullOrEmpty(o.target_id)||!target(o.target_id))return "unknown_contract_target";
     if(o.kind=="return"&&o.target_id!="origin"&&o.target_id!="mission_origin")return "invalid_home";
     if(o.kind!="gesture"&&!string.IsNullOrEmpty(o.action_id))return "action_id_only_for_gesture";
     if(o.kind=="set_flame"&&!o.lit_specified)return "set_flame_requires_explicit_boolean_lit";
@@ -82,6 +129,7 @@ namespace Yixuan.AI.Tasks {
      if(o.kind=="look_direction"&&!ValidDirection(o.direction))return "invalid_direction";
     if(!string.IsNullOrEmpty(o.condition_id)&&(!conditions.Contains(o.condition_id)||(o.branch!="true"&&o.branch!="false"&&o.branch!="unknown")))return "invalid_condition_branch";
    }
+   foreach(var slot in c.target_slots??new TaskTargetSlot[0])if(slot!=null&&!boundSlots.Contains(slot.id))return "declared_target_slot_never_bound";
    foreach(var o in c.obligations){
     if(float.IsNaN(o.at_progress)||float.IsInfinity(o.at_progress)||float.IsNaN(o.every_meters)||float.IsInfinity(o.every_meters))return "invalid_route_schedule";
     if(!string.IsNullOrEmpty(o.during_target)){
@@ -114,7 +162,9 @@ namespace Yixuan.AI.Tasks {
   public static string Policy(TaskContract c,MissionStep s,bool fromRoute=false) {
    if(c==null)return "contract_missing";
    if(s.kind=="route_progress")return Policy(c,RouteAuthorization(s),true);
-   if(!fromRoute&&(s.kind=="navigate"||s.kind=="return"))foreach(var o in c.obligations)if(o.during_target==s.target_id)return "scheduled_route_requires_follow_route";
+   if(s.kind=="select_visible"){string selectError=ValidateSelectVisibleStep(c,s);if(selectError!=null)return selectError;}
+   else if(!string.IsNullOrEmpty(s.target_slot)&&string.IsNullOrEmpty(s.target_ref))return "verified_target_handle_required";
+   if(!fromRoute&&(s.kind=="navigate"||s.kind=="return")&&!string.IsNullOrEmpty(s.target_id))foreach(var o in c.obligations)if(!string.IsNullOrEmpty(o.during_target)&&o.during_target==s.target_id)return "scheduled_route_requires_follow_route";
    if(s.body_facing&&(s.kind!="look_at"||s.camera_only))return "invalid_target_body_facing";
     if(s.kind=="turn_body"&&!ValidBodyTurn(s.yaw))return "invalid_body_turn";
    if(c.forbid_move&&(s.kind=="navigate"||s.kind=="return"||s.kind=="move_relative"))return "policy_translation_forbidden";
@@ -129,18 +179,79 @@ namespace Yixuan.AI.Tasks {
    return "policy_unrequested_tool_or_target: "+s.kind+" "+s.target_id;
   }
   static MissionStep RouteAuthorization(MissionStep s){return new MissionStep{kind=s.target_id=="origin"||s.target_id=="mission_origin"?"return":"navigate",target_id=s.target_id};}
-  public static bool Matches(TaskObligation o,MissionStep s){return o.kind==s.kind&&(o.kind!="set_flame"||o.lit_specified&&s.lit_specified&&o.lit==s.lit)&&(o.kind!="turn_body"||Math.Abs(o.yaw-s.yaw)<0.05f)&&(o.kind!="move_relative"||ValidMoveDistance(o.distance)&&ValidMoveDistance(s.distance)&&Math.Abs(o.distance-s.distance)<=0.005f)&&(string.IsNullOrEmpty(o.target_id)||o.target_id==s.target_id)&&(string.IsNullOrEmpty(o.action_id)||o.action_id==s.action_id)&&(string.IsNullOrEmpty(o.direction)||o.direction==s.direction)&&(string.IsNullOrEmpty(o.text)||o.text==s.text)&&(string.IsNullOrEmpty(o.emotion)||o.emotion==s.emotion)&&(o.min_duration<=0||s.duration+0.05f>=o.min_duration)&&(!o.angles_exact||(Math.Abs(o.pitch-s.pitch)<0.05&&Math.Abs(o.yaw-s.yaw)<0.05&&(string.IsNullOrEmpty(o.reference)||o.reference==s.reference)))&&(!o.camera_only||s.camera_only)&&(o.body_facing==s.body_facing);}
-  static MissionStep Step(MissionStepResult r){return new MissionStep{kind=r.kind,distance=r.requested_distance,target_id=r.target_id,action_id=r.action_id,direction=r.direction,text=r.text,emotion=r.emotion,duration=r.duration,pitch=r.requested_pitch,yaw=r.requested_yaw,reference=r.reference,camera_only=r.camera_only,body_facing=r.body_facing,lit=r.lit,lit_specified=r.lit_specified};}
+  /// <summary>Kinds whose effect is aimed at one concrete target and therefore need a real target identity.</summary>
+  public static bool IsTargetBindingKind(string kind){
+   return kind=="navigate"||kind=="look_at"||kind=="interact"||kind=="board_vehicle"||kind=="drive_vehicle"||
+    kind=="set_flame"||kind=="query_dynamic"||kind=="sit"||kind=="stand"||kind=="select_visible";
+  }
+  public static TaskTargetSlot FindSlot(TaskContract c,string id){
+   foreach(var slot in c!=null?(c.target_slots??new TaskTargetSlot[0]):new TaskTargetSlot[0])if(slot!=null&&slot.id==id)return slot;
+   return null;
+  }
+  static string ValidateSelectVisibleStep(TaskContract c,MissionStep s){
+   var slot=FindSlot(c,s.target_slot);
+   if(slot==null)return "policy_select_visible_unknown_target_slot: "+(s.target_slot??"");
+   if(!string.IsNullOrEmpty(s.target_id))return "policy_select_visible_must_not_carry_entity_id";
+   string declared=(slot.description??"").Trim();
+   string requested=(s.text??"").Trim();
+   if(declared.Length==0||!string.Equals(declared,requested,StringComparison.Ordinal))return "policy_select_visible_description_mismatch";
+   return null;
+  }
+  static bool SlotMatches(TaskObligation o,MissionStep s){
+   bool slotMatch;
+   if(o.kind=="select_visible")slotMatch=!string.IsNullOrEmpty(o.target_slot)&&o.target_slot==s.target_slot;
+   else if(!string.IsNullOrEmpty(o.target_slot))slotMatch=o.target_slot==s.target_slot&&!string.IsNullOrEmpty(s.target_ref);
+   else if(IsTargetBindingKind(o.kind))slotMatch=!string.IsNullOrEmpty(o.target_id)&&o.target_id==s.target_id;
+   else slotMatch=string.IsNullOrEmpty(o.target_id)||o.target_id==s.target_id;
+   return slotMatch;
+  }
+  public static bool Matches(TaskObligation o,MissionStep s){return o.kind==s.kind&&SlotMatches(o,s)&&(o.kind!="set_flame"||o.lit_specified&&s.lit_specified&&o.lit==s.lit)&&(o.kind!="turn_body"||Math.Abs(o.yaw-s.yaw)<0.05f)&&(o.kind!="move_relative"||ValidMoveDistance(o.distance)&&ValidMoveDistance(s.distance)&&Math.Abs(o.distance-s.distance)<=0.005f)&&(string.IsNullOrEmpty(o.action_id)||o.action_id==s.action_id)&&(string.IsNullOrEmpty(o.direction)||o.direction==s.direction)&&(string.IsNullOrEmpty(o.text)||o.kind=="select_visible"||o.text==s.text)&&(string.IsNullOrEmpty(o.emotion)||o.emotion==s.emotion)&&(o.min_duration<=0||s.duration+0.05f>=o.min_duration)&&(!o.angles_exact||(Math.Abs(o.pitch-s.pitch)<0.05&&Math.Abs(o.yaw-s.yaw)<0.05&&(string.IsNullOrEmpty(o.reference)||o.reference==s.reference)))&&(!o.camera_only||s.camera_only)&&(o.body_facing==s.body_facing);}
+  static MissionStep Step(MissionStepResult r){return new MissionStep{kind=r.kind,distance=r.requested_distance,target_id=r.target_id,target_ref=r.target_ref,target_slot=r.target_slot,action_id=r.action_id,direction=r.direction,text=r.text,emotion=r.emotion,duration=r.duration,pitch=r.requested_pitch,yaw=r.requested_yaw,reference=r.reference,camera_only=r.camera_only,body_facing=r.body_facing,lit=r.lit,lit_specified=r.lit_specified};}
   static MissionStepResult ConditionResult(TaskCondition q,List<MissionStepResult> receipts,float at,bool fresh=true){MissionStepResult found=null;foreach(var r in receipts)if(r.kind=="check"&&r.text==q.question&&r.ended<=at&&(!fresh||at-r.ended<=q.max_age))if(found==null||r.ended>found.ended)found=r;return found;}
   public static string Branch(TaskContract c,TaskObligation o,List<MissionStepResult> receipts,float at,bool fresh=true){if(string.IsNullOrEmpty(o.condition_id))return "unconditional";foreach(var q in c.conditions)if(q.id==o.condition_id){var r=ConditionResult(q,receipts,at,fresh);return r==null?"unresolved":!r.condition_known?"unknown":r.condition_value?"true":"false";}return "unresolved";}
-  public static string Dispatch(TaskContract c,MissionStep s,List<MissionStepResult> receipts,float at,bool fromRoute=false){if(s.kind=="route_progress")return Dispatch(c,RouteAuthorization(s),receipts,at,true);string p=Policy(c,s,fromRoute);if(p!=null)return p;if(s.kind=="wait"||s.kind=="report"||s.kind=="check")return null;
+  static bool DependenciesSatisfied(TaskContractMatch state,TaskObligation obligation,out string missing){
+   missing="";
+   foreach(var dep in obligation.after??new string[0]){
+    var depMatch=state.Get(dep);
+    if(depMatch==null){missing=dep;return false;}
+    int required=string.IsNullOrEmpty(depMatch.obligation.during_target)?System.Math.Max(1,depMatch.obligation.count):1;
+    if(depMatch.hits.Count<required){missing=dep;return false;}
+   }
+   return true;
+  }
+  public static string Dispatch(TaskContract c,MissionStep s,List<MissionStepResult> receipts,float at,bool fromRoute=false,int generation=-1){
+   if(s.kind=="route_progress")return Dispatch(c,RouteAuthorization(s),receipts,at,true,generation);
+   string p=Policy(c,s,fromRoute);if(p!=null)return p;
+   if(s.kind=="wait"||s.kind=="report"||s.kind=="check")return null;
+   // R1: BEFORE any tool effect, require real succeeded receipts for this occurrence
+   // and all declared `after` dependencies. Matching an obligation in the array is
+   // NOT evidence that it already ran. Scheduled route effects keep their legacy
+   // dynamic repetition semantics; everything else must be the next ready occurrence.
+   var state=Match(c,receipts,true,at,generation);
+   var candidates=new List<TaskObligationMatch>();
+   foreach(var m in state.obligations)if(m.obligation!=null&&Matches(m.obligation,s))candidates.Add(m);
+   if(candidates.Count==0)return "policy_conditional_branch_not_proven";
+   bool scheduled=false;foreach(var m in candidates)if(!string.IsNullOrEmpty(m.obligation.during_target))scheduled=true;
+   if(!scheduled){
+    bool anyActive=false,ready=false;string denied=null;
+    foreach(var m in candidates){
+     if(!m.branchActive)continue;
+     anyActive=true;
+     string missing;
+     if(!DependenciesSatisfied(state,m.obligation,out missing)){if(denied==null)denied="policy_dependency_not_completed: "+missing;continue;}
+     if(m.hits.Count>=m.obligation.count){if(denied==null)denied="policy_obligation_occurrence_exhausted: "+m.obligation.id;continue;}
+     ready=true;break;
+    }
+    if(!ready){if(denied!=null)return denied;return anyActive?"policy_obligation_occurrence_exhausted":"policy_conditional_branch_not_proven";}
+   }
    if(s.kind=="turn_body"){int budget=0,used=0;foreach(var o in c.obligations)if(Matches(o,s)){string branch=Branch(c,o,receipts,at);if(branch=="unconditional"||branch==o.branch)budget+=o.count;}foreach(var r in receipts)if(r.kind=="turn_body"&&Math.Abs(r.requested_yaw-s.yaw)<0.05f){if(!string.IsNullOrEmpty(s.id)&&s.id==r.id)return null;used++;}if(used>=budget)return "policy_body_turn_count_exceeded";}
    if(s.kind=="move_relative"){
     int budget=0,used=0;foreach(var o in c.obligations)if(Matches(o,s)){string b=Branch(c,o,receipts,at);if(b=="unconditional"||b==o.branch)budget+=o.count;}
     foreach(var r in receipts)if(r.kind=="move_relative"&&r.direction==s.direction&&Math.Abs(r.requested_distance-s.distance)<=0.005f){if(!string.IsNullOrEmpty(s.id)&&r.id==s.id)return null;used++;}
     if(used>=budget)return "policy_relative_move_count_exceeded";
    }
-   foreach(var o in c.obligations)if(Matches(o,s)){string b=Branch(c,o,receipts,at);if(b=="unconditional"||b==o.branch)return null;}return "policy_conditional_branch_not_proven";}
+   foreach(var o in c.obligations)if(Matches(o,s)){string b=Branch(c,o,receipts,at);if(b=="unconditional"||b==o.branch)return null;}return "policy_conditional_branch_not_proven";
+  }
   // Expand each repeated sequence into occurrence obligations before matching receipts.
   // A dependency inside a repeat group refers to the SAME iteration; the next
   // iteration starts after the previous group's last member. Outside deps are barriers.
@@ -192,15 +303,25 @@ namespace Yixuan.AI.Tasks {
    }
    return new TaskContract{version=original.version,error=original.error,forbid_move=original.forbid_move,forbid_body_turn=original.forbid_body_turn,forbid_speech=original.forbid_speech,forbid_interact=original.forbid_interact,conditions=original.conditions,obligations=list.ToArray()};
   }
-  public static TaskCompletion Evaluate(TaskContract c,List<MissionStepResult> receipts,bool program,float now,int generation=-1){
-   var v=new TaskCompletion{program_succeeded=program};if(c==null){v.reason="contract_missing";return v;}
+  /// <summary>
+  /// One shared obligation-instance/consumption pass over the real receipts.
+  /// Both completion evaluation and pre-effect dispatch use this; a receipt can be
+  /// consumed by at most one obligation occurrence, order/branch/repeat/generation/
+  /// exact-angle checks are the same ones final evaluation uses.
+  /// </summary>
+  public static TaskContractMatch Match(TaskContract c,List<MissionStepResult> receipts,bool program,float now,int generation=-1){
+   var result=new TaskContractMatch();
+   var v=new TaskCompletion{program_succeeded=program};result.completion=v;
+   if(c==null){v.reason="contract_missing";return result;}
    var used=new HashSet<string>();var matches=new Dictionary<string,List<MissionStepResult>>();
-   c=ExpandRepeatGroups(c);
+   c=ExpandRepeatGroups(c);result.expanded=c;
    foreach(var o in c.obligations){
     string branch=Branch(c,o,receipts,now,false);
+    var record=new TaskObligationMatch{obligation=o,branch=branch,branchActive=(branch=="unconditional"||branch==o.branch)};
+    result.obligations.Add(record);
     if(branch=="unknown"){bool handled=false;foreach(var candidate in c.obligations)if(candidate.condition_id==o.condition_id&&candidate.branch=="unknown")handled=true;if(!handled){v.unknown.Add(o.id+":condition_unknown_unhandled");continue;}}if(branch=="unresolved"){v.unknown.Add(o.id+":condition_not_evaluated_or_expired");continue;}
     if(branch!="unconditional"&&branch!=o.branch)continue;
-    var hits=new List<MissionStepResult>();
+    var hits=record.hits;
     foreach(var r in receipts){
      if(generation>=0&&r.generation!=generation)continue;
      bool unknownHandled=false;if(o.kind=="check"&&r.condition_evaluated&&!r.condition_known)foreach(var cond in c.conditions??new TaskCondition[0])if(cond.question==r.text)foreach(var branchObligation in c.obligations)if(branchObligation.condition_id==cond.id&&branchObligation.branch=="unknown")unknownHandled=true;
@@ -218,7 +339,8 @@ namespace Yixuan.AI.Tasks {
    }
    foreach(var o in c.obligations){List<MissionStepResult> a;if(!matches.TryGetValue(o.id,out a)||a.Count==0)continue;foreach(var dep in o.overlap??new string[0]){List<MissionStepResult>b;bool overlaps=false;if(matches.TryGetValue(dep,out b))foreach(var x in a)foreach(var y in b)if(x.started<y.ended&&y.started<x.ended)overlaps=true;if(!overlaps)v.missing.Add(o.id+":no_required_overlap_with_"+dep);}}
    foreach(var o in c.obligations)if(o.every_meters>0&&!EverySegmentFulfilled(o,receipts,generation))v.missing.Add(o.id+":route_interval_effect_missing_or_wrong_spacing");
-   v.task_succeeded=program&&v.missing.Count==0&&v.unknown.Count==0;v.reason=v.task_succeeded?"contract_fulfilled":!program?"program_failed":"contract_incomplete: "+string.Join(";",v.missing.ToArray())+" "+string.Join(";",v.unknown.ToArray());return v;
+   v.task_succeeded=program&&v.missing.Count==0&&v.unknown.Count==0;v.reason=v.task_succeeded?"contract_fulfilled":!program?"program_failed":"contract_incomplete: "+string.Join(";",v.missing.ToArray())+" "+string.Join(";",v.unknown.ToArray());return result;
   }
+  public static TaskCompletion Evaluate(TaskContract c,List<MissionStepResult> receipts,bool program,float now,int generation=-1){return Match(c,receipts,program,now,generation).completion;}
  }
 }

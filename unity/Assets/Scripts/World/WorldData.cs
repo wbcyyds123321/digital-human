@@ -67,6 +67,19 @@ namespace Yixuan.World
             _walkableGrid = null;
         }
 
+        public static void ResetForExplicitScene()
+        {
+            Map = null;
+            Ready = false;
+            Character = null;
+            GroundY = 0f;
+            WalkableBounds = default(Bounds);
+            Obstacles.Clear();
+            Anchors.Clear();
+            _walkableGrid = null;
+            LastError = null;
+        }
+
         // ---- 网格 A* ----
         public const float GridCellSize = 0.35f;
         static bool[,] _walkableGrid;
@@ -83,7 +96,7 @@ namespace Yixuan.World
 
         public static void EnsureInit()
         {
-            if (Map == null && !Ready)
+            if (Map == null && !Ready && !Yixuan.SelectionLab.SelectionLabContext.IsActive)
             {
                 var found = MapWorldProfile.FindActive();
                 if (found != null)
@@ -103,6 +116,12 @@ namespace Yixuan.World
             Character = GameObject.Find("Yixuan_Test") != null
                 ? GameObject.Find("Yixuan_Test").transform
                 : null;
+
+            if (Yixuan.SelectionLab.SelectionLabContext.IsActive)
+            {
+                RefreshFromSelectionLab(Yixuan.SelectionLab.SelectionLabContext.Scene);
+                return;
+            }
 
             if (Map == null) Map = MapWorldProfile.FindActive();
             if (UsingMapNavigation)
@@ -147,6 +166,28 @@ namespace Yixuan.World
                 Debug.Log("[WorldData] 可走范围=" + WalkableBounds + "，障碍=" + Obstacles.Count +
                           "，可去地点=" + Anchors.Count + "，角色=" + (Character != null ? Character.position.ToString("F2") : "无"));
             }
+        }
+
+        static void RefreshFromSelectionLab(Yixuan.SelectionLab.SelectionLabScene lab)
+        {
+            Map = null;
+            var floor = lab.transform.Find("LabFloor");
+            var floorRenderer = floor != null ? floor.GetComponent<Renderer>() : null;
+            GroundY = floorRenderer != null ? floorRenderer.bounds.max.y : 0f;
+            float minX = Mathf.Min(lab.mapMin.x, lab.mapMax.x);
+            float maxX = Mathf.Max(lab.mapMin.x, lab.mapMax.x);
+            float minZ = Mathf.Min(lab.mapMin.y, lab.mapMax.y);
+            float maxZ = Mathf.Max(lab.mapMin.y, lab.mapMax.y);
+            float inset = AgentRadius + Margin + 0.3f;
+            WalkableBounds = new Bounds(
+                new Vector3((minX + maxX) * 0.5f, GroundY, (minZ + maxZ) * 0.5f),
+                new Vector3(Mathf.Max(1f, maxX - minX - inset * 2f), 1f,
+                            Mathf.Max(1f, maxZ - minZ - inset * 2f)));
+            ScanObstacles();
+            if (Character != null) AddAnchor("start_point", "起始位置", Character.position);
+            Ready = true;
+            BuildWalkableGrid();
+            LastError = null;
         }
 
         // ============================================================

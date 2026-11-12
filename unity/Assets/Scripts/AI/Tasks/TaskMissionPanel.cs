@@ -40,6 +40,7 @@ namespace Yixuan.AI.Tasks
             // 视觉/语音/第一人称开关已收进统一控制台（本面板只保留任务执行相关内容）。
             _scroll=GUILayout.BeginScrollView(_scroll);
             GUILayout.Label("状态：" + Runner.Phase + "  | 可插入动作后继续原任务", _wrap);
+            if(!string.IsNullOrEmpty(Runner.PhaseSummaryText)) GUILayout.Label("阶段事实：" + Runner.PhaseSummaryText, _wrap);
             if(Runner.IsSuspended)GUILayout.Label("原任务进度已保留；插入："+(Runner.ActiveInsertion!=null?Runner.ActiveInsertion.Phase:"准备中")+"；排队 "+Runner.PendingInsertions,_wrap);
             if(!string.IsNullOrEmpty(Runner.LastInsertionReport))GUILayout.Label(Runner.LastInsertionReport,_wrap);
             if(!Runner.IsRunning) Runner.UseCodeExecution=GUILayout.Toggle(Runner.UseCodeExecution,"代码模式：LLM 生成 Lua（关闭则使用旧 JSON 计划）");

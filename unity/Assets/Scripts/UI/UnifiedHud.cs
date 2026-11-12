@@ -697,6 +697,23 @@ namespace Yixuan.UI
         void DrawVisionTab(Rect content)
         {
             float y = content.y;
+            if (Yixuan.SelectionLab.SelectionLabContext.IsActive)
+            {
+                GUI.Label(new Rect(content.x, y, content.width, 88f),
+                    "第一人称视觉选中\n在聊天框描述物体，系统会截图、定位并自动对准确认。\n当前场景按请求识图；不启动周期观察。", _label);
+                y += 96f;
+                bool previewOn = _eyePreview != null && _eyePreview.PreviewEnabled;
+                if (GUI.Button(new Rect(content.x, y, content.width, 28f),
+                    "眼睛画中画：" + (previewOn ? "开" : "关"), _bigBtn) && _eyePreview != null)
+                    _eyePreview.SetPreviewEnabled(!previewOn);
+                y += 36f;
+                GUI.Label(new Rect(content.x, y, content.width, 120f),
+                    "状态：" + Yixuan.Pick.FirstPersonTargetingService.LastStatus + "\n" +
+                    (string.IsNullOrEmpty(Yixuan.Pick.FirstPersonTargetingService.LastError)
+                        ? Yixuan.Pick.FirstPersonTargetingService.LastReply
+                        : Yixuan.Pick.FirstPersonTargetingService.LastError), _small);
+                return;
+            }
             if (_vision == null)
             {
                 GUI.Label(new Rect(content.x, y, content.width, 20), "场景里没有 VisionObserver", _label);
@@ -734,7 +751,7 @@ namespace Yixuan.UI
         {
             if (_vision == null) return "无 VisionObserver";
             if (_client == null) return "无视觉客户端";
-            if (!_client.HasKey) return "未找到视觉 API key（检查环境变量或 persistentDataPath 配置）";
+            if (!_client.HasKey) return "未找到视觉 API key（检查 _vision_poc/qwen_apikey.txt）";
             if (!_vision.GameViewEnabled && !_vision.WebcamEnabled) return "两路都关 · 不消耗额度";
             if (_client.ServiceBlocked) return "服务暂停：" + _client.ServiceStatus;
             if (_vision.Asking) return "正在看图回答…";

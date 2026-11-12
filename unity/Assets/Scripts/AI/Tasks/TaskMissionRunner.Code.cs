@@ -66,6 +66,7 @@ namespace Yixuan.AI.Tasks
             Evidence.planner_model=PlannerOverride!=null?"test-double":_plannerConfig.Model;
             yield return BindContract(generation,fixtureContract);
             if(!IsRunning||generation!=_generation)yield break;
+            PublishPhaseSummary();
             TaskLuaRuntime lua=null; string prompt=CodePrompt(), error=null;
             Write("code_prompt.txt",prompt);
             for(int attempt=0;attempt<2;attempt++)
@@ -130,7 +131,30 @@ namespace Yixuan.AI.Tasks
                 try { steps=DecodeCodeCall(value.Table,out parallel); if(parallel)lua.ChargeAdditionalCalls(steps.Length-1); }
                 catch(Exception ex) { error=TaskLuaRuntime.Error(ex); }
                 if(error!=null) { CodeTrace("invalid_call",error); StopWorkers(); Finish("failed",error); yield break; }
-                foreach(var candidate in steps){string denial=ValidateConfirmedStep(candidate)??TaskContractRules.Dispatch(Contract,candidate,Evidence.results,TaskNow);if(denial!=null){EmitRuntime("PolicyRejected","","failed",denial);StopWorkers();Finish("failed",denial);yield break;}}
+                foreach(var candidate in steps)
+                {
+                    // F2: an already-cached receipt for this same key/signature is a
+                    // replay under the existing per-mission key/signature guard. Check
+                    // this generation and the live handle BEFORE treating it as cached,
+                    // then skip Dispatch/occurrence consumption (a replay performs no new
+                    // effect and must not be rejected by policy_obligation_occurrence_exhausted).
+                    MissionStepResult cachedReplay=null;
+                    if(!string.IsNullOrEmpty(candidate.id))_codeReceipts.TryGetValue(candidate.id,out cachedReplay);
+                    if(cachedReplay!=null)
+                    {
+                        string replayError=null;
+                        if(cachedReplay.generation!=_generation)replayError="idempotent_receipt_wrong_generation";
+                        if(string.IsNullOrEmpty(replayError)&&!string.IsNullOrEmpty(candidate.target_ref))
+                        {
+                            string handleError;
+                            if(!TryResolveTargetHandle(candidate.target_ref,candidate,out handleError))replayError="idempotent_receipt_handle_invalid: "+handleError;
+                        }
+                        if(replayError!=null){EmitRuntime("PolicyRejected","","failed",replayError);StopWorkers();Finish("failed",replayError);yield break;}
+                        continue;
+                    }
+                    string denial=ValidateConfirmedStep(candidate)??TaskContractRules.Dispatch(Contract,candidate,Evidence.results,TaskNow,false,_generation);
+                    if(denial!=null){EmitRuntime("PolicyRejected","","failed",denial);StopWorkers();Finish("failed",denial);yield break;}
+                }
                 var results=new List<MissionStepResult>();
                 // Validate the entire batch and resource overlap before starting any side effect.
                 foreach(var step in steps)
@@ -138,7 +162,7 @@ namespace Yixuan.AI.Tasks
                     MissionStepResult cached;
                     if(!string.IsNullOrEmpty(step.id) && _codeReceipts.TryGetValue(step.id,out cached)) { results.Add(cached); CodeTrace("replay_receipt",step.id); continue; }
                     step.id=string.IsNullOrEmpty(step.id)?"c"+(Evidence.results.Count+1):step.id;
-                    var r=new MissionStepResult{id=step.id,kind=step.kind,requested_distance=step.distance,target_id=step.target_id,action_id=step.action_id,direction=step.direction,text=step.text,emotion=step.emotion,duration=step.duration,reference=step.reference,requested_pitch=step.pitch,requested_yaw=step.yaw,camera_only=step.camera_only,body_facing=step.body_facing,lit=step.lit,lit_specified=step.lit_specified,generation=_generation,status="running",started=TaskNow};
+                    var r=new MissionStepResult{id=step.id,kind=step.kind,requested_distance=step.distance,target_id=step.target_id,target_ref=step.target_ref,target_slot=step.target_slot,action_id=step.action_id,direction=step.direction,text=step.text,emotion=step.emotion,duration=step.duration,reference=step.reference,requested_pitch=step.pitch,requested_yaw=step.yaw,camera_only=step.camera_only,body_facing=step.body_facing,lit=step.lit,lit_specified=step.lit_specified,generation=_generation,status="running",started=TaskNow};
                     StampRouteContext(r);
                     results.Add(r); Evidence.results.Add(r); _codeReceipts[step.id]=r;
                     CodeTrace("tool_start",JsonUtility.ToJson(step));EmitRuntime("ActionStarted",r.id,"running",JsonUtility.ToJson(step));
@@ -171,7 +195,7 @@ namespace Yixuan.AI.Tasks
             if(r.status!="succeeded" && (resources & 1)!=0) {Motor.Stop("代码工具失败","cancelled");ClearAttention();}
             if(r.generation!=_generation)yield break;
             EmitRuntime("ActionFinished",r.id,r.status,JsonUtility.ToJson(r));r.event_sequence=Context!=null?Context.Events.Count:0;
-            CodeTrace("tool_result",JsonUtility.ToJson(r)); Save();Raise();
+            CodeTrace("tool_result",JsonUtility.ToJson(r)); Save();PublishPhaseSummary();Raise();
         }
         public static string ExtractLua(string raw)
         {
@@ -220,6 +244,22 @@ namespace Yixuan.AI.Tasks
             selection["observed_to_current_m"]=selected.observed_to_current_m;
             selection["generation"]=selected.generation;selection["note"]=selected.note??"";
             s["selection"]=selection;
+            // Task-scoped verified visual slots (separate from the single global UI
+            // selection above). Only successfully bound slots appear with a handle.
+            var selectionSlots=new Table(vm);int selectionSlotIndex=0;
+            if(SelectionLedger!=null)foreach(var binding in SelectionLedger.Bindings){
+                if(binding==null)continue;
+                var slotTable=new Table(vm);
+                slotTable["slot"]=binding.slot??"";slotTable["bound"]=!string.IsNullOrEmpty(binding.slot)&&binding.valid;
+                slotTable["target_ref"]=binding.target_ref??"";slotTable["entity_id"]=binding.entity_id??"";
+                slotTable["name"]=binding.entity_name??"";slotTable["description"]=binding.description??"";
+                slotTable["valid"]=binding.valid;slotTable["forced_baseline"]=binding.forced_baseline;
+                slotTable["confirm_frame_id"]=(double)binding.confirm_frame_id;
+                slotTable["invalidation_reason"]=binding.invalidation_reason??"";
+                selectionSlots[++selectionSlotIndex]=slotTable;
+            }
+            s["selection_slots"]=selectionSlots;
+            s["selection_ledger"]=SelectionLedger!=null?SelectionLedger.Describe():"no_target_bindings";
             s["dynamic_world_ready"]=dynamicFacts.world_ready;s["actor_known"]=dynamicFacts.actor_known;
             s["actor_mode"]=dynamicFacts.actor_mode;s["active_actor"]=dynamicFacts.active_actor;
             s["seat_known"]=dynamicFacts.seat_known;s["seat_state"]=dynamicFacts.seat_state;
@@ -247,6 +287,17 @@ namespace Yixuan.AI.Tasks
             t["known"]=r.condition_known;t["matched"]=r.condition_value;
             t["lit_specified"]=r.lit_specified;t["lit"]=r.lit;t["actual_lit_known"]=r.actual_lit_known;t["actual_lit"]=r.actual_lit;
             t["gaze_error"]=r.gaze_error;t["target_in_frame"]=r.target_in_frame;t["distance_error"]=r.distance_error;t["requested_distance"]=r.requested_distance;t["direction"]=r.direction??"";
+            // Task-scoped verified visual handle receipt fields.
+            t["target_ref"]=r.target_ref??"";t["target_slot"]=r.target_slot??"";
+            t["selection_confirmed"]=r.status=="succeeded"&&!string.IsNullOrEmpty(r.target_ref);
+            t["selection_generation"]=r.selection_generation;
+            t["locate_frame_id"]=(double)r.locate_frame_id;t["confirm_frame_id"]=(double)r.confirm_frame_id;
+            t["observation_age_s"]=r.observation_age_s;
+            t["observation_group_id"]=r.observation_group_id??"";t["observation_mode"]=r.observation_mode??"";
+            t["eye_yaw_before"]=r.eye_yaw_before;t["eye_yaw_after"]=r.eye_yaw_after;
+            t["eye_pitch_before"]=r.eye_pitch_before;t["eye_pitch_after"]=r.eye_pitch_after;
+            t["eye_world_yaw_before"]=r.eye_world_yaw_before;t["eye_world_yaw_after"]=r.eye_world_yaw_after;
+            t["body_yaw_before"]=r.body_yaw_before;t["body_yaw_after"]=r.body_yaw_after;
             return DynValue.NewTable(t);
         }
         MissionStep[] DecodeCodeCall(Table request,out bool parallel)
@@ -275,11 +326,54 @@ namespace Yixuan.AI.Tasks
             switch(method)
             {
                 case "follow_route":s=DecodeRoute(TaskLuaRuntime.Text(arg),opt);break;
-                case "sit": case "stand":
-                    s.target_id = ResolveCodeTarget(TaskLuaRuntime.Text(arg));
-                    if (string.IsNullOrEmpty(_runForcedEntityId) || s.target_id != _runForcedEntityId) throw new Exception("confirmed_selection_required");
+                case "select_visible":
+                    {
+                        string description = TaskLuaRuntime.Text(arg);
+                        if (string.IsNullOrEmpty(description) || description.Length > 200) throw new Exception("select_description_bounds");
+                        string slotId = "";
+                        if (opt != null)
+                        {
+                            var slotValue = opt.Get("slot");
+                            if (slotValue.Type == DataType.String) slotId = slotValue.String;
+                        }
+                        if (string.IsNullOrEmpty(slotId) || !System.Text.RegularExpressions.Regex.IsMatch(slotId, @"^[a-zA-Z0-9_-]{1,24}$"))
+                            throw new Exception("select_visible_requires_declared_slot");
+                        var declaredSlot = TaskContractRules.FindSlot(Contract, slotId);
+                        if (declaredSlot == null) throw new Exception("select_visible_unknown_target_slot: " + slotId);
+                        if (!string.Equals((declaredSlot.description ?? "").Trim(), description.Trim(), StringComparison.Ordinal))
+                            throw new Exception("select_visible_description_mismatch");
+                        s.text = description; s.target_slot = slotId;
+                    }
                     break;
-                case "navigate":case "look_at":case "interact": s.target_id=ResolveCodeTarget(TaskLuaRuntime.Text(arg));if(Catalog.Get(s.target_id)==null||method!="look_at"&&(s.target_id=="origin"||s.target_id=="mission_origin"))throw new Exception("use_return_home_for_origin");break;
+                case "sit": case "stand":
+                    {
+                        string raw = TaskLuaRuntime.Text(arg);
+                        if (TaskSelectionLedger.LooksLikeHandle(raw))
+                        {
+                            string handleError;
+                            if (!TryResolveTargetHandle(raw, s, out handleError)) throw new Exception(handleError);
+                        }
+                        else s.target_id = ResolveCodeTarget(raw);
+                        if (string.IsNullOrEmpty(_runForcedEntityId) && string.IsNullOrEmpty(s.target_ref))
+                            throw new Exception("confirmed_selection_required");
+                        if (!string.IsNullOrEmpty(_runForcedEntityId) && string.IsNullOrEmpty(s.target_ref) && s.target_id != _runForcedEntityId)
+                            throw new Exception("confirmed_selection_required");
+                        break;
+                    }
+                case "navigate": case "look_at": case "interact":
+                    {
+                        string raw = TaskLuaRuntime.Text(arg);
+                        if (TaskSelectionLedger.LooksLikeHandle(raw))
+                        {
+                            string handleError;
+                            if (!TryResolveTargetHandle(raw, s, out handleError)) throw new Exception(handleError);
+                            if (Catalog.Get(s.target_id) == null) throw new Exception("task_bound_target_not_navigable: " + s.target_id);
+                            break;
+                        }
+                        s.target_id = ResolveCodeTarget(raw);
+                        if (Catalog.Get(s.target_id) == null || method != "look_at" && (s.target_id == "origin" || s.target_id == "mission_origin")) throw new Exception("use_return_home_for_origin");
+                        break;
+                    }
                 case "return_home":s.kind="return";s.target_id=arg.Type==DataType.Nil || arg.Type==DataType.Void?"origin":TaskLuaRuntime.Text(arg);if(s.target_id!="origin" && s.target_id!="mission_origin")throw new Exception("invalid_origin");break;
                 case "turn_body":
                     if(arg.Type!=DataType.Number||!TaskContractRules.ValidBodyTurn((float)arg.Number))throw new Exception("body_turn_angle_range");s.yaw=(float)arg.Number;s.reference="body";s.camera_only=false;break;
@@ -290,29 +384,46 @@ namespace Yixuan.AI.Tasks
                     if(hasMeters){if(meters.Type!=DataType.Number)throw new Exception("distance_expected_number");s.distance=(float)meters.Number;}
                     else {if(steps.Type!=DataType.Number||double.IsNaN(steps.Number)||double.IsInfinity(steps.Number)||steps.Number<1||steps.Number>10||steps.Number!=Math.Floor(steps.Number))throw new Exception("steps_integer_1_10");s.distance=(float)steps.Number*TaskContractRules.MetersPerStep;}
                     if(!TaskContractRules.ValidMoveDistance(s.distance))throw new Exception("relative_distance_range_0_05_4");s.reference="body";break;
-                case "look_direction":s.direction=TaskLuaRuntime.Text(arg);if(!TaskContractRules.ValidDirection(s.direction))throw new Exception("invalid_direction");s.reference="body";s.pitch=s.direction=="up"?Mathf.Min(30,Gimbal!=null?Gimbal.MaxRelativePitch:30):s.direction=="down"?-Mathf.Min(30,Gimbal!=null?Gimbal.MaxRelativePitch:30):0;s.yaw=s.direction=="left"?-45:s.direction=="right"?45:0;s.camera_only=Contract!=null&&Contract.forbid_body_turn;break;
+                case "look_direction":
+                    s.direction=TaskLuaRuntime.Text(arg);if(!TaskContractRules.ValidDirection(s.direction))throw new Exception("invalid_direction");
+                    s.reference="body";s.pitch=s.direction=="up"?Mathf.Min(30,Gimbal!=null?Gimbal.MaxRelativePitch:30):s.direction=="down"?-Mathf.Min(30,Gimbal!=null?Gimbal.MaxRelativePitch:30):0;
+                    s.yaw=s.direction=="left"?-45:s.direction=="right"?45:0;s.camera_only=Contract!=null&&Contract.forbid_body_turn;
+                    s.precise_angles=false;
+                    break;
                 case "gesture":s.action_id=TaskLuaRuntime.Text(arg);if(TaskGestureSkills.Get(s.action_id)==null)throw new Exception("unknown_action: "+s.action_id);break;
                 case "check":case "speak":s.text=TaskLuaRuntime.Text(arg);break;
                 case "express":s.emotion=TaskLuaRuntime.Text(arg);if(s.emotion!="happy"&&s.emotion!="neutral")throw new Exception("unsupported_emotion");break;
                 case "wait":if(arg.Type!=DataType.Number || double.IsNaN(arg.Number)||arg.Number<0||arg.Number>15)throw new Exception("wait_range_0_15");s.duration=(float)arg.Number;break;
                 case "observe":case "report":if(arg.Type!=DataType.Nil && arg.Type!=DataType.Void)throw new Exception("tool_takes_no_argument");s.timeout=120;break;
                 case "board_vehicle":case "drive_vehicle":
-                    s.target_id=ResolveCodeTarget(TaskLuaRuntime.Text(arg));
-                    if(Catalog.Get(s.target_id)==null)throw new Exception("unknown_target: "+s.target_id);
-                    break;
+                    {
+                        string raw = TaskLuaRuntime.Text(arg);
+                        if (TaskSelectionLedger.LooksLikeHandle(raw)) { string handleError; if (!TryResolveTargetHandle(raw, s, out handleError)) throw new Exception(handleError); }
+                        else s.target_id = ResolveCodeTarget(raw);
+                        if (Catalog.Get(s.target_id) == null) throw new Exception("unknown_target: " + s.target_id);
+                        break;
+                    }
                 case "exit_vehicle":case "stop_vehicle":
                     if(arg.Type!=DataType.Nil && arg.Type!=DataType.Void)throw new Exception("tool_takes_no_argument");
                     break;
                 case "set_flame":
-                    s.target_id=ResolveCodeTarget(TaskLuaRuntime.Text(arg));
-                    if(Catalog.Get(s.target_id)==null)throw new Exception("unknown_target: "+s.target_id);
-                    if(opt==null||opt.Get("lit").Type!=DataType.Boolean)throw new Exception("set_flame_requires_explicit_boolean_lit");
-                    s.lit=opt.Get("lit").Boolean;s.lit_specified=true;
-                    break;
+                    {
+                        string raw = TaskLuaRuntime.Text(arg);
+                        if (TaskSelectionLedger.LooksLikeHandle(raw)) { string handleError; if (!TryResolveTargetHandle(raw, s, out handleError)) throw new Exception(handleError); }
+                        else s.target_id = ResolveCodeTarget(raw);
+                        if (Catalog.Get(s.target_id) == null) throw new Exception("unknown_target: " + s.target_id);
+                        if (opt == null || opt.Get("lit").Type != DataType.Boolean) throw new Exception("set_flame_requires_explicit_boolean_lit");
+                        s.lit = opt.Get("lit").Boolean; s.lit_specified = true;
+                        break;
+                    }
                 case "query_dynamic":
-                    s.target_id=ResolveCodeTarget(TaskLuaRuntime.Text(arg));
-                    if(Catalog.Get(s.target_id)==null)throw new Exception("unknown_target: "+s.target_id);
-                    break;
+                    {
+                        string raw = TaskLuaRuntime.Text(arg);
+                        if (TaskSelectionLedger.LooksLikeHandle(raw)) { string handleError; if (!TryResolveTargetHandle(raw, s, out handleError)) throw new Exception(handleError); }
+                        else s.target_id = ResolveCodeTarget(raw);
+                        if (Catalog.Get(s.target_id) == null) throw new Exception("unknown_target: " + s.target_id);
+                        break;
+                    }
                 default:throw new Exception("unknown_game_tool: "+method);
             }
             if(opt!=null)
@@ -322,7 +433,9 @@ namespace Yixuan.AI.Tasks
                 var cameraOnly=opt.Get("camera_only");if(cameraOnly.Type==DataType.Boolean)s.camera_only=cameraOnly.Boolean;
                 s.body_facing=opt.Get("body_facing").Type==DataType.Boolean && opt.Get("body_facing").Boolean;
                 if(method=="look_direction"){
-                    var yaw=opt.Get("yaw");var pitch=opt.Get("pitch");if(yaw.Type==DataType.Number)s.yaw=(float)yaw.Number;if(pitch.Type==DataType.Number)s.pitch=(float)pitch.Number;
+                    var yaw=opt.Get("yaw");var pitch=opt.Get("pitch");
+                    if(yaw.Type==DataType.Number||pitch.Type==DataType.Number)s.precise_angles=true;
+                    if(yaw.Type==DataType.Number)s.yaw=(float)yaw.Number;if(pitch.Type==DataType.Number)s.pitch=(float)pitch.Number;
                     if(float.IsNaN(s.yaw)||float.IsInfinity(s.yaw)||float.IsNaN(s.pitch)||float.IsInfinity(s.pitch)||Mathf.Abs(s.yaw)>360||Mathf.Abs(s.pitch)>90)throw new Exception("direction_angle_range");
                     var reference=opt.Get("reference");if(reference.Type==DataType.String)s.reference=reference.String;if(s.reference!="body"&&s.reference!="world")throw new Exception("direction_reference");
                     var hold=opt.Get("hold");s.hold=hold.Type!=DataType.Boolean||hold.Boolean;
@@ -338,11 +451,15 @@ namespace Yixuan.AI.Tasks
             }
             return s;
         }
+        static string VisualSelectionRules()
+        {
+            return "VISUAL SELECTION (task-scoped, awaitable): game.select_visible(description,{slot='DECLARED_SLOT'}) selects a real visible target by reusing the production first-person pipeline (shared current observation frame -> model locate -> same-frame ID/depth binding -> real gimbal aim -> NEW-frame centre confirmation of the same entity). It returns {ok,status,reason,target_id,target_ref,target_slot,selection_generation,locate_frame_id,confirm_frame_id,observation_age_s,eye_yaw_before/after,body_yaw_before/after}. description MUST equal the contract target_slots[slot].description exactly. target_ref is an OPAQUE task-scoped verified handle; pass it to navigate/look_at/interact/sit/stand/board_vehicle/drive_vehicle/set_flame/query_dynamic. Selecting slot B does NOT cancel this task and does NOT invalidate slot A; both handles stay usable in any order. Unbound/forged/cross-task/expired handles are rejected before any effect; an external user selection, scene unload or entity destruction invalidates handles and cancels the task. A failed select_visible returns ok=false and NEVER returns the previous confirmed target: do not substitute state().selection or an old entity id for it. Do not select a target the contract did not declare as a visual slot, and never use a catalog id to impersonate seeing a described target. For a multi-target request declare/select them in the requested order, e.g. local a=game.select_visible('<slot a description>',{slot='a'}); if not a.ok then return {ok=false,reason='selectA:'..tostring(a.reason)} end; local b=game.select_visible('<slot b description>',{slot='b'}); if not b.ok then return {ok=false,reason='selectB:'..tostring(b.reason)} end; then use a.target_ref / b.target_ref. A failed select MUST stop its dependent action and be reported; never fall back to state().selection, an older slot or another object. Repeated eye turns are separate game.look_direction calls (each delta from the current eye); a body turn is game.turn_body and is not an eye look. game.look_direction yaw is a DELTA from the CURRENT eye direction (two consecutive right 30 = +60 relative to the body); game.turn_body is body-only and must never be used to fake an eye look. An exact eye angle beyond the gimbal range fails explicitly instead of silently turning the body. Observation groups: slots with observe='task_start_view' share ONE immutable frozen RGB-ID-depth+eye frame captured at the first such select; a follow-up select in the same group reuses that frame but still performs its own real aim and NEW-frame centre confirmation. After any explicit body/camera-changing step (navigate/turn_body/move_relative/look_at/look_direction/observe) a task_start_view select FAILS with observation_expired - do not expect a silent recapture; declare observe='after_motion' for that slot to capture a new observation group after the motion. handle/orientation/world: look_direction reference='world' is an ABSOLUTE world heading; reference='body' (default) is a DELTA from the current eye direction. ";
+        }
         string CodePrompt()
         {
             var targets=new List<DestinationSnapshot>();foreach(var t in Catalog.SemanticTargets())targets.Add(t.Snapshot());
             var actions=new StringBuilder();foreach(var a in TaskGestureSkills.Available())actions.AppendLine(a.Id+" = "+a.Label);
-            return (IsInsertion?"RUNTIME: Execute ONLY the temporary stationary obligations in the authoritative contract. The original Lua VM is suspended and will resume automatically after this child. Never regenerate or execute its unfinished route/loop.\n":"")+@"You control a Unity character by writing a REAL Lua program. Output Lua source ONLY, no JSON, prose or markdown. The language provides local variables, functions, tables, if/elseif/else, for/while/repeat, arithmetic, concatenation, ipairs/pairs, math, assert/error, pcall/xpcall, tostring/tonumber/type. There is no io/os/require/load/debug/CLR, standard string/table libraries available; no coroutine library. Do not invent APIs. Program executes in a preemptible Lua VM. Limits: 24000 chars, 2M Lua instructions, 96 game calls, 600 seconds base with bounded route-based allowances up to 3600 active seconds; each wait <=15 seconds. No print. Return {ok=true} on fulfilled request, or {ok=false,reason='...'} on unresolved failure/ambiguity. Never return success after an unhandled tool failure.
+            return VisualSelectionRules() + (IsInsertion?"RUNTIME: Execute ONLY the temporary stationary obligations in the authoritative contract. The original Lua VM is suspended and will resume automatically after this child. Never regenerate or execute its unfinished route/loop.\n":"")+@"You control a Unity character by writing a REAL Lua program. Output Lua source ONLY, no JSON, prose or markdown. The language provides local variables, functions, tables, if/elseif/else, for/while/repeat, arithmetic, concatenation, ipairs/pairs, math, assert/error, pcall/xpcall, tostring/tonumber/type. There is no io/os/require/load/debug/CLR, standard string/table libraries available; no coroutine library. Do not invent APIs. Program executes in a preemptible Lua VM. Limits: 24000 chars, 2M Lua instructions, 96 game calls, 600 seconds base with bounded route-based allowances up to 3600 active seconds; each wait <=15 seconds. No print. Return {ok=true} on fulfilled request, or {ok=false,reason='...'} on unresolved failure/ambiguity. Never return success after an unhandled tool failure.
 The user's request is the behavioral contract. Contract repeat_group means repeat the WHOLE ordered sequence count times; dependencies inside that group refer to the same iteration. Use one Lua loop around all group members, never separate N navigations from N returns. Preserve ALL steps, order, negations, counts, conditions and concurrency. Do not add unrequested navigation, gestures, observations, speech or interaction. Resolve ambiguous or missing objects by returning failure with a clarification, never substitute a different destination. English Unity object names and Chinese aliases below refer to real objects. Door/entrance anchors are distinct from store buildings.
 When the user delegates destination selection, the independent contract already contains the model-selected concrete itinerary. Those navigate targets ARE authorized by the original delegation. Execute every chosen obligation in contract order; do not reject it as unnamed, replace it with observation, reduce it to one destination, or add other destinations outside that contract. Ordinary wandering does not authorize unrequested semantic scans, speech, gestures or interaction. A named but missing/ambiguous target still requires clarification.
 Game API (dot syntax, synchronous-looking functions suspend Lua until Unity returns; every mutating call returns {ok,status,reason,target_id,position,...}):

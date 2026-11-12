@@ -18,6 +18,7 @@ namespace Yixuan.AI
         Label _skillIdLabel;
         Label _profileSaveStatus;
         Button _removeSkillButton;
+        Button _characterSkillsShortcut;
         TextField _promptPreview;
         Foldout _promptPreviewFoldout;
         int _selectedSkill;
@@ -30,6 +31,7 @@ namespace Yixuan.AI
             entry.style.marginTop = 10;
             parent.Add(entry);
             var shortcut = SkillButton("人格 / Skills", OpenCharacterSkills);
+            _characterSkillsShortcut = shortcut;
             shortcut.name = "character-skills-shortcut";
             shortcut.style.position = Position.Absolute;
             shortcut.style.right = 126;

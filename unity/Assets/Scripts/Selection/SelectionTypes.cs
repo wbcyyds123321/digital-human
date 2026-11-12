@@ -333,6 +333,12 @@ namespace Yixuan.Pick
         public Vector3 surface_point;
         public Vector3 bounds_min;
         public Vector3 bounds_max;
+        /// <summary>True when bounds/position were sampled from live renderers at publish time.</summary>
+        public bool bounds_from_live_renderers;
+        /// <summary>True when the surface point passed the live-bounds + epsilon check.</summary>
+        public bool surface_inside_live_bounds;
+        /// <summary>"ok" or the explicit rejection reason for the surface point.</summary>
+        public string surface_validation_note = "";
         public bool dynamic;
         public string live_position_note = "";
 

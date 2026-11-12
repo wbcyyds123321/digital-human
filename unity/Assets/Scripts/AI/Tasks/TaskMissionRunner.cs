@@ -124,6 +124,7 @@ namespace Yixuan.AI.Tasks
                 vision_model = QwenVisionClient.DefaultModel };
             Context=new TaskRuntimeContext{Generation=_generation,EvidenceDirectory=RunDirectory,SceneVersion=UnityEngine.SceneManagement.SceneManager.GetActiveScene().path+"@"+UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle};
             Evidence.request_id=Context.RequestId;Evidence.mission_id=Context.MissionId;Evidence.generation=_generation;Evidence.scene_version=Context.SceneVersion;
+            InitTaskSelection();
             EmitRuntime("MissionStarted","","running",Evidence.request);
             if (Session != null && !IsInsertion) Session.MissionStarted(Evidence.request);
             if (Motor == null) { Finish("failed", "缺少移动控制器"); return false; }
@@ -160,9 +161,12 @@ namespace Yixuan.AI.Tasks
         void AcquireMissionCamera()
         {
             if (_cameraLeased) return;
+            // R3: take ownership WITHOUT recentering. The user's current real Eye pose is
+            // the observation starting point ("眼前的 A/B"); an explicit 看前方/回正 command
+            // still recenters later. ClearAttention only freezes an already-owned gaze.
             ClearAttention();
             _cameraLeased = true;
-            if (Gimbal != null) { _oldAutoRecenter = Gimbal.AutoRecenter; Gimbal.AutoRecenter = false; Gimbal.Center(); }
+            if (Gimbal != null) { _oldAutoRecenter = Gimbal.AutoRecenter; Gimbal.AutoRecenter = false; }
         }
         void Release()
         {
@@ -199,6 +203,18 @@ namespace Yixuan.AI.Tasks
             if(Session!=null)Session.CancelMissionSpeech(Context!=null?Context.MissionId:null);
             if (_speechClip != null) { Destroy(_speechClip); _speechClip = null; }
         }
+        /// <summary>
+        /// F1: clear the per-run forced-selection context. Called at every terminal
+        /// finish and at every real new-run entry so a completed/cancelled
+        /// forced-selection handoff can never leak into the next mission/navigation.
+        /// The immutable run context is still captured once in Submit; this only
+        /// clears ownership after the forced run is over.
+        /// </summary>
+        void ClearForcedSelectionRunContext()
+        {
+            _runForcedEntityId = ""; _runForcedAction = ""; _runForcedToken = -1;
+            _pendingSelectionEntityId = ""; _pendingSelectionAction = ""; _pendingSelectionToken = -1;
+        }
         void Finish(string status, string reason)
         {
             if (Evidence == null) return;
@@ -214,6 +230,8 @@ namespace Yixuan.AI.Tasks
             if (string.IsNullOrEmpty(LastReport)) LastReport = FactualReport();
             foreach(var insertion in Evidence.insertions) if(insertion.status!="succeeded") LastReport+="；插入任务未完成："+insertion.reason;
             Evidence.report = LastReport; Evidence.paused_seconds=_pausedSeconds; IsRunning = false; Phase = status; _main = null;
+            _activeStep = null; ReleaseTaskSelection(status == "cancelled" ? "task_cancelled" : "task_" + status); RebuildPhaseSummary();
+            ClearForcedSelectionRunContext();
             EmitRuntime(status=="cancelled"?"MissionCancelled":status=="succeeded"?"MissionSucceeded":"MissionFailed","",status,reason);
             using(TaskAuthority.Enter(Context!=null?Context.MissionId:null))Release();
             if(Context!=null){Context.Active=false;TaskAuthority.Release(Context.MissionId);} Save();
@@ -224,8 +242,12 @@ namespace Yixuan.AI.Tasks
         }
         void Update()
         {
-            if (IsRunning && !string.IsNullOrEmpty(_runForcedEntityId) && !SelectionTokenStillValid())
-            { Cancel("选中目标已变化，停止上一目标的任务"); return; }
+            if (IsRunning)
+            {
+                string selectionInvalid;
+                if (!SelectionIntegrationValid(out selectionInvalid))
+                { Cancel("选中目标已失效或发生了外部换选：" + selectionInvalid); return; }
+            }
             if (IsSuspended) return;
             UpdateAttention();
             if (!IsRunning || Motor == null) return;
@@ -327,6 +349,7 @@ namespace Yixuan.AI.Tasks
         {
             string selectionError = ValidateConfirmedStep(s);
             if (selectionError != null) { Fail(r, selectionError); _held &= ~resources; yield break; }
+            RecordActiveStep(s);
             r.start_position = Motor.transform.position;
             // Boarding explicitly waits for the seat controller to surrender its own owner.
             // Other tools acquire their real resources without cancelling the seated pose.
@@ -346,6 +369,7 @@ namespace Yixuan.AI.Tasks
                 case "turn_body": routine = TurnBody(s,r); break;
                 case "look_at": routine = LookAt(s, r); break;
                 case "look_direction": routine = LookDirection(s,r); break;
+                case "select_visible": routine = SelectVisible(s,r); break;
                 case "observe": ClearAttention(); routine = Observe(s, r); break;
                 case "interact": routine = Interact(s, r); break;
                 case "check": routine = CheckView(s, r); break;
@@ -365,9 +389,11 @@ namespace Yixuan.AI.Tasks
             r.timeout_seconds = s.timeout > 0 ? s.timeout : s.kind == "board_vehicle" ? Mathf.Max(240f, NavigationTimeout) :
                 s.kind == "drive_vehicle" ? 600f : IsNavigationStep(s.kind) ? NavigationTimeout : 120f;
             yield return Guard(routine, r, r.timeout_seconds);
+            RecordActiveStep(null);
+            if (StepChangesObservation(s.kind)) MarkObservationStale();
             r.ended = TaskNow; r.end_position = Motor.transform.position;
             if (r.status == "running") r.status = "succeeded";
-            _held &= ~resources; Save(); Raise();
+            _held &= ~resources; Save(); PublishPhaseSummary(); Raise();
         }
         static void DisposeStack(Stack<IEnumerator> stack)
         {
@@ -413,8 +439,8 @@ namespace Yixuan.AI.Tasks
             if (route == null) { Fail(r, "unreachable"); yield break; }
             r.approach_position = destination; r.route.AddRange(route);
             if (!ConfigureNavigationBudget(s, r)) yield break;
-            ClearAttention();
-            if (Gimbal != null) Gimbal.Center();
+            // A normal step handoff keeps the task's camera/eye state; only explicit
+            // camera commands change it. Do not ClearAttention/Center here.
             float oldRadius = Motor.ArriveRadius; Motor.ArriveRadius = Mathf.Min(oldRadius, ArrivalRadius * 0.5f);
             Vector3 previous = Motor.transform.position;
             try

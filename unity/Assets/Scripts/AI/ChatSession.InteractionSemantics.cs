@@ -75,11 +75,12 @@ namespace Yixuan.AI
                 "For stand/cancel, direction and anchor_id are empty. Recognize 起来, 起身, 别坐着了, 别做了站起来, 那是走啊起来啊 by MEANING. " +
                 "For an instruction to stand and go to ONE known map place, or to go there while currently seated, use stand_then_navigate with empty direction and an exact anchor_id from the list. Only stand_then_navigate performs safe standing followed by navigation. " +
                 "B VISUAL TARGET ROUTE: for a request to select/point at/query/approach/sit-on a CURRENTLY VISIBLE object described by the user (眼前这张椅子/红色大巴/准星旁的楼/它/刚才那个 etc), use route=interaction with a command object with operation=visual_target, direction empty, anchor_id empty, target=<the verbatim natural target phrase from the request, preserving colour/position constraints>, actions=<CSV from select,query,approach,sit,stand,board>, constraints=<CSV from leftmost,near_crosshair,no_move,no_board,no_sit,pronoun (may be empty)>, source=<verbatim substring of the LATEST user request>. Keep actions separate: selecting never implies moving; approach does not imply boarding; board only with explicit boarding intent; no_move means stay put; no_board/no_sit are negative constraints. Do not invent entity ids or world coordinates. This route performs real current-view visual localization, aim and new-frame centre confirmation, then hands ONLY the requested actions to the existing independent contract -> Lua runner using the SAME confirmed entity. A read-only question about an already selected object may use status: its fresh position and distance are in current action facts. Do not use this route for current-content description, capability questions, or hypotheticals. " +
+                "EXPLICIT SELECTION IS ALWAYS SHAPE (B): a direct instruction to select/choose/point at a described visible object returns route=interaction with operation=visual_target and actions=select, even when it is a short imperative with no preamble. Examples that MUST be shape (b): 选中红色立方体; 请选中黄色圆柱体; 把红色立方体选出来; 帮我选中画面中的黄色圆柱体; 选中它 (constraints=pronoun). Never answer such an instruction with route=action, chat or vision. A request for several sequential selections, or a selection plus further walking/turning/eye/body/action steps (先选中红色立方体，再选中绿色立方体 / 选中红色和绿色两个物体 / 依次选中... / 选A走近它再转身选B) CANNOT be represented by one visual_target: use route=action with the COMPLETE original user input. The independent contract+Lua task lane declares ordered visual target slots and executes the awaitable select_visible steps; do not return interaction or clarify for the whole multi-step request, and do not collapse it to a single selected object. Negated (别选中/不要选), hypothetical (如果能...就选中), capability questions (你能选中吗), quoted retelling, already-selected queries (当前选中了什么) and ordinary navigation/driving are NOT selection commands. " +
                 "Additional visual constraints are current_view and any_match. current_view means locate a NEW target in the CURRENT image, including a same-sentence reference such as find a car and select it. Preserve the actual target noun phrase in target; this sentence-internal it MUST NOT set pronoun or reuse a previous selection. pronoun is reserved for reusing an already confirmed object from an earlier turn, such as the one you just selected. current_view takes precedence over pronoun if both are present. " +
-                "any_match means the user authorizes choosing ONE visible matching object (a car, any car, find one); it also requires a fresh current view. Multiple matches alone are not ambiguity for any_match. Never add any_match to a uniquely specified that car or silently drop colour/model/position constraints. Never invent near_crosshair or leftmost unless the user affirmatively requested that absolute spatial condition. A relative phrase such as X左边/右边的Y (the Y to the left/right of X) describes a reference relation; keep it inside target and do NOT emit leftmost for it. leftmost means a whole-image/most-left request such as 选画面最左边的Y; a negated or comparative mention such as 别选最左边那块 is not permission for leftmost. " +
+                "any_match means the user authorizes choosing ONE visible matching object (a car, any car, find one); it also requires a fresh current view. Multiple matches alone are not ambiguity for any_match. Never add any_match to a uniquely specified that car or silently drop colour/model/position constraints. Never invent near_crosshair or leftmost unless the user affirmatively requested that absolute spatial condition. near_crosshair is ONLY for an explicit crosshair condition (准星旁/准星附近/准星旁边); plain phrases like 眼前这个红方块/正前方的物体 keep current_view and add no extra restriction. A relative phrase such as X左边/右边的Y (the Y to the left/right of X) describes a reference relation; keep it inside target and do NOT emit leftmost for it. leftmost means a whole-image/most-left request such as 选画面最左边的Y; a negated or comparative mention such as 别选最左边那块 is not permission for leftmost. " +
                 "A grounded existence request about a concrete object in the current view, such as 看看视野里有没有一辆车, uses visual_target with actions=select,query and constraints=current_view,any_match,no_move so it can identify and report one actually visible object. This is different from a generic scene description or an abstract capability question, which remain vision/chat. Seeing an object never authorizes walking or boarding. " +
                 "Complete shape (b) example: input 选中眼前这把椅子，先别走过去 => {\"route\":\"interaction\",\"reply\":\"我先确认眼前的椅子。\",\"command\":{\"operation\":\"visual_target\",\"direction\":\"\",\"anchor_id\":\"\",\"source\":\"选中眼前这把椅子，先别走过去\",\"target\":\"眼前这把椅子\",\"actions\":\"select\",\"constraints\":\"current_view,no_move\"}}. The seven command fields are required strings, even when empty. " +
-                "Ordinary navigation/gestures/multi-stop tasks use route=action and the existing independent contract -> Lua task planner. " +
+                "Ordinary navigation/gestures/multi-stop tasks use route=action and the existing independent contract -> Lua task planner. The same action lane handles ordered multi-target visual selection and selection+motion sequences through the task-scoped select_visible tool; single-target selection remains shape (b). " +
                 "Vehicle boarding/driving/stopping/exiting and flame ignition/extinguishing also MUST use route=action with the COMPLETE original user input, never the seating command object. " +
                 "Available general tools are board_vehicle, drive_vehicle, stop_vehicle, exit_vehicle, set_flame and read-only query_dynamic. Dynamic facts below identify the actual current vehicle, actor mode, vehicle positions, availability/reasons and flame state. Do not infer these from previous dialogue or invent missing state. " +
                 "A seated character can board through the board_vehicle tool's safe standing preparation: use route=action for that request, not an unsupported seating sequence. A request to go beside a car only means walking near it; getting into it requires actual boarding intent. " +
@@ -109,7 +110,8 @@ namespace Yixuan.AI
                 "; entity=" + (seat != null ? seat.CurrentEntity : "") +
                 "; visual_task=" + (agent != null ? agent.State.ToString() : "Idle") +
                 "; visual_active=" + (agent != null && agent.IsActive) +
-                "; first_person_visual=" + Yixuan.Pick.FirstPersonTargetingService.DescribeState();
+                "; first_person_visual=" + Yixuan.Pick.FirstPersonTargetingService.DescribeState() +
+                "; " + Yixuan.Pick.FirstPersonTargetingService.DescribeLastAttemptFacts();
             if (Locomotion != null) facts += "; position=" + Locomotion.transform.position.ToString("F2") +
                 "; body_yaw=" + Locomotion.transform.eulerAngles.y.ToString("F1");
             var selection = Yixuan.Pick.SelectionBroker.Current;
@@ -159,20 +161,21 @@ namespace Yixuan.AI
             catch (Exception exception) { Debug.LogWarning("[SemanticCommand] 日志保存失败：" + exception.Message); }
         }
 
-        IEnumerator DispatchSemanticInteraction(SemanticInteractionCommand command, string input, int generation)
+        IEnumerator DispatchSemanticInteraction(SemanticInteractionCommand command, string input, int generation, string provenance = "model_interaction")
         {
             string invalid = SemanticInteractionRules.Validate(command, input, id => WorldData.GetAnchor(id) != null);
             if (invalid != null)
             {
-                SemanticNotice("rejected", input, invalid);
+                SemanticNotice("rejected", input, invalid + ";provenance=" + provenance);
                 PublishNarrator("没有执行：这句话还没能转换成可靠的交互指令，请补充一下。", null, generation);
                 yield break;
             }
-            SemanticNotice("validated", input, JsonUtility.ToJson(command));
+            SemanticNotice("validated", input, JsonUtility.ToJson(command) + ";provenance=" + provenance);
             if (command.operation == "visual_target")
             {
-                SemanticNotice("visual_target_handoff", input, JsonUtility.ToJson(command));
-                Yixuan.Pick.FirstPersonTargetingService.BeginFromSemantic(this, input, Yixuan.AI.Tasks.SemanticInteractionRules.ToVisualTarget(command, input), generation);
+                SemanticNotice("visual_target_handoff", input, JsonUtility.ToJson(command) + ";provenance=" + provenance);
+                Yixuan.Pick.FirstPersonTargetingService.BeginFromSemantic(this, input, Yixuan.AI.Tasks.SemanticInteractionRules.ToVisualTarget(command, input),
+                    generation, provenance);
                 yield break;
             }
             if (command.operation == "cancel")

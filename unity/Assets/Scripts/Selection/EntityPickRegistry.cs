@@ -36,26 +36,37 @@ namespace Yixuan.Pick
         public string[] SourceObjects = new string[0];
         public int SourceObjectCount;
 
+        /// <summary>
+        /// True when this entry's position/bounds must be sampled from the LIVE
+        /// renderers instead of a build-time catalog snapshot. The ID pass draws
+        /// every explicit-lab renderer with its current transform on every
+        /// capture, so the entity record must share that same live data source;
+        /// otherwise a runtime-moved lab object yields a correct pixel code but
+        /// stale record position/bounds (observed 2026-11-11: yellow cylinder
+        /// hit surface (-0.08,3.57,1.27) outside catalog x[-2.375,-1.825]).
+        /// Sidecar path entities use their world-space source mesh; the main-map
+        /// single-renderer path stays on the catalog AABB because static batching
+        /// can make renderer.bounds span an unrelated batch group.
+        /// </summary>
+        public bool UsesLiveRendererBounds
+        {
+            get { return Renderers.Count > 0 && (Dynamic || SourceKind == "explicit_scene"); }
+        }
+
         public Vector3 LivePosition()
         {
-            if (Dynamic && Renderers.Count > 0)
+            if (UsesLiveRendererBounds)
             {
-                bool any = false;
-                Bounds bounds = new Bounds();
-                foreach (var renderer in Renderers)
-                {
-                    if (renderer == null) continue;
-                    if (!any) { bounds = renderer.bounds; any = true; }
-                    else bounds.Encapsulate(renderer.bounds);
-                }
-                if (any) return bounds.center;
+                var bounds = LiveWorldBounds();
+                return bounds.center;
             }
             return CatalogPosition;
         }
 
-        public Bounds WorldBounds()
+        /// <summary>Current world bounds from the same source the ID pass draws.</summary>
+        public Bounds LiveWorldBounds()
         {
-            if (Dynamic && Renderers.Count > 0)
+            if (UsesLiveRendererBounds)
             {
                 bool any = false;
                 Bounds bounds = new Bounds();
@@ -71,6 +82,11 @@ namespace Yixuan.Pick
             var center = (CatalogBoundsMin + CatalogBoundsMax) * 0.5f;
             var size = CatalogBoundsMax - CatalogBoundsMin;
             return new Bounds(center, size);
+        }
+
+        public Bounds WorldBounds()
+        {
+            return LiveWorldBounds();
         }
     }
 

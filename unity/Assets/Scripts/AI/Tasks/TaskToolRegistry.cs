@@ -19,6 +19,7 @@ namespace Yixuan.AI.Tasks {
    new TaskToolSpec("gesture","gesture","(action_id,options?)","body_animation",1),
    new TaskToolSpec("interact","interact","(target_id,{key='unique_id'}?)","world_state",1,true),
    new TaskToolSpec("observe","observe","()","camera,body_yaw,vision_request",3),
+   new TaskToolSpec("select_visible","select_visible","(description,{slot=declared_target_slot_id})","task_scoped_confirmed_visual_target_receipt;real_locate_aim_new_frame_confirm;returns_target_ref",3,false,90),
    new TaskToolSpec("check","check","(exact_contract_question)","vision_request",3),
    new TaskToolSpec("speak","speak","(text)","voice",4),
    new TaskToolSpec("express","express","('happy'|'neutral',{duration=2}?)","expression",8),

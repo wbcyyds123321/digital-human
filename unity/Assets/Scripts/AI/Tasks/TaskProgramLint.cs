@@ -29,7 +29,12 @@ namespace Yixuan.AI.Tasks {
      r.direct_calls.Add(method);if(method!="state"&&method!="resolve"&&TaskToolRegistry.Find(method)==null)r.errors.Add("unknown_game_tool: "+method);
      var args=Get(node,"m_Arguments") as IList;var literal=args!=null&&args.Count>0?Get(args[0],"m_Value") as DynValue:null;
      if(method=="navigate"||method=="return_home"||method=="speak"||method=="interact"||method=="gesture"){
-      var s=new MissionStep{kind=method=="return_home"?"return":method};if(literal!=null&&literal.Type==DataType.String){if(method=="gesture")s.action_id=literal.String;else if(method=="speak")s.text=literal.String;else s.target_id=literal.String;string p=TaskContractRules.Policy(c,s);if(p!=null)r.errors.Add(p);}else r.unknown.Add("dynamic argument: game."+method);
+      var s=new MissionStep{kind=method=="return_home"?"return":method};if(literal!=null&&literal.Type==DataType.String){
+       // An opaque task-scoped handle is resolved (or rejected) at runtime by the
+       // mission ledger; lint cannot know the slot from a literal string.
+       if(literal.String.StartsWith("tref/",StringComparison.Ordinal))r.unknown.Add("runtime target handle: game."+method);
+       else {if(method=="gesture")s.action_id=literal.String;else if(method=="speak")s.text=literal.String;else s.target_id=literal.String;string p=TaskContractRules.Policy(c,s);if(p!=null)r.errors.Add(p);}
+      }else r.unknown.Add("dynamic argument: game."+method);
      }
     }else r.unknown.Add("indirect or local function call");
    }

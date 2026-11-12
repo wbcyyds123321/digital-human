@@ -197,8 +197,6 @@ namespace Yixuan.EditorTools
             _runStart = (float)EditorApplication.timeSinceStartup;
             Log("== InteractionExpansion acceptance v2 (review round 2) ==");
             Log("run_dir=" + _runDir);
-            Log("task_id=task-codex-overnight-20261109-mw878vyk-hfofdhrv session_id=" +
-                "session-eaadfba2-9370-4bde-9059-8c6b587939fe");
             Log("unity=" + Application.unityVersion + " screen=" + Screen.width + "x" + Screen.height);
             WriteRunInfo();
             string inject = Environment.GetEnvironmentVariable("SBH_IA_EXIT_INJECT");

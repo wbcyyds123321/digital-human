@@ -15,11 +15,18 @@
 <p align="center">
   <a href="https://github.com/wbcyyds123321/digital-human">源码</a> ·
   <a href="docs/architecture.md">架构总览</a> ·
+  <a href="docs/progress-2026-11-12.md">最新进展</a> ·
   <a href="docs/roadmap.md">路线图</a> ·
   <a href="https://github.com/wbcyyds123321/-MapGen">地图生成器</a>
 </p>
 
 > 这是一个 Unity 数字人交互系统的源码展示快照，不是下载后即可运行的完整 Unity 工程。仓库不包含角色模型、地图二进制、动画、音频、第三方包或 API Key。
+
+## 最新进展 · 2026-11-12
+
+**视觉选中已接入 Lua 的可等待工具调用**：任务可在确认目标 A 后继续移动或转向，再用新画面选择 B，并保留 A 的任务内引用。源码包含目标槽、确认句柄、任务内选中账本和基于真实回执的阶段汇报。
+
+目前已有连续选择、移动后重新观察、复用先前目标和主动取消的真实局部样本；**组合语义仍有已知误路由，连续视觉动作尚未整体验收通过**。当前重点是统一语义决策，保留已验证的空间绑定与执行守卫。[验证结果与未完成项 →](docs/progress-2026-11-12.md)
 
 ## 这个项目解决什么问题
 
@@ -51,7 +58,7 @@
   <img src="docs/images/showcase-selection-selected.png" alt="白盒实验室中的物体选中与统一 HUD" width="100%">
 </p>
 
-*白盒截图：手动对准与确认，用于展示高亮、坐标和新版 HUD。自动闭环验证范围见[阶段进展](docs/progress-2026-11-11.md)。*
+*白盒截图：手动对准与确认，用于展示高亮、坐标和新版 HUD。自动闭环验证范围见[最新进展](docs/progress-2026-11-12.md)。*
 
 <p align="center">
   <img src="docs/images/showcase-vehicle-selection.png" alt="车辆视觉选中后的真实回执" width="100%">
@@ -80,12 +87,15 @@ flowchart TB
     L --> I[静态检查与工具注册表]
     I --> V[MoonSharp VM / Mission Runner]
     V --> G[运行时策略守卫]
+    G -->|select_visible 挂起任务| F
     G --> S[Unity Skills]
     S --> W[世界 / 导航 / 视觉 / 交互 / 语音]
     W --> E[真实回执与证据]
     E --> V
     E --> T[最终自然语言汇报]
     F --> B[SelectionBroker / 确认事实]
+    B --> H[TaskSelectionLedger<br/>目标槽与任务内句柄]
+    H -->|真实确认回执 / resume| V
     B --> T
     B -->|后续交互的目标上下文| C
     D --> O[字幕 / 流式 TTS / 表情]
@@ -95,7 +105,7 @@ flowchart TB
 | 层次 | 技术与实现 |
 |---|---|
 | 引擎与表现 | Unity 2022.3 LTS、URP、C#、VRM / MMD 骨架适配、Mixamo 动作 |
-| 语言与任务 | DeepSeek、独立意图契约、MoonSharp Lua、工具注册表、真实回执 |
+| 语言与任务 | DeepSeek、独立意图契约、MoonSharp Lua、可等待视觉工具、任务内目标账本、真实回执 |
 | 视觉与空间 | EyeCamera、二维点框、同帧实例 ID / depth、相机矩阵、新帧中心确认 |
 | 语音 | Python sidecar、SenseVoice / sherpa-onnx、Silero VAD、MiniMax 流式 TTS、口型 |
 | 世界 | Blender / Python 地图工具、碰撞 AABB、导航图 A*、语义锚点、地面高度图 |
@@ -127,7 +137,26 @@ flowchart TB
 - [任务执行器](unity/Assets/Scripts/AI/Tasks/TaskMissionRunner.cs)
 - [Lua 运行时](unity/Assets/Scripts/AI/Tasks/TaskLuaRuntime.cs)
 
-### 2. 第一人称视觉选中闭环
+### 2. 把视觉选择串进行动程序
+
+“选中”现在是可等待的任务动作。`select_visible(description, {slot=...})` 先验证契约中的目标槽，只有完成真实视觉定位、对准和新帧确认后，才返回任务内 `target_ref` 并继续 Lua。
+
+~~~text
+契约声明目标槽 A / B
+  -> select_visible(A) -> 确认后绑定 target_ref_A
+  -> 移动 / 身体转向 / Eye 转向
+  -> select_visible(B) -> 从当前新帧绑定 target_ref_B
+  -> 后续工具仍可引用 target_ref_A
+  -> 按真实工具回执汇报阶段结果
+~~~
+
+`TaskSelectionLedger` 区分“任务内部切换目标”和“用户外部换选/取消”：选择 B 可以保留 A；外部变更、失效实体和过期任务不能继续使用旧授权。目标不存在时不得借用旧的全局 Current 继续移动。身体朝向与 Eye 朝向分别处理，后续相机角度以当前 Eye 为基准累积。
+
+上图说明已实现的编排机制；真实局部样本与尚未通过的组合语义见[验证表](docs/progress-2026-11-12.md)。
+
+相关源码：[视觉任务工具](unity/Assets/Scripts/AI/Tasks/TaskMissionRunner.TaskVisual.cs) · [目标账本](unity/Assets/Scripts/AI/Tasks/TaskSelectionLedger.cs) · [阶段汇报](unity/Assets/Scripts/AI/Tasks/TaskPhaseSummary.cs) · [选择语义路由](unity/Assets/Scripts/AI/Tasks/SelectionIntentRouter.cs)
+
+### 3. 第一人称视觉选中闭环
 
 ~~~text
 EyeCamera 原始 RGB
@@ -142,10 +171,12 @@ EyeCamera 原始 RGB
 
 模型看不到世界坐标、实体目录或全图候选答案。它只负责回答“画面中目标大概在哪里”；实体身份和坐标由 Unity 的同帧缓冲、稳定实例 ID 和冻结相机矩阵确定。
 
-这条链路解决了两个常见错误：
+这条链路把模型判断与运行时身份确认分开：
 
-1. 两个外观完全相同的物体也能区分，因为它们的实例 ID 不同；
-2. 模型点落在背景或空白处时，系统不会偷偷从全图挑一个“看起来最像”的对象。
+1. 两个外观相同的物体具有不同实例 ID，运行时能记录实际选中了哪一个；自然语言是否指对目标仍要独立验证。
+2. 模型点落在背景时，仅允许在其输出框内恢复唯一可靠候选；歧义或矛盾应拒绝，不从全图替换答案。
+
+同帧 ID 能证明“射线/中心实际指向哪个实体”，不能单独证明“这个实体符合用户语义”。最近一轮保留了错认目标的原始失败；修复后的本地回放与真实模型重验分列。
 
 相关源码：
 
@@ -158,7 +189,7 @@ EyeCamera 原始 RGB
 
 默认视觉 provider 是 DeepSeek，模型是 deepseek-flash，使用官方 OpenAI 兼容端点；当前发布配置没有默认 fallback。服务额度、网络和 API 配置由使用者自行提供。
 
-### 3. 语音与对话生命周期
+### 4. 语音与对话生命周期
 
 语音 sidecar 负责本地音频输入、VAD/ASR、流式 TTS、打断和口型数据。Unity 侧按 turn、service、token 隔离播放生命周期：
 
@@ -177,7 +208,7 @@ EyeCamera 原始 RGB
 
 相关目录：[语音 sidecar](voice/README.md)、[语音源码](voice/)、[Unity 语音脚本](unity/Assets/Scripts/Voice/)。
 
-### 4. 世界、导航与角色
+### 5. 世界、导航与角色
 
 苏式蓝调地图由独立地图生成器制作，再导出 Unity 可消费的碰撞、导航、锚点和地面高度数据：
 
@@ -228,7 +259,12 @@ Tools / 白色选中实验室 / 构建实验室场景
 | 统一 HUD、地图页、选中坐标和小地图 | 已接入白盒与主地图代码 |
 | 语音注入链路、受控打断、最终正文 TTS | 已有受控验证 |
 | 真人麦克风、噪声、回声、长期运行和听感 | 待继续实测 |
-| 多物体依次视觉选择的 Lua 任务编排 | 尚未作为完整能力接通 |
+| 可等待视觉工具、目标槽、确认句柄与任务内目标账本 | 已实现，已做本地/运行时关键检查 |
+| 连续选 A/B、移动后新帧选择、保留 A 引用 | 有真实局部通过样本；整体尚未验收通过 |
+| “选中后描述/解释”的组合语义 | 仍有误判为聊天的反例，待统一语义决策 |
+| 取消中的真实迟到 HTTP 回包 | 主动取消有样本，真实迟到回包仍待验证 |
+| 目标中心绕圈 | 未启动 |
+| Jev 辅助判断与统一语义层 | 方案与评测阶段，尚未接入 |
 | 复杂大地图中的全场景视觉泛化 | 未宣称完成 |
 | 完整驾驶、座椅、上下车和电车全量回归 | 不在本发布快照结论内 |
 
@@ -264,7 +300,9 @@ docs/                         架构、路线图和展示图片
 ## 文档
 
 - [架构总览](docs/architecture.md)
-- [2026-11-11 阶段进展与边界](docs/progress-2026-11-11.md)
+- [2026-11-12 最新进展与验证边界](docs/progress-2026-11-12.md)
+- [统一语义决策方案（待实现）](docs/semantic-decision-plan.md)
+- [2026-11-11 历史进展](docs/progress-2026-11-11.md)
 - [路线图](docs/roadmap.md)
 - [语音 sidecar](voice/README.md)
 - [地图工具](map/README.md)

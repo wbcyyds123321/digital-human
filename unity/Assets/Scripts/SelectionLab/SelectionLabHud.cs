@@ -41,7 +41,7 @@ namespace Yixuan.SelectionLab
         {
             if (_white == null) _white = Texture2D.whiteTexture;
             if (_label == null)
-                _label = new GUIStyle(GUI.skin.label) { fontSize = 13, richText = false, alignment = TextAnchor.UpperLeft };
+                _label = new GUIStyle(GUI.skin.label) { fontSize = 13, richText = false, wordWrap = true, alignment = TextAnchor.UpperLeft };
             if (_title == null)
                 _title = new GUIStyle(_label) { fontSize = 15, fontStyle = FontStyle.Bold };
         }

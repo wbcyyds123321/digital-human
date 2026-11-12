@@ -17,6 +17,10 @@ namespace Yixuan.Pick
         public static string LastError { get; private set; } = "";
         /// <summary>True when the latest confirm built a record but the publish was rejected (stale generation).</summary>
         public static bool LastPublishRejected { get; private set; }
+        /// <summary>Live bounds used by the last surface-point validation (diagnostics only).</summary>
+        public static Bounds LastLiveBounds { get; private set; }
+        /// <summary>"ok" or the explicit reason the last surface point was rejected.</summary>
+        public static string LastSurfaceValidationNote { get; private set; } = "";
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetSession()
@@ -25,6 +29,8 @@ namespace Yixuan.Pick
             LastCenterHit = null;
             LastError = "";
             LastPublishRejected = false;
+            LastLiveBounds = new Bounds();
+            LastSurfaceValidationNote = "";
         }
 
         public static Camera ResolveEye()
@@ -211,6 +217,8 @@ namespace Yixuan.Pick
         {
             LastError = "";
             LastPublishRejected = false;
+            LastLiveBounds = new Bounds();
+            LastSurfaceValidationNote = "";
             bool manual = generation < 0;
             if (manual) generation = SelectionBroker.BeginManualSelection();
             var frame = CaptureEyeFrame(eye);
@@ -233,6 +241,22 @@ namespace Yixuan.Pick
                 return null;
             }
             var record = BuildRecord(hit, source, generation);
+            // The surface point comes from the same frozen depth buffer that produced
+            // the pixel hit, so it must fall inside the entity's CURRENT world bounds
+            // with a small epsilon. A stale catalog position, a wrong entity binding or
+            // a broken projection fails here instead of publishing an impossible point.
+            // This is an error, never a clamp / pivot edit / whole-frame re-search.
+            string surfaceError;
+            if (!ValidateSurfacePoint(record, hit, out surfaceError))
+            {
+                record.surface_inside_live_bounds = false;
+                record.surface_validation_note = surfaceError;
+                LastError = "surface_point_invalid: " + surfaceError;
+                LastPublishRejected = true;
+                return null;
+            }
+            record.surface_inside_live_bounds = true;
+            record.surface_validation_note = "ok";
             if (!SelectionBroker.TryPublish(generation, record))
             {
                 LastError = SelectionBroker.LastRejectReason;
@@ -240,6 +264,97 @@ namespace Yixuan.Pick
                 return null;
             }
             return hit;
+        }
+
+        /// <summary>
+        /// Validate the same-frame depth surface point against the entity's live
+        /// world bounds (bounds are a necessary condition, not the only proof: the
+        /// ID code and depth already bound the pixel to this entity this frame).
+        /// </summary>
+        public static bool ValidateSurfacePoint(SelectionRecord record, PickHit hit, out string error)
+        {
+            error = "";
+            LastSurfaceValidationNote = "";
+            if (record == null || hit == null)
+            {
+                error = "missing_record_or_hit";
+                LastSurfaceValidationNote = error;
+                return false;
+            }
+            // A point must come from a real surface of THIS frame: valid depth
+            // (is_sky=false implies depth01>0), positive eye distance, finite
+            // coordinates, and a snapshot that can reproject it back to the hit
+            // pixel. Bounds membership alone would accept e.g. Vector3.zero for an
+            // object whose AABB happens to contain the origin.
+            if (hit.is_sky || hit.distance_m <= 0f)
+            {
+                error = "surface_point_has_no_valid_depth distance=" + hit.distance_m.ToString("F3") +
+                        " is_sky=" + hit.is_sky;
+                LastSurfaceValidationNote = error;
+                return false;
+            }
+            Vector3 sp = hit.surface_point;
+            if (!IsFinite(sp.x) || !IsFinite(sp.y) || !IsFinite(sp.z))
+            {
+                error = "surface_point_not_finite point=(" + sp.x + "," + sp.y + "," + sp.z + ")";
+                LastSurfaceValidationNote = error;
+                return false;
+            }
+            if (hit.snapshot == null)
+            {
+                error = "surface_point_missing_camera_snapshot";
+                LastSurfaceValidationNote = error;
+                return false;
+            }
+            float depth01;
+            Vector3 projected = hit.snapshot.ProjectWorldToViewport(sp, out depth01);
+            if (projected.x < -0.5f || projected.y < -0.5f ||
+                projected.x > 1.5f || projected.y > 1.5f)
+            {
+                error = "surface_point_reprojection_failed projected=(" +
+                        projected.x.ToString("F4") + "," + projected.y.ToString("F4") + ")";
+                LastSurfaceValidationNote = error;
+                return false;
+            }
+            float width = Mathf.Max(1, hit.snapshot.width);
+            float height = Mathf.Max(1, hit.snapshot.height);
+            float reprojectionPx = Mathf.Sqrt(
+                Mathf.Pow((projected.x - hit.u) * width, 2f) +
+                Mathf.Pow((projected.y - hit.v) * height, 2f));
+            if (reprojectionPx > 2f)
+            {
+                error = "surface_point_reprojection_mismatch reprojection_px=" + reprojectionPx.ToString("F2") +
+                        " predicted_uv=(" + projected.x.ToString("F4") + "," + projected.y.ToString("F4") +
+                        ") hit_uv=(" + hit.u.ToString("F4") + "," + hit.v.ToString("F4") + ")";
+                LastSurfaceValidationNote = error;
+                return false;
+            }
+            Bounds bounds = new Bounds(
+                (record.bounds_min + record.bounds_max) * 0.5f,
+                record.bounds_max - record.bounds_min);
+            LastLiveBounds = bounds;
+            if (bounds.size.x <= 0f && bounds.size.y <= 0f && bounds.size.z <= 0f)
+            {
+                error = "entity_live_bounds_unavailable";
+                LastSurfaceValidationNote = error;
+                return false;
+            }
+            string note;
+            bool inside = SurfaceBoundsCheck.Contains(
+                sp.x, sp.y, sp.z,
+                record.bounds_min.x, record.bounds_min.y, record.bounds_min.z,
+                record.bounds_max.x, record.bounds_max.y, record.bounds_max.z,
+                SurfaceBoundsCheck.DefaultEpsilonMeters, out note);
+            LastSurfaceValidationNote = inside
+                ? "ok reprojection_px=" + reprojectionPx.ToString("F2")
+                : note;
+            if (!inside) error = note;
+            return inside;
+        }
+
+        static bool IsFinite(float value)
+        {
+            return !float.IsNaN(value) && !float.IsInfinity(value);
         }
 
         /// <summary>
@@ -300,16 +415,23 @@ namespace Yixuan.Pick
                 generation = generation,
                 dynamic = entry != null && entry.Dynamic,
                 capabilities = entry != null ? entry.Capabilities : "",
-                live_position_note = entry != null && entry.Dynamic
-                    ? "live transform sampled at publish time"
-                    : "static catalog/mesh position",
+                bounds_from_live_renderers = entry != null && entry.UsesLiveRendererBounds,
+                live_position_note = entry == null
+                    ? "no entity"
+                    : entry.UsesLiveRendererBounds
+                        ? "live renderer bounds sampled at publish time"
+                        : entry.Dynamic
+                            ? "live transform sampled at publish time"
+                            : "static catalog/mesh position",
             };
             Vector3 entityPosition = entry != null ? entry.LivePosition() : Vector3.zero;
             record.entity_position = entityPosition;
             record.surface_point = hasSurface ? surfacePoint : entityPosition;
             if (entry != null)
             {
-                var bounds = entry.WorldBounds();
+                // Same live source the ID pass drew this frame; never a build-time
+                // catalog snapshot for explicit lab assets (runtime-moved geometry).
+                var bounds = entry.LiveWorldBounds();
                 record.bounds_min = bounds.min;
                 record.bounds_max = bounds.max;
             }

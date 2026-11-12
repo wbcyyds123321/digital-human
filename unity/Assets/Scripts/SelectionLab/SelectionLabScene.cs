@@ -40,27 +40,6 @@ namespace Yixuan.SelectionLab
             ApplyRuntimeDefaults();
         }
 
-        void Start()
-        {
-            StartCoroutine(ApplyLabInputDefaultsAfterChatReady());
-        }
-
-        System.Collections.IEnumerator ApplyLabInputDefaultsAfterChatReady()
-        {
-            var chat = FindObjectOfType<Yixuan.AI.ChatSession>();
-            while (chat != null && !chat.InitializationComplete) yield return null;
-            if (chat == null || chat.Config == null) yield break;
-            // Config is already ChatSession's runtime Instantiate() clone. Never
-            // mutate the shared AIConfig asset here; lab defaults are runtime-only.
-            chat.Config.VoiceEnabled = false;
-            chat.Config.VoiceInputMode = "off";
-            chat.SetVoiceOutputEnabled(false);
-            if (chat.VoiceInput != null) chat.VoiceInput.SetEnabled(false);
-            var observer = FindObjectOfType<Yixuan.Vision.VisionObserver>();
-            if (observer != null) observer.enabled = false;
-            Debug.Log("[SelectionLab] runtime input defaults applied to ChatSession.Config clone");
-        }
-
         void OnDestroy()
         {
             SelectionLabContext.Unbind(this);
@@ -80,9 +59,9 @@ namespace Yixuan.SelectionLab
             if (brain != null) { brain.EnableProactive = false; brain.TakeOverAutoPlay = false; }
             var chat = FindObjectOfType<Yixuan.AI.ChatSession>();
             if (chat != null) chat.AutoCommentOnVisualEvents = false;
-            // ChatSession.Config is not cloned yet at Awake; all runtime input
-            // defaults are applied by ApplyLabInputDefaultsAfterChatReady to the
-            // runtime clone, never to the shared AIConfig asset.
+            // Keep normal microphone/TTS preferences. Automated checks mute
+            // their own runtime session explicitly; opening the lab must not
+            // turn off the user's voice interaction.
             var director = FindObjectOfType<Yixuan.Presentation.CameraDirector>();
             if (director != null) director.EyeView = true;
             PlaceAt(observationA != null ? observationA : spawnPoint);

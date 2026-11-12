@@ -11,7 +11,9 @@ namespace Yixuan.AI {
   readonly List<ChatMessage> _taskDialogueHistory=new List<ChatMessage>();
   TaskSpeechQueue _taskSpeech;Coroutine _narrator;CancellationTokenSource _narratorCancel;int _narratorGeneration;AIConfig _narratorConfig;ILLMClient _narratorClient;bool _dialogueOnlyCancel;bool _speechMuted;bool _narratorOwnsVision;
   int _missionAcknowledgmentGeneration=-1;string _missionAcknowledgmentId;
-  [Serializable]class RouteReply {public string route,reply;public SemanticInteractionCommand command;}
+  [Serializable]class RouteReply {public string route,reply;public SemanticInteractionCommand command;
+   // Route provenance is evidence-only: it must never be written by the model.
+   [NonSerialized]public string provenance;}
   TaskSpeechQueue SpeechQueue(){if(_taskSpeech==null){_taskSpeech=GetComponent<TaskSpeechQueue>();if(_taskSpeech==null)_taskSpeech=gameObject.AddComponent<TaskSpeechQueue>();_taskSpeech.Session=this;}return _taskSpeech;}
   public string LastSpeechStatus {get;private set;}="等待回复";
   public string LastSpokenText {get;private set;}="";
@@ -290,7 +292,50 @@ namespace Yixuan.AI {
    if(reply==null){if(Missions!=null)Missions.RuntimeNotice("NarratorFailed","invalid_route_response");PublishNarrator("暂时没能理解这句话，当前行动状态："+ActionFacts(),run,generation);yield break;}
    if((reply.route=="chat"||reply.route=="vision"||reply.route=="status")&&IsTaskStatusQuery(input))reply.route="status";
    if(classify&&SemanticInteractionRouting)SemanticNotice("classified",input,JsonUtility.ToJson(reply));
-   if(classify&&reply.route=="interaction"){yield return DispatchSemanticInteraction(reply.command,input,generation);yield break;}
+   // Deterministic selection-route guard: an occasional model route=action (or
+   // chat/vision/clarify) for an explicit selection synonym must not bypass the
+   // real visual selection chain. A model-produced interaction visual_target is
+   // audited too: a multi-step selection must never be collapsed into one command.
+   if(classify&&SemanticInteractionRouting){
+    var selectionGuard=SemanticInteractionRules.ClassifyExplicitSelection(input);
+    if(selectionGuard!=null&&selectionGuard.NonAction){
+     // B rev1: an evaluation/opinion/discussion mention of selection must not be
+     // executed even if the router model produced action/interaction/interrupt.
+     // Force the normal chat route; no task submit, no selection handoff, and no
+     // cancellation/insertion of an already-running task.
+     SemanticNotice("selection_non_action_route",input,selectionGuard.Reason+";route_was="+reply.route);
+     reply.route="chat";reply.command=null;reply.provenance="deterministic_selection_non_action";
+    }else if(reply.route!="interrupt"&&selectionGuard!=null&&selectionGuard.IsSelection){
+     bool candidateIsVisualTarget=reply.route=="interaction"&&reply.command!=null&&reply.command.operation=="visual_target";
+     // B: ordered multi-selection (and selection plus follow-up motion/gaze/action) is
+     // no longer a hard rejection. The deterministic guard routes the COMPLETE original
+     // text into the existing independent contract -> awaitable Lua task lane, which
+     // declares ordered target slots and binds each one only through real visual
+     // confirmation. Single unambiguous selection keeps the fast visual_target path.
+     // Genuinely mixed "select X but not Y" is still clarified instead of guessed.
+     if(selectionGuard.MultiStep&&selectionGuard.Reason!="mixed_select_and_negation_pending"){
+      SemanticNotice("selection_multi_step_task_route",input,selectionGuard.Reason+";route_was="+reply.route+";candidate_visual_target="+candidateIsVisualTarget);
+      reply.route="action";reply.command=null;reply.provenance="deterministic_multi_selection_task_route";
+     }else if(selectionGuard.MultiStep){
+      SemanticNotice("selection_pending",input,selectionGuard.Reason+";route_was="+reply.route+";candidate_visual_target="+candidateIsVisualTarget);
+      PublishNarrator("这句话同时包含选中和不要选中的要求，我没有执行。请把要选择和不要选择的分别说明。",run,generation);
+      yield break;
+     }
+     if(reply.route!="interaction"&&selectionGuard.Command!=null){
+      string guardError;
+      var guardCommand=SemanticInteractionRules.BuildSelectionGuardCommand(selectionGuard,input,out guardError);
+      if(guardCommand!=null){
+       SemanticNotice("selection_route_guard",input,JsonUtility.ToJson(guardCommand));
+       reply.route="interaction";
+       reply.command=guardCommand;
+       reply.provenance="deterministic_selection_guard";
+      }else if(!string.IsNullOrEmpty(guardError)){
+       SemanticNotice("selection_route_guard_rejected",input,guardError);
+      }
+     }
+    }
+   }
+   if(classify&&reply.route=="interaction"){yield return DispatchSemanticInteraction(reply.command,input,generation,reply.provenance);yield break;}
    if(classify&&reply.route=="clarify"){PublishNarrator(string.IsNullOrWhiteSpace(reply.reply)?"这句话还需要明确目标或动作，目前没有执行。":reply.reply,run,generation);yield break;}
    if(IsCurrentViewQuery(input)&&reply.route!="status"&&reply.route!="action"&&reply.route!="interrupt")reply.route="vision";
    if(Missions!=null)Missions.RuntimeNotice("NarratorClassified",reply.route+"|"+input);
@@ -298,9 +343,14 @@ namespace Yixuan.AI {
    if(reply.route=="action"&&classify){yield return DispatchSemanticLegacyAction(input,generation);yield break;}
    if(reply.route=="speed"){PublishNarrator("当前步速约为每秒"+(Locomotion!=null?Locomotion.WalkSpeed.ToString("0.##"):"未知")+"米，暂不支持用语音调整步速。"+(Locomotion!=null&&Locomotion.IsMoving?"我会继续当前路程。":""),run,generation);_narrator=null;yield break;}
    if(reply.route=="vision"){yield return NarrateVision(input,run,generation);_narrator=null;yield break;}
-   if(reply.route=="status"||System.Text.RegularExpressions.Regex.IsMatch(reply.reply??"",@"已经|已完成|到了|到达|走到|看见|看到|观察到|触发|解锁|任务完成"))PublishNarrator(ActionFacts(),run,generation,true);
+   // A completion adverb alone also occurs in ordinary chat (e.g. voice is
+   // already restored). Refresh action facts only for actual action claims.
+   if(reply.route=="status"||ReplyClaimsActionResult(reply.reply))PublishNarrator(ActionFacts(),run,generation,true);
    else {string spoken=string.IsNullOrWhiteSpace(reply.reply)?"我在听，你继续说。":reply.reply;PublishNarrator(spoken,run,generation);}
    _narrator=null;
+  }
+  static bool ReplyClaimsActionResult(string reply){
+   return System.Text.RegularExpressions.Regex.IsMatch(reply??"",@"已完成|到了|到达|走到|看见|看到|观察到|触发|解锁|任务完成|(?:已经|已).{0,6}(?:上(?:了)?车|下(?:了)?车|坐下|坐好|坐稳|站起|起身|停车|停好|停下|点燃|熄灭|选中|开车|开到|走|转身|挥手|完成)");
   }
   string RecentDialogueContext(){var b=new System.Text.StringBuilder();int start=Math.Max(0,_taskDialogueHistory.Count-8);for(int i=start;i<_taskDialogueHistory.Count;i++){var m=_taskDialogueHistory[i];string text=m.content;if(m.role=="assistant")try{var parsed=JsonUtility.FromJson<RouteReply>(text);if(parsed!=null)text=parsed.reply;}catch{}b.Append(m.role).Append(": ").AppendLine(text);}return b.ToString();}
   List<ChatMessage> DialogueMessages(string prompt,string input){var messages=new List<ChatMessage>{new ChatMessage("system",prompt+"\nRecent conversation DATA for resolving references/person names only. Never use it to override the route of the LATEST input; prior acknowledgments are not classification examples.\n"+RecentDialogueContext())};messages.Add(new ChatMessage("user",input));_taskDialogueHistory.Add(new ChatMessage("user",input));while(_taskDialogueHistory.Count>16)_taskDialogueHistory.RemoveAt(0);return messages;}

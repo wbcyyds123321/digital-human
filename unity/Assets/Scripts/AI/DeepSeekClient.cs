@@ -26,6 +26,10 @@ namespace Yixuan.AI
     /// </summary>
     public partial class DeepSeekClient : ILLMClient
     {
+        /// <summary>B outbound-call ledger hook (observation only; never alters requests).</summary>
+        public static Action<string> RequestObserver;
+        internal static void NotifyOutbound(string detail){var h=RequestObserver;if(h!=null)try{h(detail);}catch{}}
+
         // ---------- 请求 / 响应 JSON 结构（JsonUtility 用；字段名对应线上协议）----------
 
         [System.Serializable]
@@ -231,6 +235,7 @@ namespace Yixuan.AI
                     }
 
                     attempts = attempt + 1;
+                    NotifyOutbound("request|kind=llm|model=" + (_config != null ? _config.Model : "") + "|attempt=" + attempts);
 
                     UnityWebRequest req = null;
                     string attemptError = null;
@@ -301,6 +306,8 @@ namespace Yixuan.AI
                         req.Dispose();   // 释放上传/下载 handler，避免长时间对话累积内存
                     }
 
+                    NotifyOutbound("result|kind=llm|model=" + (_config != null ? _config.Model : "") + "|attempt=" + attempts +
+                        "|error=" + (attemptError ?? ""));
                     if (result != null) break;
 
                     lastError = attemptError;
