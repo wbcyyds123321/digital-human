@@ -1,0 +1,227 @@
+{
+  "version": 1,
+  "updated": "2026-11-16",
+  "images": [
+    {
+      "image": "docs/images/readme-20261116/world-hero.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_drive2.mp4",
+      "source_time_seconds": 44.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "72b9f692dec8de7f18947e32779de082ff65b1a8daf912d69e589b9696d5a4d7",
+      "supports": "真实运行中的地图场景、角色、统一 HUD 与任务执行反馈共存；第三人称跟随取景。",
+      "limits": "不证明 1080p 原生画质；不证明地图标签/路径在当前缩放下清晰可读；不证明本次运行之外的版本状态。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/world-navigation.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_drive2.mp4",
+      "source_time_seconds": 47.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "d91860f9c145b644d903e1c277d1a166e5da042bd767d5402cc6ed742f4e73c2",
+      "supports": "HUD 地图页是真实可交互的统一控制台标签页，与 3D 场景同屏；分类筛选与 POI 图层真实存在。",
+      "limits": "此分辨率下锚点中文名与路径线不清晰，不能据此声称“锚点/路径可读”；不证明点选导航全过程。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/selection-input.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_sel2.mp4",
+      "source_time_seconds": 29.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "11ce0cd195479085ef7d4394e2d8037fcbf98178b14c4c62321ffe690817fcbf",
+      "supports": "真实自然语言请求文本进入输入框并停留可读；白盒场景与 HUD 为真实运行画面。",
+      "limits": "不证明这是真人键盘/麦克风输入（本机桌面不接受注入键鼠，文字由拍摄驱动写入并提交）；不证明该请求已被理解。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/selection-confirmed.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_sel2.mp4",
+      "source_time_seconds": 38.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "99ec54d874a7408fe78c31a17b973035b95225e7a0e78ef4aac47c1b69895e71",
+      "supports": "同一条自然语言请求的结果：目标高亮、稳定 ID（lab/red_cube）、世界坐标/距离/方位与确认回执；视觉确认链路可追溯。",
+      "limits": "不证明同外观不同 ID 的区分能力（该轮未取得）；不证明坐标在其它帧仍一致；不证明全部用例通过。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/selection-negative.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_sel_pos.mp4",
+      "source_time_seconds": 58.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "3e1b4605acc8ab5becc02840389c10ba212dc4e0c714a31878e06773f7960450",
+      "supports": "本次请求返回未找到；画面同时保留上一轮选择。",
+      "limits": "顶部横幅与左侧面板残留的是上一轮选择，不能当作本次成功；不能仅凭静帧证明全程未移动或未替换目标；不证明所有遮挡/找不到用例均通过，也不证明拒绝是模型判断而非规则兜底。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/seat-seated.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_seat2.mp4",
+      "source_time_seconds": 34.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "26940a2f445a34b02040c3f982adde55a5c8daf82007b3f83bde37f985e21620",
+      "supports": "真实坐下任务闭环：座椅实体 ID、坐姿状态与可继续交互的提示同屏。",
+      "limits": "不证明所有座椅/地形都能正确贴合；不证明碰撞或坐姿过渡质量；不证明本次为全新运行（属同日 v2 素材）。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/seat-standing.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_seat2.mp4",
+      "source_time_seconds": 76.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "27c172f0b2a784bfddbd93fcf9ffa796ab600901300ce5f1d6ddd631c2773075",
+      "supports": "起身指令生效并恢复到可步行状态，与坐下段构成同一座椅闭环。",
+      "limits": "不证明起身动作过渡无跳变（静帧无法判断）；不证明随后路径执行成功。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/vehicle-result.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_drive2.mp4",
+      "source_time_seconds": 89.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "1389bbf1e159f7f82d0dda1d8f38eb203003235e1f5169d1abf79b9410306489",
+      "supports": "导航→上车→行驶→停车→下车五步真实成功；parked/exit 坐标与行驶距离为引擎回执；车内取景差时用停车/下车画面+回执替代表述。",
+      "limits": "不证明车内驾驶视角可看（该 take 车内以车身为主要遮挡）；不证明取景美观；不证明其它载具/路线。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/dialogue.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_talk.mp4",
+      "source_time_seconds": 8.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "7e073c633d98d2c65d57463e4adabb491acca5fc1e0f21f30fff845e63fe668e",
+      "supports": "真实对话字幕与角色同屏；语音通道处于开启状态；来自真实 TTS 对话 take（同 take 音频已单独抓取为 raw/_take_talk.wav）。",
+      "limits": "静帧不证明口型逐音素同步（仅随音频开合）；不证明字幕与音频逐字一致（需与 wav 对齐核验，未做）；不证明本轮为新增模型调用。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/eye-view.png",
+      "source_type": "real_runtime_video_frame",
+      "source_date": "2026-11-16",
+      "source_file": "take_seat2.mp4",
+      "source_time_seconds": 6.0,
+      "transform": "Crop game viewport at x=201, y=143; native 1516×848 output. No scaling or added UI.",
+      "dimensions": [
+        1516,
+        848
+      ],
+      "sha256": "8f801a681a32c1a295b8ecd835fac8ea1154067b49e6209952235ceb5bee12e0",
+      "supports": "第一人称视觉定位真实发生，且 UI 明确区分“确认中”与“成功”；画面里能看到待坐长椅。",
+      "limits": "不证明最终定位成功（此帧是过程态）；不证明帧内 Eye 缓冲被使用（另见 11）。",
+      "input_method": "Text submitted by capture driver to actual project input; not a live microphone demonstration.",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/grounding-rgb.png",
+      "source_type": "historical_controlled_capture",
+      "source_date": "2026-11-11",
+      "source_file": "00_initial_frame_rgb.png",
+      "frame_group": "gen_002352/00_initial_frame",
+      "buffer": "RGB",
+      "transform": "Original PNG, unchanged.",
+      "dimensions": [
+        640,
+        480
+      ],
+      "sha256": "cf58a584041232770a88ade0408b2e8b5f1a36a9919234916eec843ee2d75792",
+      "supports": "同一次 Eye 采集中的 RGB / 实例 ID / depth 数据关系。",
+      "limits": "历史受控采集；不是今日真实模型新增验收。ID/depth 为可视化图，不是原始数值缓冲。",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/grounding-id.png",
+      "source_type": "historical_controlled_capture",
+      "source_date": "2026-11-11",
+      "source_file": "00_initial_frame_id_vis.png",
+      "frame_group": "gen_002352/00_initial_frame",
+      "buffer": "ID visualization",
+      "transform": "Original PNG, unchanged.",
+      "dimensions": [
+        640,
+        480
+      ],
+      "sha256": "37d2f20b422779f1ca3999f2e17373576808cf7a60cb0bda226154dc3bf5a096",
+      "supports": "同一次 Eye 采集中的 RGB / 实例 ID / depth 数据关系。",
+      "limits": "历史受控采集；不是今日真实模型新增验收。ID/depth 为可视化图，不是原始数值缓冲。",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    },
+    {
+      "image": "docs/images/readme-20261116/grounding-depth.png",
+      "source_type": "historical_controlled_capture",
+      "source_date": "2026-11-11",
+      "source_file": "00_initial_frame_depth_vis.png",
+      "frame_group": "gen_002352/00_initial_frame",
+      "buffer": "Depth visualization",
+      "transform": "Original PNG, unchanged.",
+      "dimensions": [
+        640,
+        480
+      ],
+      "sha256": "58c3fba0525f9a50807f00139c8953d58d9c3d273c267552dbdc525145054832",
+      "supports": "同一次 Eye 采集中的 RGB / 实例 ID / depth 数据关系。",
+      "limits": "历史受控采集；不是今日真实模型新增验收。ID/depth 为可视化图，不是原始数值缓冲。",
+      "validation": "File/source/metadata checked; independent visual review pending."
+    }
+  ]
+}
